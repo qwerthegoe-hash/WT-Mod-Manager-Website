@@ -83,7 +83,6 @@
             if (label.includes("Проверенные фото")) {
                 setButtonIcon(button, "approved", "Проверенные фото");
             }
-            }
         });
 
         document.querySelectorAll(".community-sidebar .channel:not([data-channel])").forEach(button => {
