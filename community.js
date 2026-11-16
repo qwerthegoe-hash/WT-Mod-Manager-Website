@@ -283,6 +283,14 @@ function prepareNickname() {
 // PROFILE SYNC
 // ============================================================
 
+// Keep the chat nickname in sync when the profile is saved in another tab.
+window.addEventListener("storage", event => {
+    if (!user?.id || event.key !== "wtmm-community-nick:" + user.id) return;
+    if (typeof event.newValue !== "string") return;
+    nickname = event.newValue;
+    prepareNickname();
+});
+
 async function loadAccountNickname() {
     // The standalone profile page owns profile editing and avatar uploads.
     // Messages keep their author snapshots; a rename applies to new messages.
