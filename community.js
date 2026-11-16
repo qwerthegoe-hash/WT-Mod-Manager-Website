@@ -260,52 +260,44 @@ function storeNickname(value) {
 // ============================================================
 
 function prepareNickname() {
-    if (!user) {
+    if (!user) return false;
+    let value = String(nickname || "").trim();
+    if (!value) value = "Player_" + user.id.slice(0, 6);
+    if (value.length < 2 || value.length > 24) {
+        notice("Никнейм должен содержать от 2 до 24 символов.", true);
         return false;
     }
-
-    let value = $("nickname").value.trim();
-
-    if (!value) {
-        value = `Player_${user.id.slice(0, 6)}`;
-    }
-
-    if (
-        value.length < 2 ||
-        value.length > 24
-    ) {
-        notice(
-            "Никнейм должен содержать от 2 до 24 символов.",
-            true
-        );
-
-        return false;
-    }
-
     const reservedPattern =
         /^(admin|administrator|developer|moderator|system|system bot|wt guardian|wt mod manager)$/i;
-
-    if (
-        !isAdmin &&
-        reservedPattern.test(value)
-    ) {
-        notice(
-            "Этот никнейм зарезервирован администрацией.",
-            true
-        );
-
+    if (!isAdmin && reservedPattern.test(value)) {
+        notice("Этот никнейм зарезервирован администрацией.", true);
         return false;
     }
-
     nickname = value;
-
-    $("nickname").value = value;
-
     storeNickname(value);
-
     return true;
 }
 
+
+// ============================================================
+// PROFILE SYNC
+// ============================================================
+
+async function loadAccountNickname() {
+    // The standalone profile page owns profile editing and avatar uploads.
+    // Messages keep their author snapshots; a rename applies to new messages.
+    const fallback = readNickname() || "Player_" + user.id.slice(0, 6);
+    const { data, error } = await db
+        .from("community_user_profiles")
+        .select("nickname")
+        .eq("user_id", user.id)
+        .maybeSingle();
+    if (error) {
+        console.warn("Profile migration unavailable; using local nickname:", error.message);
+    }
+    nickname = String(data?.nickname || fallback);
+    prepareNickname();
+}
 
 // ============================================================
 // TEXT PRE-MODERATION
@@ -2227,42 +2219,6 @@ function openReportDialog(messageId) {
 // PROFILE
 // ============================================================
 
-function setupProfile() {
-    const dialog = $("communityProfileDialog");
-    const open = $("openCommunityProfile");
-    const close = $("closeCommunityProfile");
-    const input = $("nickname");
-    const idField = $("communityProfileId");
-    if (!dialog || !open || !close || !input || !idField) {
-        console.warn("Community profile elements missing.");
-        return;
-    }
-    open.addEventListener("click", () => {
-        if (!user) { notice("Профиль пока загружается."); return; }
-        input.value = nickname || readNickname() || `Player_${user.id.slice(0, 6)}`;
-        idField.value = user.id;
-        if (!dialog.open) dialog.showModal();
-    });
-    close.addEventListener("click", () => dialog.close());
-    dialog.addEventListener("click", event => {
-        if (event.target === dialog) dialog.close();
-    });
-    $("saveNickname").addEventListener("click", () => {
-        if (!user) return;
-        if (prepareNickname()) { notice("Никнейм сохранён."); dialog.close(); }
-    });
-    $("copyUserId").addEventListener("click", async () => {
-        if (!user) return;
-        try {
-            await navigator.clipboard.writeText(user.id);
-            notice("ID профиля скопирован.");
-        } catch {
-            idField.focus(); idField.select();
-            notice("Выделен ID — скопируй его вручную.");
-        }
-    });
-}
-
 // ============================================================
 // PERIODIC SYNCHRONIZATION
 // ============================================================
@@ -2339,7 +2295,6 @@ async function start() {
 
     initialized = true;
 
-    setupProfile();
     setupChannels();
     setupAttachments();
     setupMediaControls();
@@ -2417,11 +2372,7 @@ async function start() {
             adminResult.data
         );
 
-        $("nickname").value =
-            readNickname() ||
-            `Player_${user.id.slice(0, 6)}`;
-
-        prepareNickname();
+        await loadAccountNickname();
 
         setupMediaAdmin();
         updateComposer();
