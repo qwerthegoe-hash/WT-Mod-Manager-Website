@@ -8,7 +8,7 @@ begin;
 alter table public.community_user_profiles
     add column if not exists bio text not null default '',
     add column if not exists banner_path text,
-    add column if not exists is_public boolean not null default true;
+    add column if not exists is_public boolean not null default false;
 
 alter table public.community_user_profiles
     drop constraint if exists wtmm_profile_bio_length;
