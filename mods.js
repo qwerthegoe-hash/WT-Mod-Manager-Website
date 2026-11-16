@@ -8,7 +8,7 @@ const COVER_BUCKET = "wtmm-mod-previews";
 const FILE_LIMIT = 20 * 1024 * 1024;
 const COVER_LIMIT = 5 * 1024 * 1024;
 const CATEGORIES = {
-    sights: "Игровые прицелы", camouflage: "Камуфляжи",
+    visuals: "Графика и эффекты", camouflage: "Камуфляжи",
     sounds: "Звуки", interface: "Интерфейс", other: "Другое"
 };
 const IMAGE_MIMES = {
