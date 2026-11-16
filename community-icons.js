@@ -37,7 +37,7 @@
         document.querySelectorAll(".channel[data-channel]").forEach(button => {
             const name = CHANNELS[button.dataset.channel];
             if (!name || button.dataset.customIcon === name) return;
-            const label = button.textContent.replace(/^[^\\p{L}\\p{N}]+/u, "").trim();
+            const label = button.textContent.replace(/^[^\p{L}\p{N}]+/u, "").trim();
             const chip = document.createElement("span");
             chip.className = "wt-custom-chip";
             chip.append(icon(name));
@@ -87,7 +87,7 @@
         document.querySelectorAll(".guardian-system-notice strong").forEach(title => {
             if (title.dataset.customIcon === "guardian") return;
             title.dataset.customIcon = "guardian";
-            const label = title.textContent.replace(/^\\s*🛡️\\s*/, "").trim();
+            const label = title.textContent.replace(/^\s*🛡️\s*/, "").trim();
             title.replaceChildren(icon("guardian"), document.createTextNode(label));
         });
     }
