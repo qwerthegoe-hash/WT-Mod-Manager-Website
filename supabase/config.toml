@@ -1,0 +1,5 @@
+# Supabase Edge Function: the browser uses a publishable API key and a user JWT.
+# The gateway's legacy verify_jwt check does not recognize sb_publishable_ keys.
+# The function validates the user JWT and administrator role in its own handler.
+[functions.community-media]
+verify_jwt = false
