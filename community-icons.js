@@ -18,6 +18,7 @@
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
         svg.classList.add("wt-custom-icon");
+        svg.dataset.iconName = name;
         svg.setAttribute("viewBox", "0 0 512 512");
         svg.setAttribute("aria-hidden", "true");
         svg.setAttribute("focusable", "false");
