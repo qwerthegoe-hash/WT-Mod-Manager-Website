@@ -65,3 +65,49 @@ body[data-profile-accent="purple"] { --profile-accent:#b39cff; --profile-accent-
   .profile-avatar svg { width:43px; height:43px; }
   .profile-id-controls { align-items:stretch; }
 }
+
+/* Player profile 2.0 */
+.profile-banner-preview {
+    display: grid; place-items: center; position: relative; overflow: hidden;
+    aspect-ratio: 4 / 1; min-height: 120px; margin-bottom: 22px;
+    border-radius: 16px; border: 1px solid #436b93;
+    background: linear-gradient(112deg,#12335a 0%,#254a76 46%,#152b46 100%);
+    font-weight: 800; color: #bcd6f1; letter-spacing: .16em; font-size: 12px;
+}
+.profile-banner-preview img {
+    width: 100%; height: 100%; position: absolute; inset: 0;
+    object-fit: cover; display: block;
+}
+.profile-banner-preview img[hidden], .profile-banner-preview span[hidden] { display: none; }
+.profile-field textarea,
+.profile-field input[type="email"],
+.profile-field input[type="password"] {
+    box-sizing: border-box; width: 100%; min-width:0; padding:11px 13px;
+    min-height:44px; border: 1px solid #466a8e; border-radius:11px;
+    background: #10243a; color: #f5faff; font:inherit; font-size:14px;
+}
+.profile-field textarea { resize:vertical; line-height:1.55; }
+.profile-visibility {
+    display:flex; align-items:flex-start; gap:12px; padding:15px;
+    border-radius:12px; border:1px solid #3d5d80; background:#10253d;
+    color:#cfe4f8; line-height:1.55; font-size:13px;
+}
+.profile-visibility input { width:18px; height:18px; accent-color:var(--profile-accent); flex:none; }
+.profile-avatar-actions a.profile-secondary { text-decoration:none; }
+.profile-recovery { margin-top:22px; display:grid; gap:18px; }
+.profile-recovery h2 { margin:0; font-size:22px; }
+.profile-recovery > p { margin:0; color:#9ebbd7; font-size:13px; line-height:1.65; }
+.profile-recovery .profile-field { gap:11px; }
+.profile-recovery .profile-secondary { width:max-content; max-width:100%; }
+.profile-existing-account { padding:14px; border-radius:12px; border:1px solid #375675; }
+.profile-existing-account summary { cursor:pointer; font-size:13px; color:#cce6fc; font-weight:700; }
+.profile-existing-account .profile-field { margin-top:15px; }
+.profile-existing-account p { color:#b0c5dc; font-size:12px; line-height:1.55; }
+#accountNotice { color:#9fe4bc; font-size:13px; line-height:1.5; margin:0; overflow-wrap:anywhere; }
+#accountNotice.error { color:#ffb3c0; }
+@media (max-width:620px) {
+    .profile-banner-preview { aspect-ratio:3 / 1; min-height:95px; font-size:9px; }
+    .profile-nav a:nth-child(2) { display:initial; }
+    .profile-nav a { font-size:11px; }
+    .profile-nav { gap:9px; flex-wrap:wrap; justify-content:flex-end; }
+}
