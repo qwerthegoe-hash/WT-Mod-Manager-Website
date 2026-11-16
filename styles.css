@@ -1363,3 +1363,17 @@ summary:focus-visible {
     .nav-right > a.profile-nav-link { display:inline-flex; padding: 7px 10px; }
     .profile-nav-link span { display:none; }
 }
+
+/* Moderated mod library entry in main header */
+.nav-right > a.mods-nav-link {
+    display:inline-flex; align-items:center; flex-shrink:0; gap:8px;
+    border:1px solid #305473; border-radius:11px; padding:7px 10px;
+    color:#c6e4fa; background:#152c46;
+}
+.nav-right > a.mods-nav-link:hover { border-color:#75b5eb; background:#1d4263; }
+.mods-nav-link svg { width:18px; height:18px; flex:none; }
+@media(max-width:620px) {
+    .nav-right > a.mods-nav-link { display:inline-flex; min-height:35px; padding:7px; }
+    .mods-nav-link span { display:none; }
+    .nav-right { gap:7px; }
+}
