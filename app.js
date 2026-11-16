@@ -12,6 +12,7 @@ const translations = {
         navFeedback: "Feedback",
         navSupport: "Support",
         navProfile: "Profile",
+        navMods: "Mods",
 
         eyebrow: "PUBLIC BETA · 1.2",
         headline: "Manage your War Thunder mods. <em>Simply.</em>",
@@ -107,6 +108,7 @@ const translations = {
         navFeedback: "Обратная связь",
         navSupport: "Поддержать",
         navProfile: "Профиль",
+        navMods: "Моды",
 
         eyebrow: "ПУБЛИЧНАЯ БЕТА · 1.2",
         headline: "Управляй модами War Thunder. <em>Просто.</em>",
@@ -202,6 +204,7 @@ const translations = {
         navFeedback: "Зворотний зв'язок",
         navSupport: "Підтримати",
         navProfile: "Профіль",
+        navMods: "Моди",
 
         eyebrow: "ПУБЛІЧНА БЕТА · 1.2",
         headline: "Керуй модами War Thunder. <em>Просто.</em>",
