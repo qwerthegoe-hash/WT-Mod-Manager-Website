@@ -1116,21 +1116,7 @@ function setupMediaControls() {
         chooseApprovedMedia
     );
 
-    const statusButton = document.createElement("button");
-
-    statusButton.type = "button";
-    statusButton.className = "attach-button";
-    statusButton.textContent = "📋 Статус фото";
-
-    statusButton.addEventListener(
-        "click",
-        openMediaStatus
-    );
-
-    tools.append(
-        approvedButton,
-        statusButton
-    );
+    tools.append(approvedButton);
 }
 
 
