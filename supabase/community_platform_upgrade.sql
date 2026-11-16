@@ -201,7 +201,7 @@ using (bucket_id='wtmm-mod-previews'
 -- Bound each account's pending queue to reduce accidental spam.
 create or replace function public.wtmm_mod_submission_guard()
 returns trigger language plpgsql security definer set search_path=public
-as $
+as $$
 begin
   if new.owner_id is distinct from (select auth.uid()) then
     raise exception 'Only your own account may submit mods.';
@@ -216,7 +216,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 revoke all on function public.wtmm_mod_submission_guard() from public;
 drop trigger if exists wtmm_mod_submissions_limit on public.wtmm_mods;
 create trigger wtmm_mod_submissions_limit
