@@ -111,3 +111,42 @@ body[data-profile-accent="purple"] { --profile-accent:#b39cff; --profile-accent-
     .profile-nav a { font-size:11px; }
     .profile-nav { gap:9px; flex-wrap:wrap; justify-content:flex-end; }
 }
+
+/* Profile app name: large but responsive branding */
+.profile-brand-title {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0 6px;
+  font-size: clamp(31px, 6.1vw, 60px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.052em;
+  color: #d9eeff;
+  overflow-wrap: anywhere;
+  text-shadow: 0 3px 22px #3386d244;
+}
+.user-profile-heading h1 {
+  margin: 5px 0 12px;
+  font-size: clamp(21px, 3.3vw, 30px);
+  color: #8cbee8;
+  letter-spacing: -.02em;
+}
+.profile-banner-preview .profile-banner-brand {
+  position: relative;
+  z-index: 1;
+  max-width: 95%;
+  padding: 0 15px;
+  font-size: clamp(20px, 4.4vw, 46px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -.035em;
+  text-align: center;
+  color: #eaf6ff;
+  text-shadow: 0 5px 22px #06192bbc;
+  overflow-wrap: anywhere;
+}
+@media(max-width:620px) {
+  .profile-brand-title { letter-spacing: -.04em; }
+  .profile-banner-preview .profile-banner-brand { font-size: clamp(18px,5vw,31px); }
+}
