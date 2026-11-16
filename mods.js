@@ -298,7 +298,7 @@ async function imageExtension(file) {
         throw new Error("Обложка должна быть PNG, JPG, GIF или WebP до 5 МБ.");
     const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
     const at = (start, len) => String.fromCharCode(...bytes.slice(start, start + len));
-    const valid = (ext === "png" && at(1, 3) === "PNG") ||
+    const valid = (ext === "png" && bytes[0] === 137 && at(1, 3) === "PNG" && bytes[4] === 13 && bytes[5] === 10 && bytes[6] === 26 && bytes[7] === 10) ||
         (ext === "jpg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) ||
         (ext === "gif" && ["GIF87a", "GIF89a"].includes(at(0, 6))) ||
         (ext === "webp" && at(0, 4) === "RIFF" && at(8, 4) === "WEBP");
