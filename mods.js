@@ -398,6 +398,11 @@ async function init() {
         isAdmin = await getAdminStatus();
         $("moderationTab").hidden = !isAdmin;
         await refresh();
+        const selectedMod = new URLSearchParams(location.search).get("mod");
+        if (selectedMod && /^[0-9a-f-]{36}$/i.test(selectedMod)) {
+            const item = records.find(mod => mod.id === selectedMod && mod.status === "approved");
+            if (item) await showModDetails(item.id);
+        }
     } catch (error) {
         console.error("Mod library initialization:", error);
         say("Ошибка подключения библиотеки: " + error.message +
