@@ -817,3 +817,136 @@
 @media (prefers-reduced-motion: reduce) {
     .wt-custom-chip { transition: none !important; }
 }
+
+/* WT Community UI refinement: tinted artwork, breathing room, themed scrollbars */
+/* The uploaded icons are originally white; color them without changing their silhouettes. */
+.wt-custom-icon {
+    filter: brightness(0) saturate(100%) invert(88%) sepia(11%) saturate(815%) hue-rotate(171deg) brightness(102%) contrast(100%);
+}
+.wt-custom-icon[data-icon-name="approved"] {
+    filter: brightness(0) saturate(100%) invert(84%) sepia(22%) saturate(710%) hue-rotate(93deg) brightness(100%) contrast(95%);
+}
+.wt-custom-icon[data-icon-name="moderation"],
+.wt-custom-icon[data-icon-name="guardian"] {
+    filter: brightness(0) saturate(100%) invert(87%) sepia(16%) saturate(950%) hue-rotate(164deg) brightness(100%) contrast(101%);
+}
+.wt-custom-icon[data-icon-name="emoji"] {
+    filter: brightness(0) saturate(100%) invert(91%) sepia(10%) saturate(1005%) hue-rotate(173deg) brightness(104%) contrast(100%);
+}
+
+/* Larger, predictable hit areas: icons cannot crush the tool buttons. */
+.composer-bottom {
+    flex-wrap: wrap;
+    column-gap: 18px;
+    row-gap: 14px;
+}
+.composer-tools {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 12px 14px;
+    align-items: center;
+}
+.composer-tools > button,
+.composer-tools > .attach-button {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 15px;
+    white-space: nowrap;
+    border-radius: 11px;
+    line-height: 1.25;
+}
+.composer-tools #emojiToggle.wt-custom-action {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    padding: 0;
+    border-radius: 12px;
+}
+.composer-tools .wt-custom-action .wt-custom-icon {
+    flex-shrink: 0;
+    width: 19px !important;
+    height: 19px !important;
+}
+.composer-tools #emojiToggle .wt-custom-icon {
+    width: 23px !important;
+    height: 23px !important;
+}
+.composer-bottom > .btn {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+@media (max-width: 520px) {
+    .composer-bottom {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .composer-tools {
+        flex: 0 1 auto;
+        gap: 10px;
+    }
+    .composer-tools > button,
+    .composer-tools > .attach-button {
+        min-height: 42px;
+        padding: 9px 12px;
+    }
+    .composer-tools #emojiToggle.wt-custom-action {
+        width: 42px;
+        min-width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
+    .composer-bottom > .btn {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+/* Scrollbars in WT Guardian, photo moderation, reports, profile, and chat. */
+dialog,
+.chat-messages,
+.community-sidebar,
+.chat-history,
+.emoji-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #537da5 #11243a;
+}
+dialog::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar,
+.community-sidebar::-webkit-scrollbar,
+.chat-history::-webkit-scrollbar,
+.emoji-panel::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+dialog::-webkit-scrollbar-track,
+.chat-messages::-webkit-scrollbar-track,
+.community-sidebar::-webkit-scrollbar-track,
+.chat-history::-webkit-scrollbar-track,
+.emoji-panel::-webkit-scrollbar-track {
+    background: #11243a;
+    border-radius: 999px;
+    margin-block: 10px;
+}
+dialog::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb,
+.community-sidebar::-webkit-scrollbar-thumb,
+.chat-history::-webkit-scrollbar-thumb,
+.emoji-panel::-webkit-scrollbar-thumb {
+    background: #496f97;
+    border: 2px solid #11243a;
+    border-radius: 999px;
+}
+dialog::-webkit-scrollbar-thumb:hover,
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.community-sidebar::-webkit-scrollbar-thumb:hover,
+.chat-history::-webkit-scrollbar-thumb:hover,
+.emoji-panel::-webkit-scrollbar-thumb:hover {
+    background: #6a9bcc;
+}
+dialog::-webkit-scrollbar-corner,
+.chat-messages::-webkit-scrollbar-corner {
+    background: #11243a;
+}
