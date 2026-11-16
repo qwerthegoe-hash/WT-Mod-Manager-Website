@@ -118,7 +118,7 @@ async function loadProfile() {
         "Player_" + user.id.slice(0, 6);
     $("profileBio").value = data?.bio || "";
     $("profileUserId").value = user.id;
-    $("profileIsPublic").checked = data?.is_public !== false;
+    $("profileIsPublic").checked = data?.is_public === true;
     $("openPublicProfile").href = "creator.html?id=" + encodeURIComponent(user.id);
     $("accountEmail").value = user.email || "";
     setAccent(data?.accent || "blue");
