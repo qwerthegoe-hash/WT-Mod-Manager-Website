@@ -842,15 +842,27 @@ async function mediaAdminAction(action, jobId = null) {
     });
     if (error) {
         const status = error.context?.status;
-        let detail = error.message || "Неизвестная ошибка";
-        if (status === 404) {
-            detail = "Edge Function community-media не развёрнута в Supabase. " +
-                "Открой раздел Edge Functions и опубликуй её.";
+        const original = String(error.message || "Неизвестная ошибка");
+        let detail = original;
+        if (error.name === "FunctionsFetchError" ||
+            /failed to send a request|failed to fetch|networkerror/i.test(original)) {
+            detail = "Не удалось связаться с функцией community-media в Supabase. " +
+                "Проверь, опубликована ли функция (Deploy), и посмотри Logs " +
+                "в Edge Functions. Если логов нет — проверь доступ к Supabase " +
+                "из браузера и расширения, блокирующие сетевые запросы.";
+        } else if (status === 404) {
+            detail = "Функция community-media не найдена (HTTP 404). Проверь имя и Deploy.";
         } else if (status === 401 || status === 403) {
-            detail = "Ошибка авторизации модератора. Проверь сессию и права администратора.";
+            detail = "Ошибка авторизации модератора (HTTP " + status + "). " +
+                "Проверь сессию и права community_admins.";
+        } else if (status >= 500) {
+            detail = "Ошибка сервера модерации (HTTP " + status + "). Проверь Logs в Supabase.";
         } else if (status) {
             detail += " (HTTP " + status + ")";
         }
+        console.warn("Community media request failed", {
+            action, status: status || null, error: original
+        });
         throw new Error(detail);
     }
     if (!data || typeof data !== "object") {
