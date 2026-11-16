@@ -695,3 +695,23 @@
     .community-profile-dialog { padding: 18px; }
     .community-profile-idrow { flex-direction: column; }
 }
+
+/* Community sidebar spacing: profile and administrator tools */
+.community-sidebar .community-profile {
+    margin-bottom: 16px;
+}
+.community-sidebar #mediaReviewButton {
+    margin-top: 14px;
+    margin-bottom: 12px;
+}
+.community-sidebar #guardianAdminButton {
+    margin-top: 14px !important;
+    margin-bottom: 12px;
+}
+.community-sidebar .community-profile .profile-open-button {
+    margin-bottom: 0;
+}
+@media (max-width: 800px) {
+    .community-sidebar .community-profile { margin-bottom: 12px; }
+    .community-sidebar #mediaReviewButton { margin-top: 8px; }
+}
