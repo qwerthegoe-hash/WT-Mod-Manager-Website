@@ -93,7 +93,7 @@ create table if not exists public.wtmm_mods (
   constraint wtmm_mods_description check (char_length(description) <= 2500),
   constraint wtmm_mods_version check (char_length(version) between 1 and 32),
   constraint wtmm_mods_category check
-    (category in ('sights','camouflage','sounds','interface','other')),
+    (category in ('visuals','camouflage','sounds','interface','other')),
   constraint wtmm_mods_status check
     (status in ('pending','approved','rejected')),
   constraint wtmm_mods_file_path check
