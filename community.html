@@ -72,21 +72,49 @@
                 </button>
 
                 <div class="community-profile">
-                    <label for="nickname">Твой никнейм</label>
-                    <input id="nickname" type="text"
-                           minlength="2" maxlength="24"
-                           placeholder="Player_123">
-
-                    <div class="profile-actions">
-                        <button id="saveNickname" type="button">
-                            Сохранить
-                        </button>
-                        <button id="copyUserId" type="button">
-                            Мой ID
-                        </button>
-                    </div>
+                    <button id="openCommunityProfile" type="button"
+                            class="channel profile-open-button"
+                            aria-haspopup="dialog"
+                            aria-controls="communityProfileDialog">
+                        <span class="profile-symbol" aria-hidden="true">◉</span>
+                        <span>Мой профиль</span>
+                    </button>
                 </div>
             </aside>
+
+            <dialog id="communityProfileDialog" class="community-profile-dialog"
+                    aria-labelledby="communityProfileTitle">
+                <div class="community-profile-dialog-head">
+                    <div>
+                        <p class="community-profile-kicker">WT MOD MANAGER</p>
+                        <h2 id="communityProfileTitle">Мой профиль</h2>
+                        <p class="community-profile-description">Настройки относятся только к твоему аккаунту в этом браузере.</p>
+                    </div>
+                    <button id="closeCommunityProfile" type="button"
+                            class="community-profile-close" aria-label="Закрыть профиль">×</button>
+                </div>
+                <div class="community-profile-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="3.5"></circle>
+                        <path d="M5.5 20v-1.3a6.5 6.5 0 0 1 13 0V20"></path>
+                    </svg>
+                </div>
+                <div class="community-profile-fields">
+                    <label for="nickname">Никнейм</label>
+                    <input id="nickname" type="text" minlength="2" maxlength="24"
+                           placeholder="Player_123" autocomplete="off">
+                    <button id="saveNickname" class="community-profile-primary" type="button">Сохранить никнейм</button>
+                    <label for="communityProfileId">ID пользователя</label>
+                    <div class="community-profile-idrow">
+                        <input id="communityProfileId" type="text" readonly
+                               aria-label="Твой ID пользователя">
+                        <button id="copyUserId" type="button">Копировать ID</button>
+                    </div>
+                    <small class="community-profile-hint">ID нужен для поддержки и модерации. Его можно скопировать по необходимости.</small>
+                    <div id="guardianProfileState"></div>
+                </div>
+            </dialog>
 
             <section class="community-chat">
                 <div class="chat-header">
