@@ -32,7 +32,14 @@
         <h1>Библиотека модов</h1>
         <p>Пользовательские модификации, опубликованные после проверки администратором.</p>
       </div>
-      <button id="showSubmit" type="button" class="mods-primary">+ Загрузить свой мод</button>
+      <button id="showSubmit" type="button" class="mods-primary mods-upload-trigger">
+        <svg class="mods-upload-plus" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+             aria-hidden="true" focusable="false">
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        <span>Загрузить свой мод</span>
+      </button>
     </div>
     <div class="mods-toolbar" role="group" aria-label="Разделы модификаций">
       <button class="mods-tab active" type="button" data-view="catalog" aria-pressed="true">Каталог</button>
