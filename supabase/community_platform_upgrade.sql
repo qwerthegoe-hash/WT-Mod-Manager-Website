@@ -197,4 +197,30 @@ using (bucket_id='wtmm-mod-previews'
   and not exists(select 1 from public.wtmm_mods m
     where m.cover_path=name and m.status='approved'));
 
+
+-- Bound each account's pending queue to reduce accidental spam.
+create or replace function public.wtmm_mod_submission_guard()
+returns trigger language plpgsql security definer set search_path=public
+as $
+begin
+  if new.owner_id is distinct from (select auth.uid()) then
+    raise exception 'Only your own account may submit mods.';
+  end if;
+  if (select count(*) from public.wtmm_mods
+      where owner_id=new.owner_id and status='pending') >= 5 then
+    raise exception 'You already have five mods awaiting review.';
+  end if;
+  if exists(select 1 from public.wtmm_mods
+      where owner_id=new.owner_id and created_at > now() - interval '45 seconds') then
+    raise exception 'Please wait before submitting another mod.';
+  end if;
+  return new;
+end;
+$;
+revoke all on function public.wtmm_mod_submission_guard() from public;
+drop trigger if exists wtmm_mod_submissions_limit on public.wtmm_mods;
+create trigger wtmm_mod_submissions_limit
+before insert on public.wtmm_mods
+for each row execute function public.wtmm_mod_submission_guard();
+
 commit;
