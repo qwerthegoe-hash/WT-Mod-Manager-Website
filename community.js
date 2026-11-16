@@ -168,14 +168,9 @@ function notice(message, error = false) {
 }
 
 function connection(message, online = false) {
-    const element = $("connectionStatus");
-
-    if (!element) {
-        return;
-    }
-
-    element.textContent = message;
-    element.classList.toggle("online", online);
+    // No online badge is displayed. Connection errors remain in the chat notice.
+    const el = $("connectionStatus");
+    if (el) { el.textContent = ""; el.hidden = true; }
 }
 
 function showError(prefix, error) {
@@ -249,26 +244,16 @@ function isConfigured() {
 // ============================================================
 
 function readNickname() {
-    try {
-        return localStorage.getItem(
-            "wtmm-community-nick"
-        ) || "";
-    } catch {
-        return "";
-    }
+    if (!user?.id) return "";
+    try { return localStorage.getItem("wtmm-community-nick:" + user.id) || ""; }
+    catch { return ""; }
 }
 
 function storeNickname(value) {
-    try {
-        localStorage.setItem(
-            "wtmm-community-nick",
-            value
-        );
-    } catch {
-        // Some browsers may block local storage.
-    }
+    if (!user?.id) return;
+    try { localStorage.setItem("wtmm-community-nick:" + user.id, value); }
+    catch { /* Local storage unavailable. */ }
 }
-
 
 // ============================================================
 // USERNAME VALIDATION
@@ -850,32 +835,30 @@ async function chooseApprovedMedia() {
 
 async function mediaAdminAction(action, jobId = null) {
     if (!db || !user || !isAdmin) {
-        throw new Error(
-            "Доступ разрешён только администратору."
-        );
+        throw new Error("Модерация доступна только администратору.");
     }
-
-    const { data, error } = await db.functions.invoke(
-        MEDIA_FUNCTION,
-        {
-            body: {
-                action,
-                jobId
-            }
-        }
-    );
-
+    const { data, error } = await db.functions.invoke(MEDIA_FUNCTION, {
+        body: { action, jobId }
+    });
     if (error) {
-        throw error;
+        const status = error.context?.status;
+        let detail = error.message || "Неизвестная ошибка";
+        if (status === 404) {
+            detail = "Edge Function community-media не развёрнута в Supabase. " +
+                "Открой раздел Edge Functions и опубликуй её.";
+        } else if (status === 401 || status === 403) {
+            detail = "Ошибка авторизации модератора. Проверь сессию и права администратора.";
+        } else if (status) {
+            detail += " (HTTP " + status + ")";
+        }
+        throw new Error(detail);
     }
-
-    if (data?.error) {
-        throw new Error(data.error);
+    if (!data || typeof data !== "object") {
+        throw new Error("Функция модерации вернула пустой ответ.");
     }
-
+    if (data.error) throw new Error(String(data.error));
     return data;
 }
-
 
 // ============================================================
 // MEDIA MODERATION QUEUE
@@ -1125,32 +1108,17 @@ function setupMediaControls() {
 // ============================================================
 
 function setupMediaAdmin() {
-    if (!isAdmin) {
-        return;
-    }
-
-    const sidebar = document.querySelector(
-        ".community-sidebar"
-    );
-
-    if (!sidebar) {
-        return;
-    }
-
-    const adminButton = document.createElement("button");
-
-    adminButton.type = "button";
-    adminButton.className = "channel";
-    adminButton.textContent = "🛡️ Модерация фото";
-
-    adminButton.addEventListener(
-        "click",
-        openMediaReview
-    );
-
-    sidebar.append(adminButton);
+    if (!isAdmin) return;
+    const sidebar = document.querySelector(".community-sidebar");
+    if (!sidebar || $("mediaReviewButton")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "mediaReviewButton";
+    button.className = "channel";
+    button.textContent = "🛡️ Модерация фото";
+    button.addEventListener("click", openMediaReview);
+    sidebar.append(button);
 }
-
 
 // ============================================================
 // ATTACHMENT INPUT
@@ -1708,7 +1676,7 @@ async function subscribeToChannel() {
         }
 
         if (statusValue === "SUBSCRIBED") {
-            connection("● Онлайн", true);
+            connection("", true);
 
             loadMessages();
             reconcileVisibleMessages();
@@ -1750,7 +1718,7 @@ async function selectChannel(next) {
     $("loadOlder").hidden = true;
 
     document.querySelectorAll(
-        ".channel"
+        ".channel[data-channel]"
     ).forEach(button => {
         const selected =
             button.dataset.channel === next;
@@ -1799,7 +1767,7 @@ async function selectChannel(next) {
 
 function setupChannels() {
     document.querySelectorAll(
-        ".channel"
+        ".channel[data-channel]"
     ).forEach(button => {
         button.addEventListener(
             "click",
@@ -2248,45 +2216,40 @@ function openReportDialog(messageId) {
 // ============================================================
 
 function setupProfile() {
-    $("nickname").value = readNickname();
-
-    $("saveNickname").addEventListener(
-        "click",
-        () => {
-            if (!user) {
-                return;
-            }
-
-            if (prepareNickname()) {
-                notice("Никнейм сохранён.");
-            }
+    const dialog = $("communityProfileDialog");
+    const open = $("openCommunityProfile");
+    const close = $("closeCommunityProfile");
+    const input = $("nickname");
+    const idField = $("communityProfileId");
+    if (!dialog || !open || !close || !input || !idField) {
+        console.warn("Community profile elements missing.");
+        return;
+    }
+    open.addEventListener("click", () => {
+        if (!user) { notice("Профиль пока загружается."); return; }
+        input.value = nickname || readNickname() || `Player_${user.id.slice(0, 6)}`;
+        idField.value = user.id;
+        if (!dialog.open) dialog.showModal();
+    });
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => {
+        if (event.target === dialog) dialog.close();
+    });
+    $("saveNickname").addEventListener("click", () => {
+        if (!user) return;
+        if (prepareNickname()) { notice("Никнейм сохранён."); dialog.close(); }
+    });
+    $("copyUserId").addEventListener("click", async () => {
+        if (!user) return;
+        try {
+            await navigator.clipboard.writeText(user.id);
+            notice("ID профиля скопирован.");
+        } catch {
+            idField.focus(); idField.select();
+            notice("Выделен ID — скопируй его вручную.");
         }
-    );
-
-    $("copyUserId").addEventListener(
-        "click",
-        async () => {
-            if (!user) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(
-                    user.id
-                );
-
-                notice("ID профиля скопирован.");
-
-            } catch {
-                notice(
-                    "Не удалось скопировать ID профиля.",
-                    true
-                );
-            }
-        }
-    );
+    });
 }
-
 
 // ============================================================
 // PERIODIC SYNCHRONIZATION
@@ -2882,7 +2845,7 @@ async function initializeGuardian() {
         parent.insertAdjacentElement("afterend", guardianNoticesElement);
     }
 
-    const profile = document.querySelector(".community-profile");
+    const profile = $("guardianProfileState");
     if (profile && !document.querySelector(".guardian-user-status")) {
         guardianStateElement = guardianNode("div", "🛡️ WT Guardian", "guardian-user-status");
         Object.assign(guardianStateElement.style, {
