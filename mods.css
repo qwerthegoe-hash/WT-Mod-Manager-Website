@@ -110,3 +110,37 @@ body { background:#0b121e; }
 
 /* Hide empty private images until signed media URLs are available. */
 .creator-banner img[hidden], .creator-avatar img[hidden] { display:none !important; }
+
+/* Upload button: stable, optically centered plus icon */
+.mods-upload-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 11px;
+  box-sizing: border-box;
+  min-height: 46px;
+  padding: 11px 18px;
+  white-space: nowrap;
+  line-height: 1.25;
+  text-align: center;
+}
+.mods-upload-trigger .mods-upload-plus {
+  display: block;
+  flex: 0 0 21px;
+  width: 21px;
+  height: 21px;
+  margin: 0;
+  transform: none !important;
+  vertical-align: middle;
+}
+.mods-upload-trigger span { display: block; flex: 0 0 auto; }
+@media (max-width: 420px) {
+  .mods-upload-trigger {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+    padding-inline: 13px;
+  }
+  .mods-upload-trigger span { flex: 0 1 auto; }
+}
