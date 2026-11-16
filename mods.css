@@ -107,3 +107,6 @@ body { background:#0b121e; }
   .mods-submit-panel { padding:17px; }
   .creator-banner { height:135px; }
 }
+
+/* Hide empty private images until signed media URLs are available. */
+.creator-banner img[hidden], .creator-avatar img[hidden] { display:none !important; }
