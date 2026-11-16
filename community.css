@@ -476,3 +476,46 @@
         width: 100%;
     }
 }
+
+/* Procedural vector icons: scalable, no emoji or raster assets in UI */
+.wt-procedural-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    flex: none;
+    vertical-align: middle;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.wt-procedural-chip {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: 1px solid #37648e;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #264d74, #152e48);
+    color: #9fd2ff;
+    box-shadow: inset 0 1px 0 #ffffff15;
+}
+.channel .wt-procedural-chip .wt-procedural-icon {width: 19px;height: 19px}
+.channel:hover .wt-procedural-chip,
+.channel.active .wt-procedural-chip {
+    border-color: #70b5fa;
+    background: linear-gradient(145deg, #316ba0, #204769);
+    color: #eff9ff;
+}
+.guardian-avatar {
+    border: 1px solid #4b85b5;
+    background: linear-gradient(145deg, #2c648e, #183c61);
+    color: #d1efff;
+}
+.guardian-avatar .wt-procedural-icon {width: 24px;height: 24px}
+.wt-procedural-action {display: inline-flex;align-items: center;justify-content: center;gap: 8px}
+.wt-procedural-action .wt-procedural-icon {width: 18px;height: 18px}
+#emojiToggle .wt-procedural-icon {width: 21px;height: 21px}
+.guardian-system-notice strong .wt-procedural-icon {width: 17px;height: 17px;margin-right: 6px}
