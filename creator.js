@@ -5,7 +5,7 @@ import { COMMUNITY_CONFIG as config } from "./community-config.js";
 const $ = id => document.getElementById(id);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CATEGORIES = {
-    sights: "Игровые прицелы", camouflage: "Камуфляжи", sounds: "Звуки",
+    visuals: "Графика и эффекты", camouflage: "Камуфляжи", sounds: "Звуки",
     interface: "Интерфейс", other: "Другое"
 };
 
