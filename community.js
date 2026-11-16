@@ -1260,17 +1260,8 @@ function createMessageElement(message) {
         message.nickname || "Player"
     );
 
-    const time = document.createElement("time");
-    time.className = "message-time";
-
-    const date = new Date(message.created_at);
-
-    if (!Number.isNaN(date.getTime())) {
-        time.dateTime = message.created_at;
-        time.textContent = date.toLocaleString("ru-RU");
-    }
-
-    header.append(author, time);
+    // Show only the author; keep created_at in data for ordering.
+    header.append(author);
     article.append(header);
 
     if (message.body) {
