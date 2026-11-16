@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101724">
+    <meta name="description" content="Личный профиль WT Mod Manager: аватарка, никнейм и оформление.">
+    <title>Мой профиль — WT Mod Manager</title>
+    <link rel="icon" href="assets/LogotipProject.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="profile.css">
+    <script type="module" src="profile.js"></script>
+</head>
+<body>
+    <header class="site-header">
+        <nav class="nav wrap" aria-label="Главная навигация">
+            <a href="index.html" class="brand">
+                <img src="assets/LogotipProject.png" width="42" height="42" alt="">
+                <span>WT <strong>MOD MANAGER</strong></span>
+            </a>
+            <div class="profile-nav">
+                <a href="index.html">Главная</a>
+                <a href="community.html">Community</a>
+                <a href="profile.html" aria-current="page">Мой профиль</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="wrap user-profile-page" id="main">
+        <div class="user-profile-heading">
+            <span class="user-profile-eyebrow">WT MOD MANAGER / ACCOUNT</span>
+            <h1>Мой профиль</h1>
+            <p>Твои настройки, твоя аватарка и личный ID пользователя.</p>
+        </div>
+
+        <section class="user-profile-card" aria-labelledby="userProfileTitle">
+            <div class="profile-preview">
+                <div class="profile-avatar" id="profileAvatarPreview">
+                    <img id="profileAvatarImage" alt="Твоя аватарка" hidden>
+                    <svg id="profileAvatarFallback" viewBox="0 0 24 24" aria-hidden="true"
+                         fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="3.5"></circle>
+                        <path d="M5.5 20v-1.3a6.5 6.5 0 0 1 13 0V20"></path>
+                    </svg>
+                </div>
+                <div class="profile-preview-text">
+                    <span class="profile-mini-label">Личный аккаунт</span>
+                    <h2 id="userProfileTitle">Загрузка...</h2>
+                    <span class="profile-account-type">WT Mod Manager Community</span>
+                </div>
+            </div>
+
+            <form id="profileForm" class="user-profile-form">
+                <div class="profile-field">
+                    <label for="profileNickname">Никнейм</label>
+                    <input id="profileNickname" type="text" minlength="2" maxlength="24"
+                           autocomplete="off" placeholder="Player_123" required>
+                    <small>От 2 до 24 символов. Не используй имена администрации.</small>
+                </div>
+
+                <div class="profile-field">
+                    <label for="avatarFile">Аватарка</label>
+                    <div class="profile-avatar-actions">
+                        <label class="profile-upload-button" for="avatarFile">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                                 aria-hidden="true">
+                                <path d="M12 16V4m-4 4 4-4 4 4M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"></path>
+                            </svg>
+                            Выбрать изображение
+                        </label>
+                        <input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"
+                               aria-describedby="avatarInfo" hidden>
+                        <button class="profile-secondary" type="button" id="removeAvatar">Убрать аватарку</button>
+                    </div>
+                    <small id="avatarInfo">PNG, JPG, WebP или GIF, не больше 5 МБ. Файл хранится приватно.</small>
+                </div>
+
+                <fieldset class="profile-colors">
+                    <legend>Цвет профиля</legend>
+                    <label><input type="radio" name="profileAccent" value="blue" checked><span class="profile-color-swatch blue"></span> Голубой</label>
+                    <label><input type="radio" name="profileAccent" value="teal"><span class="profile-color-swatch teal"></span> Бирюзовый</label>
+                    <label><input type="radio" name="profileAccent" value="purple"><span class="profile-color-swatch purple"></span> Фиолетовый</label>
+                </fieldset>
+
+                <div class="profile-field">
+                    <label for="profileUserId">ID пользователя</label>
+                    <div class="profile-id-controls">
+                        <input id="profileUserId" type="text" readonly aria-label="Твой ID">
+                        <button type="button" id="copyProfileId" class="profile-secondary">Копировать</button>
+                    </div>
+                </div>
+                <button type="submit" id="saveProfile" class="profile-primary" disabled>Сохранить профиль</button>
+                <p id="profileNotice" role="status" aria-live="polite"></p>
+            </form>
+        </section>
+        <p class="profile-privacy-note">
+            Профиль привязан к твоему аккаунту Supabase. Пока используется анонимный вход,
+            при очистке данных браузера можно потерять доступ к этому ID. Не удаляй данные сайта.
+        </p>
+    </main>
+</body>
+</html>
