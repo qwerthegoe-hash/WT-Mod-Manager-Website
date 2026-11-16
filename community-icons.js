@@ -46,21 +46,6 @@
             button.replaceChildren(chip, document.createTextNode(label));
         });
 
-        const profileButton = document.querySelector("#openCommunityProfile");
-        if (profileButton && profileButton.dataset.customIcon !== "profile") {
-            const chip = document.createElement("span");
-            chip.className = "wt-custom-chip";
-            chip.append(icon("profile"));
-            profileButton.dataset.customIcon = "profile";
-            profileButton.replaceChildren(chip, document.createTextNode("Мой профиль"));
-        }
-
-        const profileAvatar = document.querySelector(".community-profile-avatar");
-        if (profileAvatar && profileAvatar.dataset.customIcon !== "profile") {
-            profileAvatar.dataset.customIcon = "profile";
-            profileAvatar.replaceChildren(icon("profile"));
-        }
-
         const guardianAvatar = document.querySelector(".guardian-avatar");
         if (guardianAvatar && guardianAvatar.dataset.customIcon !== "guardian") {
             guardianAvatar.dataset.customIcon = "guardian";
