@@ -1343,3 +1343,23 @@ summary:focus-visible {
         transform: none !important;
     }
 }
+
+/* The account entry remains reachable on small screens. */
+.nav-right > a.profile-nav-link {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 7px 11px;
+    border: 1px solid #3a6287;
+    border-radius: 12px;
+    background: #17324f;
+    color: #dbefff;
+}
+.nav-right > a.profile-nav-link:hover { background: #234869; border-color: #71b4ef; }
+.profile-nav-link svg { width:18px; height:18px; flex-shrink:0; }
+@media (max-width: 620px) {
+    .nav-right > a.profile-nav-link { display:inline-flex; padding: 7px 10px; }
+    .profile-nav-link span { display:none; }
+}
