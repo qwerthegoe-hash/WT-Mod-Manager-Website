@@ -715,3 +715,105 @@
     .community-sidebar .community-profile { margin-bottom: 12px; }
     .community-sidebar #mediaReviewButton { margin-top: 8px; }
 }
+
+/* Custom owner-supplied icons — fixed centers, no hover drift */
+.wt-custom-icon {
+    display: block !important;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    overflow: visible;
+    vertical-align: middle;
+    transform: none !important;
+    transition: none !important;
+    transform-origin: center;
+}
+.wt-custom-chip {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    display: grid !important;
+    place-items: center;
+    padding: 0 !important;
+    border: 1px solid #3d719f;
+    border-radius: 12px;
+    background: linear-gradient(155deg, #28547b 0%, #193552 95%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.11);
+    line-height: 0;
+    transform: none !important;
+    transition: background-color .18s ease, border-color .18s ease;
+}
+.wt-custom-chip > .wt-custom-icon {
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+}
+.channel:hover .wt-custom-chip {
+    transform: none !important;
+    border-color: #6db4ed;
+}
+.channel.active .wt-custom-chip {
+    transform: none !important;
+    border-color: #78baff;
+    background: linear-gradient(150deg, #326d9e, #224d74);
+}
+.community-sidebar .channel,
+.community-sidebar .profile-open-button {
+    gap: 12px;
+    align-items: center;
+    min-height: 48px;
+}
+.community-sidebar .profile-open-button .wt-custom-chip {
+    flex-basis: 36px;
+}
+.wt-custom-action {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 9px;
+    vertical-align: middle;
+}
+.wt-custom-action .wt-custom-icon {
+    width: 19px !important;
+    height: 19px !important;
+    margin: 0 !important;
+}
+#emojiToggle.wt-custom-action {
+    display: inline-grid !important;
+    place-items: center !important;
+    padding: 0;
+}
+#emojiToggle .wt-custom-icon {
+    width: 21px !important;
+    height: 21px !important;
+}
+.guardian-avatar {
+    display: grid !important;
+    place-items: center !important;
+    flex-shrink: 0;
+}
+.guardian-avatar > .wt-custom-icon {
+    width: 26px !important;
+    height: 26px !important;
+}
+.community-profile-avatar {
+    display: grid !important;
+    place-items: center !important;
+}
+.community-profile-avatar > .wt-custom-icon {
+    width: 36px !important;
+    height: 36px !important;
+}
+.guardian-system-notice strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.guardian-system-notice strong .wt-custom-icon {
+    width: 17px;
+    height: 17px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .wt-custom-chip { transition: none !important; }
+}
