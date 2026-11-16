@@ -1,0 +1,612 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101724">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="WT Mod Manager Support Center. Report bugs, suggest features and contact the developer.">
+
+    <title>Support Center — WT Mod Manager</title>
+
+    <link rel="icon" href="assets/LogotipProject.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="support.css">
+
+    <script src="support.js" defer></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <nav class="nav wrap" aria-label="Main navigation">
+            <a href="index.html" class="brand">
+                <img
+                    src="assets/LogotipProject.png"
+                    width="42"
+                    height="42"
+                    alt=""
+                >
+                <span>WT <strong>MOD MANAGER</strong></span>
+            </a>
+
+            <div class="support-nav">
+                <a href="index.html" id="homeLink">← Home</a>
+
+                <div class="lang-wrap">
+                    <button
+                        id="supportLanguageToggle"
+                        class="lang-toggle"
+                        type="button"
+                        aria-controls="supportLanguageMenu"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        aria-label="Choose language"
+                    >
+                        <span id="supportLanguageLabel">EN</span>
+                        <span class="lang-chevron" aria-hidden="true"></span>
+                    </button>
+
+                    <div
+                        id="supportLanguageMenu"
+                        class="lang-menu"
+                        role="group"
+                        aria-label="Languages"
+                        hidden
+                    >
+                        <button
+                            type="button"
+                            class="lang-option"
+                            data-lang="en"
+                            lang="en"
+                        >
+                            EN <small>English</small>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="lang-option"
+                            data-lang="ru"
+                            lang="ru"
+                        >
+                            RU <small>Русский</small>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="lang-option"
+                            data-lang="uk"
+                            lang="uk"
+                        >
+                            UA <small>Українська</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="support-main wrap" id="main">
+        <!-- PAGE HEADING -->
+        <div class="support-heading">
+            <div class="eyebrow">
+                <span class="pulse"></span>
+                <span id="supportEyebrow">COMMUNITY SUPPORT</span>
+            </div>
+
+            <h1 id="supportTitle">How can we help?</h1>
+
+            <p id="supportSubtitle">
+                Report a problem or share an idea for WT Mod Manager.
+                No GitHub account required.
+            </p>
+
+            <button
+                type="button"
+                class="support-help-main"
+                data-help="overview"
+                aria-haspopup="dialog"
+            >
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4"></path>
+                    <path d="M12 17h.01"></path>
+                </svg>
+                <span id="mainHelpLabel">How to complete the form?</span>
+            </button>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="support-layout">
+            <!-- SIDEBAR -->
+            <aside class="support-sidebar">
+                <h2 id="categoryTitle">Request type</h2>
+
+                <button
+                    type="button"
+                    class="support-category active"
+                    data-type="bug"
+                    aria-pressed="true"
+                >
+                    <span class="category-icon bug-category-icon">
+                        <svg viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"
+                             aria-hidden="true">
+                            <path d="M8 8a4 4 0 0 1 8 0v9a4 4 0 0 1-8 0V8Z"/>
+                            <path d="M9 4 7 2M15 4l2-2M4 9h4M16 9h4M4 15h4M16 15h4M6 20l3-3M18 20l-3-3"/>
+                        </svg>
+                    </span>
+
+                    <span class="category-copy">
+                        <strong id="bugTabTitle">Report a bug</strong>
+                        <small id="bugTabDesc">
+                            Something isn't working
+                        </small>
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    class="support-category"
+                    data-type="idea"
+                    aria-pressed="false"
+                >
+                    <span class="category-icon idea-category-icon">
+                        <svg viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"
+                             aria-hidden="true">
+                            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c1 .7 1.5 1.7 1.5 2.3h5c0-1.6.5-2.6 1.5-3.3A7 7 0 0 0 12 2Z"/>
+                        </svg>
+                    </span>
+
+                    <span class="category-copy">
+                        <strong id="ideaTabTitle">Suggest a feature</strong>
+                        <small id="ideaTabDesc">
+                            Help improve the app
+                        </small>
+                    </span>
+                </button>
+
+                <div class="support-side-note">
+                    <svg viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8"
+                         aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 11v6M12 7h.01"></path>
+                    </svg>
+
+                    <p id="privacyNote">
+                        Do not send passwords, tokens,
+                        private files or personal documents.
+                    </p>
+                </div>
+            </aside>
+
+            <!-- SUPPORT FORM -->
+            <section class="support-form-card">
+                <div class="form-card-heading">
+                    <span class="form-label" id="formOverline">
+                        NEW REQUEST
+                    </span>
+
+                    <h2 id="formTitle">Report a problem</h2>
+
+                    <p id="formDescription">
+                        Tell us what happened so we can investigate.
+                    </p>
+                </div>
+
+                <form id="supportForm" novalidate>
+                    <input
+                        type="hidden"
+                        name="request_type"
+                        id="requestType"
+                        value="Bug report"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="_subject"
+                        id="messageSubject"
+                        value="WT Mod Manager — Bug report"
+                    >
+
+                    <!-- SPAM TRAP -->
+                    <div class="honeypot-field" aria-hidden="true">
+                        <label for="contactWebsite">
+                            Leave this blank
+                        </label>
+                        <input
+                            type="text"
+                            id="contactWebsite"
+                            name="_gotcha"
+                            tabindex="-1"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <!-- NAME AND EMAIL -->
+                    <div class="form-row">
+                        <div class="form-field">
+                            <div class="field-heading">
+                                <label for="visitorName" id="nameLabel">
+                                    Name or nickname
+                                </label>
+                                <button
+                                    class="field-help"
+                                    type="button"
+                                    data-help="name"
+                                    aria-label="Help with name"
+                                    aria-haspopup="dialog"
+                                >?</button>
+                            </div>
+
+                            <input
+                                id="visitorName"
+                                name="name"
+                                type="text"
+                                minlength="2"
+                                maxlength="60"
+                                autocomplete="nickname"
+                                placeholder="Player_123"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-field">
+                            <div class="field-heading">
+                                <label for="visitorEmail" id="emailLabel">
+                                    Email for a reply
+                                </label>
+                                <button
+                                    class="field-help"
+                                    type="button"
+                                    data-help="email"
+                                    aria-label="Help with email"
+                                    aria-haspopup="dialog"
+                                >?</button>
+                            </div>
+
+                            <input
+                                id="visitorEmail"
+                                name="email"
+                                type="email"
+                                maxlength="160"
+                                autocomplete="email"
+                                placeholder="player@example.com"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <!-- REQUEST TITLE -->
+                    <div class="form-field">
+                        <div class="field-heading">
+                            <label for="requestTitle" id="requestTitleLabel">
+                                Problem title
+                            </label>
+                            <button
+                                class="field-help"
+                                type="button"
+                                data-help="title"
+                                aria-label="Help with request title"
+                                aria-haspopup="dialog"
+                            >?</button>
+                        </div>
+
+                        <input
+                            id="requestTitle"
+                            name="title"
+                            type="text"
+                            minlength="5"
+                            maxlength="120"
+                            required
+                        >
+                    </div>
+
+                    <!-- VERSION -->
+                    <div class="form-field" id="versionField">
+                        <div class="field-heading">
+                            <label for="appVersion" id="versionLabel">
+                                Application version
+                            </label>
+                            <button
+                                class="field-help"
+                                type="button"
+                                data-help="version"
+                                aria-label="Help with application version"
+                                aria-haspopup="dialog"
+                            >?</button>
+                        </div>
+
+                        <input
+                            id="appVersion"
+                            name="version"
+                            type="text"
+                            maxlength="40"
+                            placeholder="Beta 1.2"
+                        >
+                    </div>
+
+                    <!-- MESSAGE -->
+                    <div class="form-field">
+                        <div class="field-heading">
+                            <label for="requestMessage" id="messageLabel">
+                                Describe the problem
+                            </label>
+                            <button
+                                class="field-help"
+                                type="button"
+                                data-help="message"
+                                aria-label="Help with description"
+                                aria-haspopup="dialog"
+                            >?</button>
+                        </div>
+
+                        <textarea
+                            id="requestMessage"
+                            name="message"
+                            rows="7"
+                            minlength="15"
+                            maxlength="5000"
+                            required
+                        ></textarea>
+
+                        <div class="character-counter">
+                            <span id="messageHint">
+                                Please provide enough detail.
+                            </span>
+                            <span id="characterCount">0 / 5000</span>
+                        </div>
+                    </div>
+
+                    <!-- STEPS -->
+                    <div class="form-field" id="stepsField">
+                        <div class="field-heading">
+                            <label for="reproduceSteps" id="stepsLabel">
+                                What did you do before the problem appeared?
+                            </label>
+                            <button
+                                class="field-help"
+                                type="button"
+                                data-help="steps"
+                                aria-label="Help with steps"
+                                aria-haspopup="dialog"
+                            >?</button>
+                        </div>
+
+                        <textarea
+                            id="reproduceSteps"
+                            name="steps_to_reproduce"
+                            rows="4"
+                            maxlength="2500"
+                        ></textarea>
+
+                        <p class="field-small-note" id="stepsNote">
+                            Describe your actions in order, if possible.
+                        </p>
+                    </div>
+
+                    <!-- REFERENCE LINK -->
+                    <div class="form-field">
+                        <div class="field-heading">
+                            <label for="referenceUrl" id="referenceLabel">
+                                Screenshot or reference URL (optional)
+                            </label>
+                            <button
+                                class="field-help"
+                                type="button"
+                                data-help="reference"
+                                aria-label="Help with screenshot link"
+                                aria-haspopup="dialog"
+                            >?</button>
+                        </div>
+
+                        <input
+                            id="referenceUrl"
+                            name="reference_url"
+                            type="url"
+                            maxlength="500"
+                            placeholder="https://..."
+                        >
+                    </div>
+
+                    <!-- SUBMIT -->
+                    <div class="form-bottom">
+                        <p id="submissionNote">
+                            Your request will be sent to the developer.
+                        </p>
+
+                        <button
+                            id="submitRequest"
+                            class="btn primary"
+                            type="submit"
+                            disabled
+                        >
+                            <span id="submitLabel">
+                                Send request
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                    <p
+                        id="formStatus"
+                        class="form-status"
+                        role="status"
+                        aria-live="polite"
+                    ></p>
+                </form>
+            </section>
+        </div>
+
+        <!-- DEVELOPER EMAIL -->
+        <section
+            id="developerContact"
+            class="developer-contact"
+            hidden
+        >
+            <div class="developer-contact-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                    <path d="m3 7 9 7 9-7"></path>
+                </svg>
+            </div>
+
+            <div class="developer-contact-body">
+                <span class="form-label" id="contactOverline">
+                    DIRECT CONTACT
+                </span>
+
+                <h2 id="contactTitle">
+                    Contact the developer
+                </h2>
+
+                <p id="contactDescription">
+                    You can send the form above or write
+                    directly to the developer.
+                </p>
+
+                <div class="developer-email-box">
+                    <span id="emailAddressLabel">
+                        DEVELOPER EMAIL
+                    </span>
+
+                    <a
+                        id="developerEmailLink"
+                        href="#"
+                        class="developer-email-address"
+                    ></a>
+                </div>
+
+                <div class="developer-actions">
+                    <button
+                        type="button"
+                        id="copyDeveloperEmail"
+                        class="btn secondary"
+                    >
+                        <span id="copyEmailLabel">
+                            Copy email
+                        </span>
+                    </button>
+
+                    <a
+                        id="writeDeveloperEmail"
+                        href="#"
+                        class="btn primary"
+                    >
+                        <span id="writeEmailLabel">
+                            Write an email
+                        </span>
+                    </a>
+                </div>
+
+                <p
+                    id="emailCopyStatus"
+                    class="email-copy-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+            </div>
+        </section>
+    </main>
+
+    <!-- HELP MODAL -->
+    <div id="helpOverlay" class="help-overlay" hidden>
+        <section
+            id="helpDialog"
+            class="help-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="helpDialogTitle"
+            aria-describedby="helpDialogDescription"
+            tabindex="-1"
+        >
+            <div class="help-dialog-header">
+                <div class="help-dialog-brand">
+                    <span class="help-dialog-icon" aria-hidden="true">
+                        ?
+                    </span>
+
+                    <span id="helpDialogOverline">
+                        FIELD EXPLANATION
+                    </span>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeHelpDialog"
+                    class="help-dialog-close"
+                    aria-label="Close help"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M5 5L19 19M19 5L5 19"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="help-dialog-content">
+                <h2 id="helpDialogTitle">
+                    How to complete this field
+                </h2>
+
+                <p id="helpDialogDescription"></p>
+
+                <div class="help-example">
+                    <span id="helpExampleLabel">
+                        EXAMPLE
+                    </span>
+
+                    <p id="helpExampleText"></p>
+                </div>
+
+                <p
+                    id="helpExtraText"
+                    class="help-extra"
+                ></p>
+            </div>
+
+            <div class="help-dialog-footer">
+                <button
+                    type="button"
+                    id="helpDialogDone"
+                    class="btn primary"
+                >
+                    Got it
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <div class="wrap footer-inner">
+            <span>
+                © <span id="year"></span> WT Mod Manager
+            </span>
+
+            <span id="footerDisclaimer">
+                Independent fan-made project.
+                Not affiliated with Gaijin Entertainment.
+            </span>
+        </div>
+    </footer>
+</body>
+</html>
