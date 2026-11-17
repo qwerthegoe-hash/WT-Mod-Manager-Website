@@ -1,6 +1,6 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { COMMUNITY_CONFIG as config } from "./community-config.js";
+import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 
 const $ = id => document.getElementById(id);
 const COLORS = new Set(["blue", "teal", "purple"]);
@@ -119,7 +119,7 @@ async function loadProfile() {
     $("profileBio").value = data?.bio || "";
     $("profileUserId").value = user.id;
     $("profileIsPublic").checked = data?.is_public === true;
-    $("openPublicProfile").href = "creator.html?id=" + encodeURIComponent(user.id);
+    $("openPublicProfile").href = "../creator/creator.html?id=" + encodeURIComponent(user.id);
     $("accountEmail").value = user.email || "";
     setAccent(data?.accent || "blue");
     updateHeading();
