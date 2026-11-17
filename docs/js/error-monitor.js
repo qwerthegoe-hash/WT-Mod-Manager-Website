@@ -50,7 +50,17 @@
                 online: typeof navigator !== "undefined" ? navigator.onLine !== false : true,
                 issues: history.length,
                 counters: { ...counters }
-            })
+            }),
+            // User-triggered diagnostics export: deliberately excludes URLs,
+            // stack traces, credentials, message text and account identifiers.
+            exportJSON: () => JSON.stringify({
+                product: "WT Mod Manager Website",
+                format: 2,
+                generatedAt: new Date().toISOString(),
+                online: typeof navigator !== "undefined" ? navigator.onLine !== false : true,
+                counters: { ...counters },
+                events: history.map(item => ({ ...item }))
+            }, null, 2)
         }),
         configurable: false,
         writable: false
