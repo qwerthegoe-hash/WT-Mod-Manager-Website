@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { createSessionDrafts } from "../js/session-drafts.mjs";
+import { setupProfileMfa } from "../js/profile-mfa.mjs";
 
 const $ = id => document.getElementById(id);
 const COLORS = new Set(["blue", "teal", "purple"]);
@@ -27,6 +28,7 @@ const MEDIA = {
 let db;
 let user;
 let saving = false;
+let mfaController = null;
 let draftStorage = null;
 try { draftStorage = sessionStorage; } catch { /* Session storage may be disabled. */ }
 const profileDrafts = createSessionDrafts(draftStorage, "profile");
@@ -356,6 +358,13 @@ async function init() {
             throw new Error("Подключение Supabase не настроено.");
         db = createClient(config.supabaseUrl, config.supabasePublishableKey);
         user = await getIdentity();
+        // MFA management is optional: an Auth settings/network error must not break the profile.
+        try {
+            mfaController = setupProfileMfa(db.auth);
+            await mfaController.refresh();
+        } catch (mfaError) {
+            report("Двухфакторная защита сейчас недоступна: " + (mfaError?.message || "ошибка подключения"), true, "mfaNotice");
+        }
         // Identity can load even when the profile database is temporarily unavailable.
         $("userProfileTitle").textContent = user.email || "Player_" + user.id.slice(0, 6);
         await loadProfile();
