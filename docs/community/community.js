@@ -31,7 +31,7 @@
  */
 
 import { createClient } from
-    "https://esm.sh/@supabase/supabase-js@2";
+    "https://esm.sh/@supabase/supabase-js@2.119.0";
 
 import { COMMUNITY_CONFIG as config } from
     "../js/community-config.js";
