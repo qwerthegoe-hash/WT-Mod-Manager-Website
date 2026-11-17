@@ -1,5 +1,7 @@
 
 "use strict";
+import { getContactBridge } from "../js/contact-bridge.mjs";
+import { supportTextsExtra, supportHelpExtra } from "./support-extra-i18n.mjs";
 
 // WT Mod Manager Support Center
 // Stage 1: Formspree, field help, modal, developer contact
@@ -165,6 +167,26 @@ const texts = {
         privacyFooter: "Незалежний фанатський проєкт. Не пов'язаний із Gaijin Entertainment."
     }
 };
+
+Object.assign(texts, supportTextsExtra);
+Object.assign(texts.ru,{
+  identityReady:"Отправитель из профиля:",identityMissing:"Для отправки сначала установи никнейм в профиле.",
+  openProfile:"Открыть профиль",rateLimit:"Слишком много обращений. Попробуй позже.",
+  readyNote:"Обращение отправится разработчику от твоего профиля. Никнейм и email подставляются автоматически.",
+  invalid:"Проверь обязательные поля."
+});
+Object.assign(texts.uk,{
+  identityReady:"Відправник із профілю:",identityMissing:"Для надсилання спочатку встанови нікнейм у профілі.",
+  openProfile:"Відкрити профіль",rateLimit:"Забагато звернень. Спробуй пізніше.",
+  readyNote:"Звернення надійде розробнику від твого профілю. Нікнейм і email додаються автоматично.",
+  invalid:"Перевір обов'язкові поля."
+});
+Object.assign(texts.en,{
+  identityReady:"Sender from profile:",identityMissing:"Set a profile nickname before sending a request.",
+  openProfile:"Open profile",rateLimit:"Too many requests. Try again later.",
+  readyNote:"Your request will be delivered from your profile. Nickname and verified email are filled automatically.",
+  invalid:"Please check the required fields."
+});
 
 // Detailed explanation for every form field.
 // Each entry: title, description, example, additional note.
@@ -485,6 +507,8 @@ const helpTexts = {
     }
 };
 
+Object.assign(helpTexts, supportHelpExtra);
+
 // DOM and application state.
 
 const form = document.getElementById("supportForm");
@@ -493,8 +517,8 @@ const submitButton = document.getElementById("submitRequest");
 
 let currentLanguage = "en";
 let requestKind = "bug";
-let formspreeId = "";
-let developerEmail = "";
+let bridge = null;
+
 let submitting = false;
 
 // Restore unfinished feedback in this tab only. Never store email, name or credentials.
@@ -714,7 +738,9 @@ function applyLanguage(language) {
     const languageLabels = {
         en: "EN",
         ru: "RU",
-        uk: "UA"
+        uk: "UA",
+        pl: "PL",
+        de: "DE"
     };
 
     byId("supportLanguageLabel").textContent =
@@ -733,18 +759,10 @@ function applyLanguage(language) {
         ideaTabDesc: "ideaTabDesc",
         privacyNote: "privacy",
         formOverline: "overline",
-        nameLabel: "name",
-        emailLabel: "email",
         versionLabel: "version",
         messageHint: "messageHint",
         referenceLabel: "reference",
         mainHelpLabel: "mainHelp",
-        contactOverline: "contactOverline",
-        contactTitle: "contactTitle",
-        contactDescription: "contactDescription",
-        emailAddressLabel: "developerEmailLabel",
-        copyEmailLabel: "copyEmail",
-        writeEmailLabel: "writeEmail",
         footerDisclaimer: "privacyFooter"
     };
 
@@ -763,7 +781,9 @@ function applyLanguage(language) {
     const languageLabelsAria = {
         en: "Choose language",
         ru: "Выбрать язык",
-        uk: "Вибрати мову"
+        uk: "Вибрати мову",
+        pl: "Wybierz język",
+        de: "Sprache wählen"
     };
 
     byId("supportLanguageToggle").setAttribute(
@@ -787,7 +807,6 @@ function applyLanguage(language) {
     applyRequestKind(requestKind, false);
     renderHelpContent();
 
-    byId("emailCopyStatus").textContent = "";
 
     try {
         localStorage.setItem("wtmm-language", currentLanguage);
@@ -849,9 +868,8 @@ function applyRequestKind(kind, clearStatus = true) {
         ? translate("sending")
         : translate("send");
 
-    byId("submissionNote").textContent = formspreeId
-        ? translate("readyNote")
-        : translate("setupNote");
+    byId("submissionNote").textContent = bridge
+        ? translate("readyNote") : translate("setupNote");
 
     const titleHelp = helpTexts[currentLanguage][
         isBug ? "bugTitle" : "ideaTitle"
@@ -992,100 +1010,27 @@ function updateCharacterCounter() {
         `${message.value.length} / 5000`;
 }
 
-// Developer contact panel.
-
-function validDeveloperEmail(value) {
-    if (typeof value !== "string") {
-        return "";
-    }
-
-    const email = value.trim();
-
-    if (
-        email.length > 160 ||
-        !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)
-    ) {
-        return "";
-    }
-
-    return email;
-}
-
-function updateDeveloperContact() {
-    const panel = byId("developerContact");
-
-    if (!developerEmail) {
-        panel.hidden = true;
-        return;
-    }
-
-    panel.hidden = false;
-
-    byId("developerEmailLink").textContent = developerEmail;
-    byId("developerEmailLink").href = `mailto:${developerEmail}`;
-    byId("writeDeveloperEmail").href = `mailto:${developerEmail}`;
-}
-
-async function copyDeveloperEmail() {
-    if (!developerEmail) {
-        return;
-    }
-
-    const status = byId("emailCopyStatus");
-
-    try {
-        await navigator.clipboard.writeText(developerEmail);
-        status.textContent = translate("copied");
-    } catch {
-        status.textContent = translate("copyFailed");
-        byId("developerEmailLink").focus();
-    }
-}
-
-function setupDeveloperContact() {
-    byId("copyDeveloperEmail").addEventListener(
-        "click",
-        copyDeveloperEmail
-    );
-}
-
-// Configuration from site-config.json.
-
+// Load verified sender from the profile. Identity is resolved again by the
+// Edge Function when the message is actually submitted.
 async function loadSettings() {
+    const note = byId("supportIdentityNotice");
     try {
-        const response = await fetch("../json/site-config.json", {
-            cache: "no-store",
-            signal: AbortSignal.timeout(8000)
-        });
-
-        if (!response.ok) {
-            throw new Error("Configuration could not be loaded");
-        }
-
-        const config = await response.json();
-
-        const candidate = config.formspree_form_id;
-
-        if (
-            typeof candidate === "string" &&
-            /^[A-Za-z0-9]{4,30}$/.test(candidate)
-        ) {
-            formspreeId = candidate;
-        }
-
-        developerEmail = validDeveloperEmail(
-            config.developer_email
-        );
-    } catch (error) {
-        console.warn("Support configuration unavailable:", error);
+        bridge = await getContactBridge();
+        note.textContent = translate("identityReady") + " " + bridge.nickname;
+        submitButton.disabled = false;
+        byId("submissionNote").textContent = translate("readyNote");
+    } catch(error) {
+        bridge = null;
+        submitButton.disabled = true;
+        const message = error?.message === "PROFILE_REQUIRED"
+            ? translate("identityMissing") : translate("notReady");
+        note.textContent = message + " ";
+        const link = document.createElement("a");
+        link.href = "../profile/profile.html";
+        link.textContent = translate("openProfile");
+        note.append(link);
+        byId("submissionNote").textContent = message;
     }
-
-    submitButton.disabled = !formspreeId;
-    updateDeveloperContact();
-
-    byId("submissionNote").textContent = formspreeId
-        ? translate("readyNote")
-        : translate("setupNote");
 }
 
 // Formspree submission.
@@ -1100,83 +1045,44 @@ function setupSubmission() {
             return;
         }
 
-        if (!formspreeId) {
-            setStatus(translate("notReady"), "error");
+        if (!bridge) {
+            setStatus(translate("identityMissing"), "error");
             return;
         }
-
-        const name = byId("visitorName").value.trim();
-        const email = byId("visitorEmail").value.trim();
         const title = byId("requestTitle").value.trim();
         const message = byId("requestMessage").value.trim();
-        const website = byId("contactWebsite").value.trim();
-
-        if (website) {
-            // Spam trap: do not send automated submissions.
-            return;
-        }
-
-        if (
-            name.length < 2 ||
-            !email ||
-            title.length < 5 ||
-            message.length < 15 ||
-            !form.checkValidity()
-        ) {
+        if (byId("contactWebsite").value.trim()) return;
+        if (title.length < 5 || message.length < 15 || !form.checkValidity()) {
             setStatus(translate("invalid"), "error");
             form.reportValidity();
             return;
         }
-
-        const data = new FormData(form);
-
-        data.set("name", name);
-        data.set("email", email);
-        data.set("title", title);
-        data.set("message", message);
-        data.set("language", currentLanguage);
-        data.set(
-            "page",
-            window.location.origin + window.location.pathname
-        );
 
         submitting = true;
         submitButton.disabled = true;
         byId("submitLabel").textContent = translate("sending");
         setStatus("");
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 20000);
         try {
-            const response = await fetch(
-                `https://formspree.io/f/${formspreeId}`,
-                {
-                    method: "POST",
-                    body: data,
-                    signal: controller.signal,
-                    headers: {
-                        Accept: "application/json"
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    `Formspree returned HTTP ${response.status}`
-                );
-            }
-
+            await bridge.send({
+                kind: requestKind,
+                title, message,
+                version: byId("appVersion").value.trim(),
+                details: byId("reproduceSteps").value.trim(),
+                reference: byId("referenceUrl").value.trim(),
+                language: currentLanguage,
+                website: ""
+            });
             form.reset();
             clearSupportDraft();
             updateCharacterCounter();
             setStatus(translate("success"), "success");
         } catch (error) {
-            console.error("Support submission failed:", error);
-            setStatus(translate("error"), "error");
+            console.warn("Support submission failed:", error?.message || "request error");
+            setStatus(error?.message === "RATE_LIMIT" ? translate("rateLimit") : translate("error"), "error");
         } finally {
-            clearTimeout(timeout);
             submitting = false;
-            submitButton.disabled = !formspreeId;
+            submitButton.disabled = !bridge;
             byId("submitLabel").textContent = translate("send");
         }
     });
@@ -1251,7 +1157,6 @@ async function initSupport() {
     setupHelpModal();
     setupCounter();
     setupSubmission();
-    setupDeveloperContact();
 
     applyLanguage(detectLanguage());
     setupDiagnosticsExport();

@@ -847,3 +847,6 @@ body.help-dialog-open {
     border-color: #8cbef4;
     color: #f0f7ff;
 }
+
+.support-identity-note {margin:0 0 10px;padding:12px 15px;border:1px solid #40668b;border-radius:11px;background:#122c45;color:#cde7fc;font-size:13px;line-height:1.6;}
+.support-identity-note a {color:#9bcfff;font-weight:750;text-decoration:underline;text-underline-offset:3px;}

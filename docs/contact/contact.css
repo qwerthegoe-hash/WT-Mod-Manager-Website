@@ -119,3 +119,6 @@ body { background:radial-gradient(ellipse 70% 35% at 48% 9%,#163761b3,transparen
 .contact-fallback {display:inline-flex;align-items:center;gap:8px;margin-top:15px;font-size:13px;font-weight:720;color:#9ed0ff;text-decoration:underline;text-underline-offset:3px;}
 .contact-fallback[hidden] {display:none!important;}
 .contact-fallback:focus-visible {outline:2px solid #b5deff;outline-offset:4px;}
+
+.contact-identity-note {border:1px solid #3e6587;border-radius:12px;padding:13px 15px;background:#132e49;color:#d0e8fc;font-size:13px;line-height:1.6;}
+.contact-identity-note a {color:#9ad2ff;font-weight:760;text-decoration:underline;text-underline-offset:3px;}

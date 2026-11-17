@@ -65,16 +65,14 @@ for (const file of walk(docs)) {
         fail(relative, "CSP must not allow wildcard Supabase projects");
       if (/img-src[^;]*\shttps:(?:[\s;'"]|$)/.test(csp[0]))
         fail(relative, "CSP must not allow all HTTPS image hosts");
-      // The standalone developer contact panel uses Formspree only.
-      // It must NOT inherit broad Supabase permissions from other site pages.
+      // All contact submissions now go to the authenticated Supabase gateway.
+      // No page needs permission to POST directly to the public Formspree endpoint.
       const contactOnly = relative === path.join("docs", "contact", "contact.html");
-      if (contactOnly) {
-        if (csp[0].includes(configuredSupabase) || !csp[0].includes("https://formspree.io"))
-          fail(relative, "Contact CSP must allow only its configured message endpoint");
-      } else if (configuredSupabase && (!csp[0].includes(configuredSupabase) ||
-          !csp[0].includes(configuredSupabase.replace("https://", "wss://")))) {
+      if (contactOnly && csp[0].includes("https://formspree.io"))
+        fail(relative, "Developer contact must not send directly to public Formspree");
+      if (configuredSupabase && (!csp[0].includes(configuredSupabase) ||
+          !csp[0].includes(configuredSupabase.replace("https://", "wss://"))))
         fail(relative, "CSP does not match the configured Supabase origin");
-      }
     }
     for (const match of html.matchAll(/<a\b([^>]*)>/g)) {
       if (/target=["']_blank["']/.test(match[1]) && !/rel=["'][^"']*noopener[^"']*["']/.test(match[1]))
@@ -120,7 +118,9 @@ for (const test of [
   "test-windows-sync.mjs",
   "test-profile-mfa.mjs",
   "test-security-suite.mjs",
-  "test-contact-panel.mjs"
+  "test-contact-panel.mjs",
+  "test-identity-gateway.mjs",
+  "test-localization-five.mjs"
 ]) {
   const result = spawnSync(process.execPath, [
     path.join(root, "tools", test)

@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="support.css">
 
-    <script src="support.js" defer></script>
+    <script type="module" src="support.js"></script>
 </head>
 
 <body>
@@ -84,6 +84,8 @@
                         >
                             UA <small>Українська</small>
                         </button>
+                        <button type="button" class="lang-option" data-lang="pl" lang="pl">PL <small>Polski</small></button>
+                        <button type="button" class="lang-option" data-lang="de" lang="de">DE <small>Deutsch</small></button>
                     </div>
                 </div>
             </div>
@@ -94,7 +96,6 @@
         <!-- PAGE HEADING -->
         <div class="support-heading">
             <div class="eyebrow">
-                <span class="pulse"></span>
                 <span id="supportEyebrow">COMMUNITY SUPPORT</span>
             </div>
 
@@ -235,59 +236,8 @@
                         >
                     </div>
 
-                    <!-- NAME AND EMAIL -->
-                    <div class="form-row">
-                        <div class="form-field">
-                            <div class="field-heading">
-                                <label for="visitorName" id="nameLabel">
-                                    Name or nickname
-                                </label>
-                                <button
-                                    class="field-help"
-                                    type="button"
-                                    data-help="name"
-                                    aria-label="Help with name"
-                                    aria-haspopup="dialog"
-                                >?</button>
-                            </div>
-
-                            <input
-                                id="visitorName"
-                                name="name"
-                                type="text"
-                                minlength="2"
-                                maxlength="60"
-                                autocomplete="nickname"
-                                placeholder="Player_123"
-                                required
-                            >
-                        </div>
-
-                        <div class="form-field">
-                            <div class="field-heading">
-                                <label for="visitorEmail" id="emailLabel">
-                                    Email for a reply
-                                </label>
-                                <button
-                                    class="field-help"
-                                    type="button"
-                                    data-help="email"
-                                    aria-label="Help with email"
-                                    aria-haspopup="dialog"
-                                >?</button>
-                            </div>
-
-                            <input
-                                id="visitorEmail"
-                                name="email"
-                                type="email"
-                                maxlength="160"
-                                autocomplete="email"
-                                placeholder="player@example.com"
-                                required
-                            >
-                        </div>
-                    </div>
+                    <!-- Profile identity is verified by the server; not editable here. -->
+                    <p id="supportIdentityNotice" class="support-identity-note" role="status" aria-live="polite">Проверяем профиль отправителя…</p>
 
                     <!-- REQUEST TITLE -->
                     <div class="form-field">
@@ -450,78 +400,6 @@
             </section>
         </div>
 
-        <!-- DEVELOPER EMAIL -->
-        <section
-            id="developerContact"
-            class="developer-contact"
-            hidden
-        >
-            <div class="developer-contact-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.8"
-                     stroke-linecap="round"
-                     stroke-linejoin="round">
-                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
-                    <path d="m3 7 9 7 9-7"></path>
-                </svg>
-            </div>
-
-            <div class="developer-contact-body">
-                <span class="form-label" id="contactOverline">
-                    DIRECT CONTACT
-                </span>
-
-                <h2 id="contactTitle">
-                    Contact the developer
-                </h2>
-
-                <p id="contactDescription">
-                    You can send the form above or write
-                    directly to the developer.
-                </p>
-
-                <div class="developer-email-box">
-                    <span id="emailAddressLabel">
-                        DEVELOPER EMAIL
-                    </span>
-
-                    <a
-                        id="developerEmailLink"
-                        href="#"
-                        class="developer-email-address"
-                    ></a>
-                </div>
-
-                <div class="developer-actions">
-                    <button
-                        type="button"
-                        id="copyDeveloperEmail"
-                        class="btn secondary"
-                    >
-                        <span id="copyEmailLabel">
-                            Copy email
-                        </span>
-                    </button>
-
-                    <a
-                        id="writeDeveloperEmail"
-                        href="#"
-                        class="btn primary"
-                    >
-                        <span id="writeEmailLabel">
-                            Write an email
-                        </span>
-                    </a>
-                </div>
-
-                <p
-                    id="emailCopyStatus"
-                    class="email-copy-status"
-                    role="status"
-                    aria-live="polite"
-                ></p>
-            </div>
-        </section>
     </main>
 
     <!-- HELP MODAL -->
