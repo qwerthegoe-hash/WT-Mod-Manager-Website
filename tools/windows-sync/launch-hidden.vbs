@@ -8,5 +8,5 @@ Set shell = CreateObject("WScript.Shell")
 folder = fso.GetParentFolderName(WScript.ScriptFullName)
 repo = fso.GetAbsolutePathName(fso.BuildPath(folder, "..\.."))
 ps = fso.BuildPath(folder, "sync-github-safe.ps1")
-command = "powershell.exe -NoLogo -NoProfile -NonInteractive -File """ & ps & """ -RepositoryPath """ & repo & """"
+command = "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File """ & ps & """ -RepositoryPath """ & repo & """"
 shell.Run command, 0, True
