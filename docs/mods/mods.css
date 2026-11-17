@@ -144,3 +144,30 @@ body { background:#0b121e; }
   }
   .mods-upload-trigger span { flex: 0 1 auto; }
 }
+
+/* Administrator status overview: additive styling, no existing selectors changed. */
+.mods-admin-overview {
+  margin: 18px 0 22px;
+  padding: clamp(15px, 2.5vw, 22px);
+  border: 1px solid rgba(107, 152, 199, .32);
+  border-radius: 14px;
+  background: rgba(19, 35, 56, .78);
+}
+.mods-admin-overview[hidden] { display: none !important; }
+.mods-admin-heading { margin: 0 0 6px; font-size: 1.2rem; }
+.mods-admin-copy { margin: 0 0 15px; color: #bed0e3; }
+.mods-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+}
+.mods-admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 16px;
+  border-radius: 10px;
+  background: rgba(34, 61, 88, .75);
+}
+.mods-admin-stat strong { color: #edf6ff; font-size: 1.4rem; }
+.mods-admin-stat span { color: #bcd0e4; font-size: .86rem; }
