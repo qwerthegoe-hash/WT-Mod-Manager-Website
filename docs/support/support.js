@@ -1212,6 +1212,33 @@ function detectLanguage() {
     return "en";
 }
 
+// Optional, user-triggered local diagnostics export. No telemetry is sent.
+function setupDiagnosticsExport() {
+    if (!window.WTDiagnostics?.exportJSON || byId("supportDiagnosticsExport")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "supportDiagnosticsExport";
+    button.className = "support-diagnostics-export";
+    button.textContent = ({
+        ru: "Скопировать технический отчёт",
+        uk: "Скопіювати технічний звіт",
+        en: "Copy technical report"
+    })[currentLanguage] || "Copy technical report";
+    button.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(window.WTDiagnostics.exportJSON());
+            setStatus(currentLanguage === "ru" ? "Технический отчёт скопирован без личных данных." :
+                currentLanguage === "uk" ? "Технічний звіт скопійовано без особистих даних." :
+                "Technical report copied without personal data.", "success");
+        } catch {
+            setStatus(currentLanguage === "ru" ? "Не удалось скопировать отчёт." :
+                currentLanguage === "uk" ? "Не вдалося скопіювати звіт." :
+                "Could not copy the report.", "error");
+        }
+    });
+    statusElement.insertAdjacentElement("afterend", button);
+}
+
 // Startup.
 
 async function initSupport() {
@@ -1226,6 +1253,7 @@ async function initSupport() {
     setupDeveloperContact();
 
     applyLanguage(detectLanguage());
+    setupDiagnosticsExport();
 
     const params = new URLSearchParams(
         window.location.search
