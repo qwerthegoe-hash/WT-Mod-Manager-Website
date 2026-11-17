@@ -315,9 +315,11 @@ async function init() {
         // Identity can load even when the profile database is temporarily unavailable.
         $("userProfileTitle").textContent = user.email || "Player_" + user.id.slice(0, 6);
         await loadProfile();
+        window.WTDiagnostics?.record?.("profile-load-ok");
         setSaving(false);
         report("");
     } catch (error) {
+        window.WTDiagnostics?.record?.("profile-load-failed");
         console.error("Profile initialization:", error);
         $("userProfileTitle").textContent = "Не удалось загрузить профиль";
         report("Не удалось открыть профиль: " + (error?.message || String(error)) +
