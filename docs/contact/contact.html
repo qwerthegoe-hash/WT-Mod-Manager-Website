@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; frame-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e1828">
+  <meta name="description" content="Связаться с разработчиком WT Mod Manager. Отправить вопрос, предложение или сообщение команде проекта.">
+  <title>Связаться с разработчиком — WT Mod Manager</title>
+  <link rel="icon" type="image/png" href="../assets/LogotipProject.png">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="contact.css">
+  <script type="module" src="contact.js"></script>
+</head>
+<body>
+  <a class="contact-skip" href="#main" data-t="skip">Перейти к форме</a>
+  <header class="site-header">
+    <nav class="nav wrap" aria-label="Main navigation">
+      <a class="brand" href="../index.html">
+        <img src="../assets/LogotipProject.png" width="42" height="42" alt="">
+        <span>WT <strong>MOD MANAGER</strong></span>
+      </a>
+      <div class="contact-nav">
+        <a href="../index.html" data-t="navHome">Главная</a>
+        <a href="../community/community.html" data-t="navCommunity">Сообщество</a>
+        <a href="../support/support.html" data-t="navSupport">Центр поддержки</a>
+        <label class="contact-language"><span data-t="languageLabel">Язык</span>
+          <select id="contactLanguage" aria-label="Language">
+            <option value="ru">Русский</option>
+            <option value="uk">Українська</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </div>
+    </nav>
+  </header>
+  <main class="contact-wrap wrap" id="main">
+    <div class="contact-hero">
+      <div class="contact-overline"><span class="contact-overline-icon" aria-hidden="true">✉</span> <span data-t="eyebrow">СВЯЗЬ С КОМАНДОЙ</span></div>
+      <h1 data-t="heading">Связаться с <em>разработчиком</em></h1>
+      <p data-t="intro">Есть вопрос по WT Mod Manager, идея для сотрудничества или предложение? Напиши напрямую через отдельную форму. Мы получим сообщение в нашем канале обращений.</p>
+    </div>
+
+    <div class="contact-layout">
+      <aside class="contact-aside">
+        <div class="contact-side-title">
+          <div class="contact-icon-circle" aria-hidden="true">✧</div>
+          <div>
+            <span class="contact-mini" data-t="sidebarLabel">ЦЕНТР КОНТАКТОВ</span>
+            <h2 data-t="sidebarTitle">Выбери тему</h2>
+          </div>
+        </div>
+        <p data-t="sidebarDesc">Так мы сможем быстрее понять, зачем ты пишешь.</p>
+        <div class="contact-topics" role="group" aria-label="Message topic">
+          <button class="contact-topic is-current" type="button" data-topic="question" aria-pressed="true">
+            <span class="topic-glyph" aria-hidden="true">?</span><span><strong data-t="topicQuestion">Общий вопрос</strong><small data-t="topicQuestionDesc">О проекте или приложении</small></span>
+          </button>
+          <button class="contact-topic" type="button" data-topic="cooperation" aria-pressed="false">
+            <span class="topic-glyph" aria-hidden="true">↗</span><span><strong data-t="topicCooperation">Сотрудничество</strong><small data-t="topicCooperationDesc">Партнёрство и предложения</small></span>
+          </button>
+          <button class="contact-topic" type="button" data-topic="feedback" aria-pressed="false">
+            <span class="topic-glyph" aria-hidden="true">✧</span><span><strong data-t="topicFeedback">Отзыв или идея</strong><small data-t="topicFeedbackDesc">Мнение и пожелания</small></span>
+          </button>
+          <button class="contact-topic" type="button" data-topic="other" aria-pressed="false">
+            <span class="topic-glyph" aria-hidden="true">⋯</span><span><strong data-t="topicOther">Другое</strong><small data-t="topicOtherDesc">Любое обращение по делу</small></span>
+          </button>
+        </div>
+        <div class="contact-aside-help">
+          <div class="contact-mini" data-t="helpTitle">НУЖНА ТЕХНИЧЕСКАЯ ПОМОЩЬ?</div>
+          <p data-t="helpText">Для ошибки или проблемы установки у нас есть отдельная форма, где можно описать шаги воспроизведения.</p>
+          <a href="../support/support.html?type=bug" data-t="helpLink">Сообщить об ошибке</a>
+        </div>
+      </aside>
+
+      <section class="contact-panel" aria-labelledby="formHeading">
+        <div class="contact-panel-head">
+          <div>
+            <span class="contact-mini" data-t="formOverline">НОВОЕ СООБЩЕНИЕ</span>
+            <h2 id="formHeading" data-t="formHeading">Напиши нам</h2>
+          </div>
+          <div class="contact-status-pill" aria-hidden="true"><span>WTMM</span> / CONTACT</div>
+        </div>
+        <p class="contact-panel-description" data-t="formDesc">Обращение попадёт разработчику через действующую систему сообщений. Регистрация не требуется.</p>
+
+        <form id="contactForm" novalidate>
+          <input id="contactTopic" name="topic" type="hidden" value="question">
+          <input type="hidden" id="contactSubject" name="_subject" value="WT Mod Manager — Developer contact">
+          <div class="contact-trap" aria-hidden="true">
+            <label for="contactWebsite">Website</label>
+            <input type="text" id="contactWebsite" name="_gotcha" tabindex="-1" autocomplete="off">
+          </div>
+
+          <div class="contact-row">
+            <div class="contact-field">
+              <label for="contactName" data-t="nameLabel">Твоё имя или никнейм</label>
+              <input id="contactName" name="name" type="text" autocomplete="nickname" maxlength="60" minlength="2" required placeholder="Player_123">
+            </div>
+            <div class="contact-field">
+              <label for="contactEmail" data-t="emailLabel">Email для ответа</label>
+              <input id="contactEmail" name="email" type="email" autocomplete="email" maxlength="160" required placeholder="player@example.com">
+            </div>
+          </div>
+
+          <div class="contact-field">
+            <label for="contactTitle" data-t="titleLabel">Тема письма</label>
+            <input id="contactTitle" name="title" type="text" minlength="5" maxlength="120" required data-placeholder="titlePlaceholder" placeholder="Вопрос о WT Mod Manager">
+          </div>
+
+          <div class="contact-field">
+            <div class="contact-label-row"><label for="contactMessage" data-t="messageLabel">Сообщение разработчику</label><span id="contactCounter" aria-live="off">0 / 4000</span></div>
+            <textarea id="contactMessage" name="message" rows="8" minlength="15" maxlength="4000" required data-placeholder="messagePlaceholder" placeholder="Расскажи подробнее, что хочешь обсудить..."></textarea>
+          </div>
+
+          <details class="contact-options">
+            <summary><span aria-hidden="true">⚙</span> <span data-t="optionsTitle">Дополнительные настройки сообщения</span><span aria-hidden="true" class="option-chevron">⌄</span></summary>
+            <div class="contact-options-inner">
+              <div class="contact-field">
+                <label for="contactReply" data-t="replyLabel">Нужен ответ?</label>
+                <select id="contactReply" name="reply_preference">
+                  <option value="email" data-t="replyEmail">Да, ответьте на мой email</option>
+                  <option value="none" data-t="replyNone">Нет, просто передаю сообщение</option>
+                </select>
+              </div>
+              <div class="contact-field">
+                <label for="contactReference" data-t="referenceLabel">Ссылка на пример (необязательно)</label>
+                <input id="contactReference" name="reference_url" type="url" maxlength="500" placeholder="https://example.com/">
+              </div>
+              <p class="contact-options-note" data-t="optionsNote">Не прикрепляй пароли, токены, документы и приватные файлы. Пожалуйста, не публикуй чужие личные данные.</p>
+            </div>
+          </details>
+
+          <div class="contact-footer">
+            <label class="contact-agree"><input type="checkbox" id="contactConsent" required><span data-t="consentText">Я согласен отправить указанные данные для обработки моего обращения.</span></label>
+            <div class="contact-footer-bottom">
+              <span class="contact-footnote" id="contactNotice" role="status" aria-live="polite" data-t="loading">Подключение к службе обращений…</span>
+              <button id="contactSubmit" class="contact-submit" type="submit" disabled><span data-t="send">Отправить сообщение</span> <span aria-hidden="true">↗</span></button>
+            </div>
+          </div>
+        </form>
+        <a id="contactEmailFallback" class="contact-fallback" href="#" hidden data-t="emailFallback">Написать через почтовое приложение</a>
+        <div id="contactSuccess" class="contact-success" hidden tabindex="-1" role="status">
+          <div class="contact-success-icon" aria-hidden="true">✓</div>
+          <h3 data-t="successTitle">Сообщение отправлено!</h3>
+          <p data-t="successText">Сервис принял обращение. Если ты запросил ответ, мы сможем связаться через указанный email.</p>
+          <button id="contactAgain" type="button" class="contact-again" data-t="again">Написать ещё</button>
+        </div>
+      </section>
+    </div>
+    <p class="contact-privacy" data-t="privacy">WT Mod Manager — независимый фанатский проект. Сообщения обрабатываются через Formspree. Не передавай конфиденциальную информацию.</p>
+  </main>
+  <footer class="contact-bottom"><div class="wrap"><span>© <span id="contactYear">2026</span> WT Mod Manager</span><a href="../index.html" data-t="backHome">Вернуться на главную</a></div></footer>
+</body>
+</html>
