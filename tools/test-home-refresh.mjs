@@ -10,7 +10,7 @@ assert.ok(html.includes('href="home-refresh.css"'), "Homepage CSS must be loaded
 assert.ok(!html.includes('class="pulse"'), "Remove green dot next to beta");
 assert.ok(html.includes('class="hero-title-main"'), "Headline should have relaxed line layout");
 assert.ok(css.includes(".hero h1 .hero-title-main"), "Modern hero typography styles missing");
-assert.ok(html.includes('href="support/support.html"'), "Contact developer must link to existing Support Center");
+assert.ok(html.includes('href="contact/contact.html"'), "Contact developer must link to dedicated Contact panel");
 for (const key of ["q1","q2","q3","q4","q5","a1","a2","a3","a4","a5"]) {
   assert.ok(html.includes('data-i18n="' + key + '"'), "FAQ missing " + key);
 }
