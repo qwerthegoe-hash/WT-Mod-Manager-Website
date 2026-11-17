@@ -101,6 +101,21 @@ if (asyncPoolTest.status !== 0) {
 } else {
   process.stdout.write(asyncPoolTest.stdout);
 }
+// Guard against removing public routes, account UI, and community channels during refactors.
+for (const test of [
+  "test-supabase-session.mjs",
+  "test-error-monitor.mjs",
+  "test-site-functionality.mjs"
+]) {
+  const result = spawnSync(process.execPath, [
+    path.join(root, "tools", test)
+  ], { encoding: "utf8" });
+  if (result.status !== 0) {
+    fail(test, (result.stderr || result.stdout).slice(0, 1200));
+  } else {
+    process.stdout.write(result.stdout);
+  }
+}
 console.log("Checked " + checkedPages + " pages, " + checkedLinks + " local links, " + checkedScripts + " JS scripts.");
 if (errors.length) {
   for (const error of errors) console.error("FAIL: " + error);
