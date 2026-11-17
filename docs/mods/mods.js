@@ -174,9 +174,15 @@ async function render() {
 }
 async function refresh() {
     say("Загружаю модификации...");
-    await queryAll();
-    await render();
-    say("");
+    try {
+        await queryAll();
+        await render();
+        window.WTDiagnostics?.record?.("mods-refresh-ok");
+        say("");
+    } catch (error) {
+        window.WTDiagnostics?.record?.("mods-refresh-failed");
+        throw error;
+    }
 }
 async function showModDetails(id) {
     const row = records.find(item => item.id === id);
