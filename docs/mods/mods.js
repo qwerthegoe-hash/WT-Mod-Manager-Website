@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
 import { modReviewReady } from "../js/mod-review-policy.mjs";
+import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { mapWithConcurrency } from "../js/async-pool.mjs";
 
 const $ = id => document.getElementById(id);
@@ -41,15 +42,11 @@ function link(href, text, className = "") {
     return a;
 }
 async function ensureSession() {
-    const { data, error } = await db.auth.getSession();
-    if (error) throw error;
-    if (!data.session) {
-        const result = await db.auth.signInAnonymously();
-        if (result.error) throw result.error;
-    }
-    const { data: identity, error: userError } = await db.auth.getUser();
-    if (userError || !identity.user) throw userError || new Error("Нет аккаунта.");
-    return identity.user;
+    // Reuse the same verified auth bootstrap as the other site modules.
+    // Each call checks the real server identity; duplicate startup calls coalesce.
+    const identity = await ensureAuthenticatedUser(db);
+    if (!identity?.id) throw new Error("Нет аккаунта.");
+    return identity;
 }
 async function getAdminStatus() {
     const { data, error } = await db.from("community_admins")
@@ -157,6 +154,45 @@ async function makeCard(row) {
     card.append(cover, content);
     return card;
 }
+// Administrator-only overview using records already authorized by Supabase RLS.
+// No extra requests, private credentials, or new permissions are introduced.
+function updateAdminOverview() {
+    let panel = document.getElementById("modAdminOverview");
+    if (!isAdmin) {
+        if (panel) panel.hidden = true;
+        return;
+    }
+    if (!panel) {
+        panel = node("section", "mods-admin-overview");
+        panel.id = "modAdminOverview";
+        panel.setAttribute("aria-label", "Обзор модерации модификаций");
+        const toolbar = document.querySelector(".mods-toolbar");
+        toolbar?.insertAdjacentElement("afterend", panel);
+    }
+    panel.hidden = currentView !== "moderation";
+    if (panel.hidden) return;
+
+    const statuses = { pending: 0, approved: 0, rejected: 0 };
+    for (const record of records) {
+        if (Object.hasOwn(statuses, record.status)) statuses[record.status]++;
+    }
+    const heading = node("h2", "mods-admin-heading", "Панель модерации");
+    const details = node("p", "mods-admin-copy",
+        "Обзор заявок, которые разрешены сервером для текущего администратора.");
+    const indicators = node("div", "mods-admin-stats");
+    for (const [key, title] of [
+        ["pending", "Ожидают проверки"],
+        ["approved", "Опубликованы"],
+        ["rejected", "Отклонены"]
+    ]) {
+        const tile = node("div", "mods-admin-stat");
+        tile.append(node("strong", "", String(statuses[key])));
+        tile.append(node("span", "", title));
+        indicators.append(tile);
+    }
+    panel.replaceChildren(heading, details, indicators);
+}
+
 let renderVersion = 0;
 async function render() {
     const version = ++renderVersion;
@@ -166,6 +202,7 @@ async function render() {
         button.setAttribute("aria-pressed", String(selected));
     });
     const rows = visibleRecords();
+    updateAdminOverview();
     $("modsCounter").textContent = rows.length + " модов";
     $("modsEmpty").hidden = rows.length !== 0;
     const fragment = document.createDocumentFragment();
@@ -177,9 +214,15 @@ async function render() {
 }
 async function refresh() {
     say("Загружаю модификации...");
-    await queryAll();
-    await render();
-    say("");
+    try {
+        await queryAll();
+        await render();
+        window.WTDiagnostics?.record?.("mods-refresh-ok");
+        say("");
+    } catch (error) {
+        window.WTDiagnostics?.record?.("mods-refresh-failed");
+        throw error;
+    }
 }
 async function showModDetails(id) {
     const row = records.find(item => item.id === id);

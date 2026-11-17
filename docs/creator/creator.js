@@ -1,6 +1,8 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
+import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
+import { mapWithConcurrency } from "../js/async-pool.mjs";
 
 const $ = id => document.getElementById(id);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,12 +31,9 @@ async function signed(db, bucket, path) {
     return data?.signedUrl || null;
 }
 async function session(db) {
-    const { data, error } = await db.auth.getSession();
-    if (error) throw error;
-    if (!data.session) {
-        const { error: authError } = await db.auth.signInAnonymously();
-        if (authError) throw authError;
-    }
+    // The same authenticated/anonymous user contract as the community and mods.
+    // Access checks for public profiles continue to be enforced by server RLS.
+    await ensureAuthenticatedUser(db);
 }
 async function renderMod(db, item) {
     const card = textNode("article", "", "mod-card");
@@ -98,7 +97,8 @@ async function init() {
         $("creatorModCount").textContent = "Одобренных модов: " + items.length;
         $("creatorHeader").hidden = false;
         $("creatorModsHeading").hidden = false;
-        const cards = await Promise.all(items.map(mod => renderMod(db, mod)));
+        // Limit simultaneous signed-URL requests while keeping every published card.
+        const cards = await mapWithConcurrency(items, 6, mod => renderMod(db, mod));
         $("creatorModsGrid").replaceChildren(...cards);
         $("creatorNotice").textContent = items.length ? "" : "У автора пока нет опубликованных модификаций.";
     } catch (error) {

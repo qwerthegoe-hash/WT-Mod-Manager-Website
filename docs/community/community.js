@@ -91,6 +91,8 @@ const MEDIA_BUCKETS = {
 const MEDIA_FUNCTION = "community-media";
 
 const REFRESH_INTERVAL = 30000;
+// Network requests should not restart while the browser explicitly reports offline.
+// A separate "online" listener below triggers immediate recovery.
 const MIN_SEND_INTERVAL = 3500;
 const MAX_MESSAGE_LENGTH = 1500;
 
@@ -2246,8 +2248,10 @@ async function refreshCommunity() {
     try {
         await reconcileVisibleMessages();
         await loadMessages();
+        window.WTDiagnostics?.record?.("community-refresh-ok");
 
     } catch (error) {
+        window.WTDiagnostics?.record?.("community-refresh-failed");
         console.warn(
             "Community refresh failed:",
             error
@@ -2269,7 +2273,7 @@ function startRefreshTimer() {
     }
 
     refreshTimer = setInterval(() => {
-        if (!document.hidden) {
+        if (!document.hidden && navigator.onLine !== false) {
             refreshCommunity();
         }
     }, REFRESH_INTERVAL);
