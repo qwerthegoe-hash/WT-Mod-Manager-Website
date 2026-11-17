@@ -1,6 +1,7 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
+import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 
 const $ = id => document.getElementById(id);
 const COLORS = new Set(["blue", "teal", "purple"]);
@@ -98,15 +99,11 @@ function saveLocalNickname(value) {
     catch { /* Browser storage is optional. */ }
 }
 async function getIdentity() {
-    const { data: session, error: sessionError } = await db.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!session.session) {
-        const { error } = await db.auth.signInAnonymously();
-        if (error) throw error;
-    }
-    const { data, error } = await db.auth.getUser();
-    if (error || !data.user) throw error || new Error("Не удалось получить аккаунт.");
-    return data.user;
+    // Profile and community must agree about the real Supabase user identity.
+    // Retain anonymous profiles and existing email accounts without changing UX.
+    const identity = await ensureAuthenticatedUser(db);
+    if (!identity?.id) throw new Error("Не удалось получить аккаунт.");
+    return identity;
 }
 async function loadProfile() {
     const { data, error } = await db.from("community_user_profiles")
