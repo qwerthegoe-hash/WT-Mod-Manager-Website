@@ -330,6 +330,15 @@ function bind() {
             button.disabled = false;
         }
     });
+    // When the same account is edited in another tab, keep its nickname
+    // in sync unless this tab has unsaved changes to protect.
+    window.addEventListener("storage", event => {
+        if (!user || saving || event.key !== "wtmm-community-nick:" + user.id) return;
+        if (profileDrafts.read(user.id) || typeof event.newValue !== "string") return;
+        $("profileNickname").value = event.newValue.slice(0, 24);
+        updateHeading();
+        report("Никнейм обновлён в другой вкладке.");
+    });
     window.addEventListener("pagehide", () =>
         Object.values(MEDIA).forEach(revokePreview));
 }
