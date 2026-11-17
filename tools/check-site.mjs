@@ -108,7 +108,8 @@ for (const test of [
   "test-site-functionality.mjs",
   "test-session-drafts.mjs",
   "test-feature-enhancements.mjs",
-  "test-global-search.mjs"
+  "test-global-search.mjs",
+  "test-home-refresh.mjs"
 ]) {
   const result = spawnSync(process.execPath, [
     path.join(root, "tools", test)

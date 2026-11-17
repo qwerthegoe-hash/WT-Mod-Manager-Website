@@ -14,9 +14,9 @@ const translations = {
         navProfile: "Profile",
         navMods: "Mods",
 
-        eyebrow: "PUBLIC BETA · 1.2",
-        headline: "Manage your War Thunder mods. <em>Simply.</em>",
-        lead: "A free desktop manager for custom sights, camouflages, sounds and personal settings. Built for players, not paywalls.",
+        eyebrow: "PUBLIC BETA / VERSION 1.2",
+        headline: '<span class="hero-title-main">Manage your War Thunder mods</span> <em>All in one place</em>',
+        lead: "Organize custom sights, camouflages, supported audio files and personal preferences in one convenient Windows tool. Free to use and built as an independent project for players.",
         heroDownload: "Get WT Mod Manager",
         learnMore: "Explore features",
         free: "100% free",
@@ -90,14 +90,34 @@ const translations = {
         supportBtn: "Support via monobank",
 
         faqOverline: "GOOD TO KNOW",
-        faqTitle: "Frequently asked questions",
+        faqTitle: "Your questions, answered",
         q1: "Is WT Mod Manager free?",
-        a1: "Yes. WT Mod Manager is free to download and use. No subscription is required. Donations through monobank are completely voluntary and do not unlock exclusive features.",
+        a1: "Yes. WT Mod Manager is designed as a free Windows utility: no subscriptions, mandatory payments or paid access to core tools. The download button will be enabled only when the public installer is actually published. Voluntary development support is separate and does not unlock exclusive functions.",
         q2: "Is this an official War Thunder product?",
-        a2: "No. WT Mod Manager is an independent fan-made utility. It is not developed, published, supported, funded or endorsed by Gaijin Entertainment. War Thunder and its related trademarks belong to their respective owners.",
+        a2: "This is the project website for WT Mod Manager itself, an independent fan-made tool. It is not an official War Thunder or Gaijin Entertainment product, and is not developed, sponsored or approved by them. The website describes our own software and its planned releases; War Thunder trademarks belong to their respective owners.",
         q3: "Where are downloads hosted?",
-        a3: "Windows installers are planned to be published through GitHub Releases when ready.",
+        a3: "Public Windows installers and release notes are planned for the project's GitHub Releases page after the build is ready. Until then, the site intentionally does not show a non-working download link. Community-submitted mod archives are handled separately through the site's moderated mod library.",
 
+        previewHint: "Select Sights, Camouflages, Sounds or Settings to explore this interactive concept.",
+        previewSightsTitle: "Precision where you need it",
+        previewSightsDesc: "Explore an illustrative sight layout and keep the aiming presets you use organized.",
+        previewCamoTitle: "Your personal visual style",
+        previewCamoDesc: "Browse different camouflage looks in an organized space for vehicle appearance files.",
+        previewSoundsTitle: "Audio, under control",
+        previewSoundsDesc: "Keep supported sound files in order and preview the kind of audio options the manager focuses on.",
+        previewSettingsTitle: "A setup that feels yours",
+        previewSettingsDesc: "Personalize the interface, appearance and preferences in one clear workspace.",
+        previewSightsNote1: "Preset", previewSightsNote2: "Sight view", previewSightsNote3: "Organization",
+        previewCamoNote1: "Patterns", previewCamoNote2: "Collections", previewCamoNote3: "Vehicles",
+        previewSoundsNote1: "Audio", previewSoundsNote2: "Playback", previewSoundsNote3: "Profiles",
+        previewSettingsNote1: "Themes", previewSettingsNote2: "Languages", previewSettingsNote3: "Preferences",
+        contactTitle: "Contact the developer",
+        contactDesc: "Have a project question, an improvement idea or feedback? Reach out through our Support Center.",
+        contactButton: "Get in touch",
+        q4: "What does WT Mod Manager help organize?",
+        a4: "The goal is to bring supported custom sights, camouflage files, audio resources and personal settings into one Windows interface. The website illustration shows the idea of these sections; it is not a live screenshot of the application. Check the release notes for what each public version actually supports.",
+        q5: "How can I reach the developer?",
+        a5: "Open the Support Center to report a technical problem, propose a feature or send a question. If a direct developer email is configured, you will also see a contact option there. Please do not include passwords, account tokens or sensitive personal information.",
         footerNote: "Independent fan-made project. War Thunder is a trademark of its respective owner."
     },
 
@@ -110,9 +130,9 @@ const translations = {
         navProfile: "Профиль",
         navMods: "Моды",
 
-        eyebrow: "ПУБЛИЧНАЯ БЕТА · 1.2",
-        headline: "Управляй модами War Thunder. <em>Просто.</em>",
-        lead: "Бесплатный менеджер пользовательских прицелов, камуфляжей, звуков и настроек. Создан для игроков.",
+        eyebrow: "ПУБЛИЧНАЯ БЕТА / ВЕРСИЯ 1.2",
+        headline: '<span class="hero-title-main">Управляй модами War Thunder</span> <em>Всё под контролем</em>',
+        lead: "Управляй прицелами, камуфляжами, поддерживаемыми звуковыми файлами и настройками в одной удобной программе для Windows. Бесплатно, понятно и создано для игроков.",
         heroDownload: "Скачать WT Mod Manager",
         learnMore: "Посмотреть возможности",
         free: "Полностью бесплатно",
@@ -186,14 +206,34 @@ const translations = {
         supportBtn: "Поддержать через monobank",
 
         faqOverline: "ПОЛЕЗНО ЗНАТЬ",
-        faqTitle: "Часто задаваемые вопросы",
+        faqTitle: "Задаваемые вопросы вами",
         q1: "WT Mod Manager — бесплатная программа?",
-        a1: "Да. WT Mod Manager полностью бесплатен. Для установки и использования не нужны подписка или платный доступ. Добровольная поддержка разработчика через monobank не открывает дополнительных платных функций.",
+        a1: "Да. WT Mod Manager — бесплатная программа для Windows: подписка, обязательные платежи и платный доступ к основным инструментам не требуются. Кнопка скачивания заработает после публикации готового установщика. Добровольная поддержка через monobank никак не влияет на доступные функции.",
         q2: "Это официальный продукт War Thunder?",
-        a2: "Нет. WT Mod Manager — независимый фанатский проект для удобной работы с пользовательскими модификациями War Thunder. Программа не разрабатывается, не финансируется и не одобряется Gaijin Entertainment. Название игры и связанные товарные знаки принадлежат соответствующим правообладателям.",
+        a2: "Это официальный сайт нашего собственного проекта WT Mod Manager, но сама программа — независимая фанатская утилита, а не официальный продукт War Thunder или Gaijin Entertainment. Мы не представляем разработчиков игры, не финансируемся и не одобрены ими. Здесь публикуется информация только о нашем менеджере; права на War Thunder принадлежат правообладателям.",
         q3: "Где размещаются файлы для скачивания?",
-        a3: "Установщики планируется публиковать через GitHub Releases после подготовки публичного релиза.",
+        a3: "Готовые установщики WT Mod Manager и заметки об обновлениях планируется размещать в GitHub Releases нашего проекта. Пока релиз не опубликован, сайт не подменяет его фальшивой ссылкой. Моды, которые загружают участники сообщества, хранятся отдельно в библиотеке сайта и проходят модерацию перед публикацией.",
 
+        previewHint: "Нажми на прицелы, камуфляжи, звуки или настройки — демонстрационная панель переключится.",
+        previewSightsTitle: "Точность в твоих руках",
+        previewSightsDesc: "Наглядный пример раздела прицелов: порядок в вариантах прицеливания и быстрый доступ к нужным файлам.",
+        previewCamoTitle: "Свой стиль для техники",
+        previewCamoDesc: "Переключай варианты оформления и представляй, как удобно хранить коллекции пользовательских камуфляжей.",
+        previewSoundsTitle: "Звуки под контролем",
+        previewSoundsDesc: "Демонстрация раздела для поддерживаемых аудиофайлов, их организации и доступных настроек.",
+        previewSettingsTitle: "Интерфейс под себя",
+        previewSettingsDesc: "Представление раздела с темами оформления, выбором языка и индивидуальными параметрами программы.",
+        previewSightsNote1: "Варианты", previewSightsNote2: "Прицел", previewSightsNote3: "Порядок",
+        previewCamoNote1: "Узоры", previewCamoNote2: "Коллекции", previewCamoNote3: "Техника",
+        previewSoundsNote1: "Звуки", previewSoundsNote2: "Просмотр", previewSoundsNote3: "Профили",
+        previewSettingsNote1: "Темы", previewSettingsNote2: "Языки", previewSettingsNote3: "Параметры",
+        contactTitle: "Связаться с разработчиком",
+        contactDesc: "Есть вопрос по проекту, идея для новой функции или предложение? Напиши нам через Центр поддержки.",
+        contactButton: "Написать разработчику",
+        q4: "Что помогает организовывать WT Mod Manager?",
+        a4: "Цель проекта — собрать в удобном интерфейсе Windows пользовательские прицелы, файлы камуфляжей, поддерживаемые аудиоматериалы и личные настройки. Иллюстрация на главной показывает концепцию разделов, а не живой скриншот. Фактические возможности каждой публичной версии будут указаны в её описании.",
+        q5: "Как связаться с разработчиком?",
+        a5: "Перейди в Центр поддержки: там можно описать ошибку, предложить улучшение или задать вопрос о проекте. Если указан прямой адрес разработчика, он появится в разделе контактов. Не отправляй пароли, коды и другие личные данные.",
         footerNote: "Независимый фанатский проект. War Thunder — товарный знак соответствующего правообладателя."
     },
 
@@ -206,9 +246,9 @@ const translations = {
         navProfile: "Профіль",
         navMods: "Моди",
 
-        eyebrow: "ПУБЛІЧНА БЕТА · 1.2",
-        headline: "Керуй модами War Thunder. <em>Просто.</em>",
-        lead: "Безкоштовний менеджер користувацьких прицілів, камуфляжів, звуків і налаштувань. Створений для гравців.",
+        eyebrow: "ПУБЛІЧНА БЕТА / ВЕРСІЯ 1.2",
+        headline: '<span class="hero-title-main">Керуй модами War Thunder</span> <em>Усе під контролем</em>',
+        lead: "Керуй прицілами, камуфляжами, підтримуваними звуковими файлами й налаштуваннями в одній зручній програмі для Windows. Безкоштовно та створено для гравців.",
         heroDownload: "Завантажити WT Mod Manager",
         learnMore: "Переглянути можливості",
         free: "Повністю безкоштовно",
@@ -282,14 +322,34 @@ const translations = {
         supportBtn: "Підтримати через monobank",
 
         faqOverline: "КОРИСНО ЗНАТИ",
-        faqTitle: "Поширені запитання",
+        faqTitle: "Запитання, які ставите ви",
         q1: "WT Mod Manager — безкоштовна програма?",
-        a1: "Так. WT Mod Manager повністю безкоштовний. Для встановлення й використання не потрібні підписка або платний доступ. Добровільна підтримка через monobank не відкриває додаткових платних можливостей.",
+        a1: "Так. WT Mod Manager — безкоштовна програма для Windows: підписка й обов'язкові платежі не потрібні. Кнопка завантаження запрацює після появи готового публічного інсталятора. Добровільна підтримка через monobank не відкриває окремих платних функцій.",
         q2: "Це офіційний продукт War Thunder?",
-        a2: "Ні. WT Mod Manager — незалежний фанатський проєкт для роботи з користувацькими модифікаціями War Thunder. Програму не розробляє, не фінансує та не схвалює Gaijin Entertainment. Назва гри й пов'язані торговельні марки належать відповідним правовласникам.",
+        a2: "Це офіційна сторінка нашого власного проєкту WT Mod Manager, але програма є незалежною фанатською утилітою, а не офіційним продуктом War Thunder або Gaijin Entertainment. Ми не представляємо розробників гри й не маємо їхнього схвалення. Торговельні марки War Thunder належать відповідним правовласникам.",
         q3: "Де розміщуються файли для завантаження?",
-        a3: "Інсталятори планується публікувати через GitHub Releases після підготовки публічної версії.",
+        a3: "Готові інсталятори WT Mod Manager та нотатки про оновлення планується розміщувати в GitHub Releases нашого проєкту. До появи релізу сайт не показує несправжнє посилання. Моди учасників спільноти зберігаються окремо в бібліотеці сайту й проходять модерацію перед публікацією.",
 
+        previewHint: "Натисни на приціли, камуфляжі, звуки або налаштування — демонстраційна панель перемкнеться.",
+        previewSightsTitle: "Точність у твоїх руках",
+        previewSightsDesc: "Наочний приклад розділу прицілів: порядок у варіантах прицілювання та зручний доступ до потрібних файлів.",
+        previewCamoTitle: "Власний стиль для техніки",
+        previewCamoDesc: "Переглядай варіанти оформлення й уявляй, як зручно зберігати колекції користувацьких камуфляжів.",
+        previewSoundsTitle: "Звуки під контролем",
+        previewSoundsDesc: "Демонстрація розділу для підтримуваних аудіофайлів, їх організації та доступних налаштувань.",
+        previewSettingsTitle: "Інтерфейс під себе",
+        previewSettingsDesc: "Уявлення розділу з темами оформлення, вибором мови та особистими параметрами програми.",
+        previewSightsNote1: "Варіанти", previewSightsNote2: "Приціл", previewSightsNote3: "Порядок",
+        previewCamoNote1: "Візерунки", previewCamoNote2: "Колекції", previewCamoNote3: "Техніка",
+        previewSoundsNote1: "Звуки", previewSoundsNote2: "Перегляд", previewSoundsNote3: "Профілі",
+        previewSettingsNote1: "Теми", previewSettingsNote2: "Мови", previewSettingsNote3: "Параметри",
+        contactTitle: "Зв'язатися з розробником",
+        contactDesc: "Маєш запитання щодо проєкту, ідею нової функції чи пропозицію? Напиши через Центр підтримки.",
+        contactButton: "Написати розробнику",
+        q4: "Що допомагає впорядковувати WT Mod Manager?",
+        a4: "Мета проєкту — поєднати в одному інтерфейсі Windows користувацькі приціли, файли камуфляжів, підтримувані аудіоматеріали та власні налаштування. Ілюстрація на головній показує концепцію, а не живий знімок програми. Фактичні можливості публічних версій будуть описані в нотатках до випуску.",
+        q5: "Як зв'язатися з розробником?",
+        a5: "Перейди в Центр підтримки, щоб описати проблему, запропонувати покращення чи поставити запитання. Якщо доступна пряма електронна адреса розробника, її буде показано в розділі контактів. Не надсилай паролі або особисті дані.",
         footerNote: "Незалежний фанатський проєкт. War Thunder — торгова марка відповідного правовласника."
     }
 };
@@ -477,6 +537,56 @@ function activateLink(element, url) {
     return true;
 }
 
+// An interactive, purely illustrative mock interface on the homepage.
+// This is not connected to local game files or the actual desktop application.
+const mockModes = {
+    sights: { title: "previewSightsTitle", description: "previewSightsDesc",
+        labels: ["previewSightsNote1", "previewSightsNote2", "previewSightsNote3"] },
+    camouflages: { title: "previewCamoTitle", description: "previewCamoDesc",
+        labels: ["previewCamoNote1", "previewCamoNote2", "previewCamoNote3"] },
+    sounds: { title: "previewSoundsTitle", description: "previewSoundsDesc",
+        labels: ["previewSoundsNote1", "previewSoundsNote2", "previewSoundsNote3"] },
+    settings: { title: "previewSettingsTitle", description: "previewSettingsDesc",
+        labels: ["previewSettingsNote1", "previewSettingsNote2", "previewSettingsNote3"] }
+};
+let selectedMockMode = "sights";
+
+function renderMockPreview() {
+    const data = mockModes[selectedMockMode];
+    const heading = document.getElementById("previewHeading");
+    const description = document.getElementById("previewDescription");
+    const panel = document.getElementById("mockPreviewPanel");
+    if (!data || !heading || !description || !panel) return;
+
+    heading.textContent = tr(data.title);
+    description.textContent = tr(data.description);
+    panel.dataset.mode = selectedMockMode;
+
+    document.querySelectorAll(".mock-item[data-preview]").forEach(button => {
+        const selected = button.dataset.preview === selectedMockMode;
+        button.classList.toggle("current", selected);
+        button.setAttribute("aria-pressed", String(selected));
+    });
+    document.querySelectorAll(".preview-scene[data-scene]").forEach(scene => {
+        scene.hidden = scene.dataset.scene !== selectedMockMode;
+    });
+    document.querySelectorAll("#previewGrid > div").forEach((item, index) => {
+        const label = item.querySelector("span");
+        if (label && data.labels[index]) label.textContent = tr(data.labels[index]);
+    });
+}
+
+function setupMockShowcase() {
+    document.querySelectorAll(".mock-item[data-preview]").forEach(button => {
+        button.addEventListener("click", () => {
+            if (!Object.prototype.hasOwnProperty.call(mockModes, button.dataset.preview)) return;
+            selectedMockMode = button.dataset.preview;
+            renderMockPreview();
+        });
+    });
+    renderMockPreview();
+}
+
 // Main language system.
 
 function renderLanguage(nextLanguage) {
@@ -504,6 +614,8 @@ function renderLanguage(nextLanguage) {
             element.textContent = value;
         }
     });
+
+    renderMockPreview();
 
     document.querySelectorAll(".lang-option").forEach(button => {
         const active = button.dataset.lang === currentLanguage;
@@ -843,10 +955,26 @@ function setupRevealAnimations() {
         "(prefers-reduced-motion: reduce)"
     ).matches;
 
+    // Run the homepage entrance only on its first visit in this tab.
+    // Moving to Community, Mods, Profile, Help or Support and returning
+    // should never replay the entire page reveal sequence.
+    const introKey = "wtmm-home-intro-seen-v1";
+    let introAlreadySeen = false;
+    try {
+        introAlreadySeen = sessionStorage.getItem(introKey) === "1";
+        sessionStorage.setItem(introKey, "1");
+    } catch {
+        // Private browsing may disallow storage; the website still works.
+    }
+
     if (
+        introAlreadySeen ||
         reducedMotion ||
         !("IntersectionObserver" in window)
     ) {
+        document.querySelectorAll(".reveal").forEach(element => {
+            element.classList.add("revealed");
+        });
         return;
     }
 
@@ -1034,6 +1162,7 @@ async function init() {
     setupHelpCenter();
     setupScrollFeatures();
     setupSupportLinks();
+    setupMockShowcase();
 
     renderLanguage(detectInitialLanguage());
     setupRevealAnimations();

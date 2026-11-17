@@ -14,6 +14,7 @@
 
     <link rel="icon" type="image/png" href="assets/LogotipProject.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="home-refresh.css">
     <script src="app.js" defer></script>
 </head>
 
@@ -104,12 +105,11 @@
         <!-- HERO -->
         <section id="top" class="hero wrap">
             <div class="eyebrow reveal">
-                <span class="pulse"></span>
-                <span data-i18n="eyebrow">PUBLIC BETA · 1.2</span>
+                <span data-i18n="eyebrow">PUBLIC BETA / VERSION 1.2</span>
             </div>
 
             <h1 class="reveal" data-i18n="headline">
-                Manage your War Thunder mods. <em>Simply.</em>
+                <span class="hero-title-main">Manage your War Thunder mods</span> <em>All in one place</em>
             </h1>
 
             <p class="lead reveal" data-i18n="lead">
@@ -157,52 +157,64 @@
                 </div>
 
                 <div class="mock-body">
-                    <aside class="mock-side">
-                        <div class="mock-item current">
-                            <span
-                                class="mock-icon icon-mask icon-sights"
-                                aria-hidden="true"
-                            ></span>
+                    <aside class="mock-side" aria-label="Preview sections">
+                        <button type="button" class="mock-item current" data-preview="sights" aria-pressed="true">
+                            <span class="mock-icon icon-mask icon-sights" aria-hidden="true"></span>
                             <span data-i18n="sights">Sights</span>
-                        </div>
-
-                        <div class="mock-item">
-                            <span
-                                class="mock-icon icon-mask icon-camouflages"
-                                aria-hidden="true"
-                            ></span>
+                        </button>
+                        <button type="button" class="mock-item" data-preview="camouflages" aria-pressed="false">
+                            <span class="mock-icon icon-mask icon-camouflages" aria-hidden="true"></span>
                             <span data-i18n="camouflages">Camouflages</span>
-                        </div>
-
-                        <div class="mock-item">
+                        </button>
+                        <button type="button" class="mock-item" data-preview="sounds" aria-pressed="false">
                             <span class="mock-icon" aria-hidden="true">♫</span>
                             <span data-i18n="sounds">Sounds</span>
-                        </div>
-
-                        <div class="mock-item">
-                            <span
-                                class="mock-icon icon-mask icon-configurations"
-                                aria-hidden="true"
-                            ></span>
+                        </button>
+                        <button type="button" class="mock-item" data-preview="settings" aria-pressed="false">
+                            <span class="mock-icon icon-mask icon-configurations" aria-hidden="true"></span>
                             <span data-i18n="settings">Settings</span>
-                        </div>
+                        </button>
                     </aside>
 
-                    <div class="mock-content">
+                    <div class="mock-content" id="mockPreviewPanel" data-mode="sights">
                         <div class="mock-kicker" data-i18n="previewLabel">
                             APP PREVIEW
                         </div>
 
-                        <h3 data-i18n="previewTitle">
+                        <h3 id="previewHeading" data-i18n="previewTitle">
                             Everything in one place
                         </h3>
 
-                        <p data-i18n="previewDesc">
+                        <p id="previewDescription" data-i18n="previewDesc">
                             Easy navigation, flexible appearance and
                             convenient settings.
                         </p>
 
-                        <div class="preview-grid">
+                        <div class="preview-art" aria-hidden="true">
+                            <div class="preview-scene preview-scene-sights" data-scene="sights">
+                                <div class="preview-reticle"><span class="reticle-center"></span></div>
+                                <div class="preview-scene-chips"><i></i><i></i><i></i></div>
+                            </div>
+                            <div class="preview-scene preview-scene-camo" data-scene="camouflages" hidden>
+                                <div class="camo-card camo-card-a"></div>
+                                <div class="camo-card camo-card-b"></div>
+                                <div class="camo-card camo-card-c"></div>
+                            </div>
+                            <div class="preview-scene preview-scene-sounds" data-scene="sounds" hidden>
+                                <div class="waveform">
+                                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                                    <i></i><i></i><i></i><i></i><i></i>
+                                </div>
+                            </div>
+                            <div class="preview-scene preview-scene-settings" data-scene="settings" hidden>
+                                <div class="settings-illustration-row"><span></span><i></i></div>
+                                <div class="settings-illustration-row"><span></span><i></i></div>
+                                <div class="settings-illustration-row"><span></span><i></i></div>
+                            </div>
+                        </div>
+                        <p class="preview-hint" data-i18n="previewHint">Choose a category on the left to explore this interactive concept.</p>
+                        <div class="preview-grid" id="previewGrid">
                             <div>
                                 <b>01</b>
                                 <span data-i18n="sights">Sights</span>
@@ -633,6 +645,19 @@
                         Suggest a feature
                     </a>
                 </article>
+
+                <!-- DIRECT CONTACT / EXISTING SUPPORT CENTER -->
+                <article class="feedback-card reveal">
+                    <div class="feedback-icon contact-icon" aria-hidden="true">✉</div>
+                    <h3 data-i18n="contactTitle">Contact the developer</h3>
+                    <p data-i18n="contactDesc">
+                        Questions about the project, compatibility or cooperation?
+                        Reach the developer through the Support Center.
+                    </p>
+                    <a class="btn secondary feedback-button"
+                       href="support/support.html"
+                       data-i18n="contactButton">Contact developer</a>
+                </article>
             </div>
 
             <p
@@ -746,6 +771,28 @@
                             GitHub Releases will host the installers.
                         </p>
                     </div>
+                </details>
+
+                <details class="faq-item reveal">
+                    <summary>
+                        <span data-i18n="q4">What can WT Mod Manager organize?</span>
+                        <span class="faq-arrow" aria-hidden="true"></span>
+                    </summary>
+                    <div class="faq-answer"><p data-i18n="a4">
+                        The project focuses on custom sights, camouflages, supported sounds
+                        and personal preferences in one desktop interface.
+                    </p></div>
+                </details>
+
+                <details class="faq-item reveal">
+                    <summary>
+                        <span data-i18n="q5">How can I contact the developer?</span>
+                        <span class="faq-arrow" aria-hidden="true"></span>
+                    </summary>
+                    <div class="faq-answer"><p data-i18n="a5">
+                        Open the Support Center to report a bug, suggest an improvement
+                        or find the available direct contact option.
+                    </p></div>
                 </details>
             </div>
         </section>
