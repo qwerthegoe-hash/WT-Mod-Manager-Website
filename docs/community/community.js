@@ -2780,9 +2780,50 @@ async function guardianOpenAdminPanel() {
         eventsSection.style.marginTop = "28px";
         eventsSection.append(guardianNode("h3", "Журнал модерации"));
         const refreshEvents = guardianButton("Обновить журнал");
+        const eventFilter = document.createElement("select");
+        eventFilter.setAttribute("aria-label", "Тип события модерации");
+        eventFilter.style.cssText = "padding:8px;background:#101e2d;color:#fff;border:1px solid #456787;border-radius:7px;margin:5px 8px;";
+        eventFilter.append(new Option("Все события", ""));
+        const eventSearch = document.createElement("input");
+        eventSearch.type = "search";
+        eventSearch.placeholder = "Поиск по событиям";
+        eventSearch.maxLength = 120;
+        eventSearch.setAttribute("aria-label", "Поиск по журналу модерации");
+        eventSearch.style.cssText = "padding:8px;background:#101e2d;color:#fff;border:1px solid #456787;border-radius:7px;margin:5px 8px;";
         const eventsList = guardianNode("div");
-        eventsSection.append(refreshEvents, eventsList);
+        let cachedEvents = [];
+        eventsSection.append(refreshEvents, eventFilter, eventSearch, eventsList);
         dialog.append(eventsSection);
+
+        function renderEventLog() {
+            const fragment = document.createDocumentFragment();
+            const term = eventSearch.value.trim().toLocaleLowerCase();
+            const matching = cachedEvents.filter(item => (
+                (!eventFilter.value || item.event_type === eventFilter.value) &&
+                (!term || String(item.event_type + " " + item.details + " " + item.user_id)
+                    .toLocaleLowerCase().includes(term))
+            ));
+            for (const item of matching) {
+                const row = guardianNode("div");
+                Object.assign(row.style, {
+                    padding: "11px 0",
+                    borderBottom: "1px solid #38506a",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere"
+                });
+                const title = guardianNode("strong", item.event_type);
+                const body = guardianNode("p",
+                    `ID: ${item.user_id}\nПричина: ${item.details}\nПредупреждений: ${item.warning_count}`
+                );
+                const date = guardianNode("small",
+                    new Date(item.created_at).toLocaleString("ru-RU")
+                );
+                row.append(title, body, date);
+                fragment.append(row);
+            }
+            eventsList.replaceChildren(fragment);
+            if (!matching.length) eventsList.textContent = "По запросу событий не найдено.";
+        }
 
         async function loadEvents() {
             if (refreshEvents.disabled) return;
@@ -2793,35 +2834,26 @@ async function guardianOpenAdminPanel() {
                     .from("guardian_events")
                     .select("user_id,event_type,details,warning_count,created_at")
                     .order("created_at", { ascending: false })
-                    .limit(50);
+                    .limit(100);
                 if (eventsError) throw eventsError;
-                const fragment = document.createDocumentFragment();
-                for (const item of data || []) {
-                    const row = guardianNode("div");
-                    Object.assign(row.style, {
-                        padding: "11px 0",
-                        borderBottom: "1px solid #38506a",
-                        whiteSpace: "pre-wrap",
-                        overflowWrap: "anywhere"
-                    });
-                    const title = guardianNode("strong", item.event_type);
-                    const body = guardianNode("p",
-                        `ID: ${item.user_id}\nПричина: ${item.details}\nПредупреждений: ${item.warning_count}`
-                    );
-                    const date = guardianNode("small",
-                        new Date(item.created_at).toLocaleString("ru-RU")
-                    );
-                    row.append(title, body, date);
-                    fragment.append(row);
+                cachedEvents = data || [];
+                const previousFilter = eventFilter.value;
+                eventFilter.replaceChildren(new Option("Все события", ""));
+                for (const type of [...new Set(cachedEvents.map(item => item.event_type))].sort()) {
+                    eventFilter.append(new Option(type, type));
                 }
-                eventsList.replaceChildren(fragment);
-                if (!data?.length) eventsList.textContent = "Событий пока нет.";
+                if ([...eventFilter.options].some(opt => opt.value === previousFilter)) {
+                    eventFilter.value = previousFilter;
+                }
+                renderEventLog();
             } catch (error) {
                 eventsList.textContent = `Ошибка журнала: ${error.message}`;
             } finally {
                 refreshEvents.disabled = false;
             }
         }
+        eventFilter.addEventListener("change", renderEventLog);
+        eventSearch.addEventListener("input", renderEventLog);
         refreshEvents.addEventListener("click", loadEvents);
         await loadEvents();
     } catch (error) {
