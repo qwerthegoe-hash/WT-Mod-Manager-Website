@@ -19,15 +19,10 @@ export function validDeveloperEmail(value) {
 export function validateContact(values) {
   if (!values || typeof values !== "object") return "invalid";
   if (String(values.website || "").trim()) return "honeypot";
-  const name = String(values.name || "").trim();
-  const email = String(values.email || "").trim();
   const title = String(values.title || "").trim();
   const message = String(values.message || "").trim();
   const url = String(values.reference || "").trim();
-  if (name.length < 2 || name.length > 60) return "invalid";
   if (values.reply !== "email" && values.reply !== "none") return "invalid";
-  if (values.reply === "email" && !validDeveloperEmail(email)) return "invalid";
-  if (email && !validDeveloperEmail(email)) return "invalid";
   if (title.length < 5 || title.length > 120) return "invalid";
   if (message.length < 15 || message.length > 4000) return "invalid";
   if (url) {
