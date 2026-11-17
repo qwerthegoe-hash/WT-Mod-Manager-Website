@@ -309,6 +309,35 @@ async function showModDetails(id) {
         node("span", "", authorName(row)));
     content.append(info);
     content.append(node("p", "mod-details-text", row.description || "Описание отсутствует."));
+    if (row.status === "approved") {
+        // Lightweight history: existing approved submissions by this author
+        // with the exact same title. No new table or weaker RLS required.
+        const versions = node("section", "mod-versions");
+        versions.setAttribute("aria-label", "Другие версии этой модификации");
+        content.append(versions);
+        void (async () => {
+            try {
+                const { data: previous, error } = await db.from("wtmm_mods")
+                    .select("id,version,created_at")
+                    .eq("owner_id", row.owner_id)
+                    .eq("title", row.title)
+                    .eq("status", "approved")
+                    .order("created_at", { ascending: false })
+                    .limit(10);
+                if (error) throw error;
+                if (!previous || previous.length < 2) return;
+                const title = node("h3", "", "Опубликованные версии");
+                const entries = node("ul");
+                for (const record of previous) {
+                    const formatted = new Date(record.created_at).toLocaleDateString("ru-RU");
+                    entries.append(node("li", "", "v" + record.version + " · " + formatted));
+                }
+                versions.replaceChildren(title, entries);
+            } catch (error) {
+                console.warn("Version history unavailable:", error?.message);
+            }
+        })();
+    }
     if (row.status !== "approved") {
         content.append(node("p", "mod-status " + row.status,
             row.status === "pending" ? "Ожидает модерации" : "Отклонено"));
