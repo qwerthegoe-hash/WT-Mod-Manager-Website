@@ -93,6 +93,14 @@ if (reviewPolicyTest.status !== 0) {
 } else {
   process.stdout.write(reviewPolicyTest.stdout);
 }
+const asyncPoolTest = spawnSync(process.execPath, [
+  path.join(root, "tools", "test-async-pool.mjs")
+], { encoding: "utf8" });
+if (asyncPoolTest.status !== 0) {
+  fail("Async request pool tests", (asyncPoolTest.stderr || asyncPoolTest.stdout).slice(0, 1000));
+} else {
+  process.stdout.write(asyncPoolTest.stdout);
+}
 console.log("Checked " + checkedPages + " pages, " + checkedLinks + " local links, " + checkedScripts + " JS scripts.");
 if (errors.length) {
   for (const error of errors) console.error("FAIL: " + error);

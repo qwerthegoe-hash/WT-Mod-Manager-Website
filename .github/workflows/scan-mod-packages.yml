@@ -1,0 +1,47 @@
+name: WTMM server-side ZIP malware scanning
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+# Never run unreviewed PR code with privileged scanning credentials.
+permissions:
+  contents: read
+
+concurrency:
+  group: wtmm-malware-scanner
+  cancel-in-progress: false
+
+jobs:
+  antivirus:
+    # Scheduled scanning is opt-in. Add the repository variable
+    # WTMM_SCAN_ENABLED=true only after applying the SQL migration and
+    # saving both encrypted repository secrets.
+    if: github.event_name == 'workflow_dispatch' || vars.WTMM_SCAN_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_URL: ${{ secrets.WTMM_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.WTMM_SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Checkout pinned repository revision without token persistence
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Confirm server credentials are configured
+        shell: bash
+        run: |
+          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
+            echo "Missing WTMM scanner secrets" >&2
+            exit 1
+          fi
+      - name: Install antivirus
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clamav
+          sudo systemctl stop clamav-freshclam || true
+          sudo freshclam --stdout
+          clamscan --version
+      - name: Server-side scan quarantined and legacy published ZIPs
+        run: python3 tools/scan_mod_packages.py

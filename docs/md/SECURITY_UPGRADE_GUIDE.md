@@ -38,3 +38,54 @@
 ## Limitations
 
 Static tests and TypeScript type-checks cannot confirm actual Supabase permissions, form delivery or browser behavior against the live database. The new SQL files are opt-in administrative scripts; do not assume they have run. The website is improved and protected in several layers, but cannot be called fully secure or malware-proof on source inspection alone.
+
+## Server-side antivirus workflow (new; NOT automatically enabled)
+
+This project now includes `tools/scan_mod_packages.py`, a ClamAV-based worker,
+and `.github/workflows/scan-mod-packages.yml`. The worker downloads private ZIP
+packages only with a server-side credential, validates ZIP structures, scans
+recursively with ClamAV and writes an audit status and SHA-256 fingerprint.
+Invalid files and antivirus alerts are marked `blocked`. Scanner errors are
+marked `error` and never treated as clean. Every new transition to `approved`
+is rejected by the database unless its scan is `clean`, has a digest and a
+completion time, **once the migration has been applied**.
+
+### Production rollout order (manual; do not skip)
+
+1. Back up the Supabase database. Check the deployed schema with
+   `docs/database/mod_scan_audit.sql` and `security_audit.sql`. Source SQL is
+   not evidence that a migration was applied to the hosted project.
+2. Confirm `community_platform_upgrade.sql` and
+   `mod_package_integrity_upgrade.sql` have already been applied. Validate
+   that pending ZIP objects cannot be deleted/replaced by the owner while a
+   pending database record refers to them.
+3. Set encrypted GitHub Actions repository secrets
+   `WTMM_SUPABASE_URL` and `WTMM_SUPABASE_SERVICE_ROLE_KEY`.
+   Use the **server-only service_role credential**, never the publishable
+   browser key. The worker uses a JWT bearer token for its REST and private
+   Storage requests; validate compatibility with your current Supabase keys.
+   Never put credentials into Markdown, code, browser files or Actions logs.
+4. Apply `docs/database/mod_malware_scanning_upgrade.sql` manually in Supabase
+   SQL Editor. This starts with scan status `pending` for existing records.
+   New approvals now fail closed until the scan worker succeeds. Previously
+   approved mods remain visible while backfill occurs; the scanner also checks
+   them and automatically rejects legacy approved archives it marks blocked.
+5. In GitHub Actions, run **WTMM server-side ZIP malware scanning** manually.
+   Verify ClamAV signatures updated, the job passed, the scan audit columns
+   changed, and normal uploads still work. Use a clean non-production test ZIP
+   and an intentionally invalid ZIP to verify clean vs blocked behavior.
+6. Only after the end-to-end test succeeds, add repository variable
+   `WTMM_SCAN_ENABLED=true` to enable the scheduled 30-minute scans.
+   Stop the schedule by changing the variable to `false`. Jobs use a
+   concurrency lock to avoid overlapping privileged scans.
+7. Verify from separate test accounts that a member cannot set scan fields,
+   cannot approve their own mod, and cannot replace a pending ZIP after review.
+   Verify admin can still reject submissions and owner can delete rejected
+   submissions. Verify site pages, profile, chat, moderation and downloads.
+
+**Important limitations:** This is a periodically scheduled GitHub-hosted
+server-side worker, not a permanently running scanning server. ClamAV scanning
+reduces risk but never guarantees that a mod is harmless. A successful GitHub
+push **does not** apply SQL or grant the scanner access to Supabase. Existing
+published files are not guaranteed clean until backfill has finished.
+Production deployment and database state must be verified separately.
