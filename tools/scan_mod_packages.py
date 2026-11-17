@@ -72,6 +72,10 @@ def validate_zip(filename: Path) -> int:
                 total += member.file_size
                 if total > MAX_EXPANDED:
                     raise UnsafeArchive("Expanded size limit")
+                if member.is_dir():
+                    if member.file_size != 0:
+                        raise UnsafeArchive("Invalid directory entry")
+                    continue
                 with archive.open(member) as stream:
                     consumed = 0
                     while True:
