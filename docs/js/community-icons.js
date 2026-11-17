@@ -5,7 +5,16 @@
  * The DOM decoration is idempotent and safe for dynamically added controls.
  */
 (() => {
-    const SPRITE = "../assets/community-icons.svg";
+    // Reuse the owner's original PNG artwork. Resolve relative to this script,
+    // not the document, so nested pages never break icon URLs.
+    const ASSET_ROOT = new URL("../assets/", document.currentScript.src);
+    const IMAGES = {
+        chat: "Chat.png", updates: "updates.png", news: "news.png",
+        ideas: "ideas.png", help: "help.png", profile: "profile.png",
+        guardian: "guardian.png", emoji: "emoji.png", photo: "photo.png",
+        approved: "approved.png", moderation: "moderation.png",
+        settings: "settings.png"
+    };
     const CHANNELS = {
         general: "chat",
         updates: "updates",
@@ -15,16 +24,14 @@
     };
 
     function icon(name) {
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-        svg.classList.add("wt-custom-icon");
-        svg.dataset.iconName = name;
-        svg.setAttribute("viewBox", "0 0 512 512");
-        svg.setAttribute("aria-hidden", "true");
-        svg.setAttribute("focusable", "false");
-        use.setAttribute("href", SPRITE + "#" + name);
-        svg.append(use);
-        return svg;
+        const img = document.createElement("img");
+        img.classList.add("wt-custom-icon");
+        img.dataset.iconName = name;
+        img.src = new URL(IMAGES[name] || "help.png", ASSET_ROOT).href;
+        img.alt = "";
+        img.decoding = "async";
+        img.setAttribute("aria-hidden", "true");
+        return img;
     }
 
     function buttonIcon(node, name, label) {
