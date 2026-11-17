@@ -4,6 +4,20 @@
 (() => {
     const history = [];
     const MAX_ITEMS = 25;
+    const MAX_COUNTER = 1000000;
+    const counters = Object.create(null);
+    const allowedEvents = new Set([
+        "community-refresh-ok", "community-refresh-failed",
+        "mods-refresh-ok", "mods-refresh-failed",
+        "profile-load-ok", "profile-load-failed",
+        "connectivity-offline", "connectivity-online"
+    ]);
+    function record(category) {
+        // Only generic hard-coded categories may be recorded: never user input or URLs.
+        if (typeof category !== "string" || !allowedEvents.has(category)) return false;
+        counters[category] = Math.min((counters[category] || 0) + 1, MAX_COUNTER);
+        return true;
+    }
     function note(kind, detail = "") {
         history.push({
             time: new Date().toISOString(),
@@ -24,10 +38,19 @@
     document.addEventListener("securitypolicyviolation", event => {
         note("csp", event.effectiveDirective || "blocked");
     });
+    window.addEventListener("offline", () => record("connectivity-offline"));
+    window.addEventListener("online", () => record("connectivity-online"));
     Object.defineProperty(window, "WTDiagnostics", {
         value: Object.freeze({
+            // Keep the original public API for existing scripts and console users.
             summary: () => history.map(item => ({ ...item })),
-            clear: () => { history.length = 0; }
+            clear: () => { history.length = 0; for (const k of Object.keys(counters)) delete counters[k]; },
+            record,
+            health: () => ({
+                online: typeof navigator !== "undefined" ? navigator.onLine !== false : true,
+                issues: history.length,
+                counters: { ...counters }
+            })
         }),
         configurable: false,
         writable: false
