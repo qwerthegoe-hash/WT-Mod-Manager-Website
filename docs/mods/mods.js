@@ -232,6 +232,33 @@ async function showModDetails(id) {
         const preview = node("button", "mods-secondary", "Сформировать ссылку на ZIP");
         preview.type = "button";
         const previewArea = node("div", "mods-review-link");
+        const checkArchive = node("button", "mods-secondary", "Проверить структуру ZIP");
+        checkArchive.type = "button";
+        const checkStatus = node("p", "mods-review-note", "");
+        checkArchive.addEventListener("click", async () => {
+            checkArchive.disabled = true;
+            checkStatus.textContent = "Проверяю ZIP без распаковки...";
+            try {
+                const { data, error } = await db.storage.from(FILE_BUCKET)
+                    .createSignedUrl(row.file_path, 120);
+                if (error || !data?.signedUrl) throw error || new Error("Не удалось получить ссылку.");
+                const response = await fetch(data.signedUrl, {
+                    cache: "no-store",
+                    signal: AbortSignal.timeout(45000)
+                });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const file = await response.blob();
+                if (file.size > FILE_LIMIT) throw new Error("ZIP превышает 20 МБ.");
+                const result = await validateModZip(file);
+                checkStatus.textContent = "Структура ZIP проверена: " + result.files +
+                    " файлов. Это не антивирусная проверка — всё ещё нужна ручная модерация.";
+            } catch (error) {
+                checkStatus.textContent = "Проверка ZIP не пройдена: " +
+                    (error?.message || String(error)) + ". Не одобряй архив без проверки.";
+            } finally {
+                checkArchive.disabled = false;
+            }
+        });
         const approve = node("button", "mods-primary", "Одобрить");
         approve.type = "button"; approve.disabled = true;
         const reject = node("button", "mods-secondary", "Отклонить");
@@ -252,7 +279,7 @@ async function showModDetails(id) {
         });
         approve.addEventListener("click", () => decideMod(row, "approved"));
         reject.addEventListener("click", () => decideMod(row, "rejected"));
-        actions.append(preview, previewArea, approve, reject);
+        actions.append(checkArchive, checkStatus, preview, previewArea, approve, reject);
     }
     if (currentView === "mine" && row.owner_id === user.id &&
         row.status !== "approved") {
