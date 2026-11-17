@@ -1,0 +1,15 @@
+# Keep private configuration out of public GitHub / GitHub Pages.
+.env
+.env.*
+!.env.example
+secrets/
+private/
+*.pem
+*.p12
+*.key
+node_modules/
+coverage/
+dist/
+.DS_Store
+Thumbs.db
+.vscode/
