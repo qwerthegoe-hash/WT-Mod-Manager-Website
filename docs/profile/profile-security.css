@@ -1,0 +1,39 @@
+/* Optional Supabase Auth TOTP: accessible controls, no third-party QR library. */
+.profile-security { margin-top:22px; display:grid; gap:16px; }
+.profile-security-title { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.profile-security h2 { margin:0; font-size:clamp(19px,3vw,24px); }
+.profile-security h3 { margin:0; font-size:16px; }
+.profile-security p { margin:0; color:#b4cbe2; font-size:13px; line-height:1.75; }
+.profile-security-marker { color:#8ec9ff; font-size:28px; }
+.profile-security .profile-secondary,
+.profile-security .profile-primary { width:fit-content; max-width:100%; }
+.profile-security .mfa-step {
+  display:grid; justify-items:start; gap:15px;
+  padding:18px; border:1px solid #426181; border-radius:15px; background:#101d2e;
+}
+.profile-security [hidden] { display:none !important; }
+.profile-security .mfa-step img {
+  display:block; max-width:100%; border-radius:12px;
+  background:#fff; padding:9px;
+}
+.profile-security .mfa-step label { font-size:13px; font-weight:680; color:#d5eaff; }
+.profile-security .mfa-step input {
+  width:min(100%,250px); min-height:44px;
+  padding:9px 12px; font:inherit; color:#f0f8ff; background:#10243a;
+  border:1px solid #45698e; border-radius:11px; letter-spacing:.18em;
+  user-select:text; -webkit-user-select:text;
+}
+.profile-security .mfa-secret {
+  max-width:100%; padding:9px 12px; border-radius:8px;
+  color:#dceeff; background:#071322; border:1px solid #304b67;
+  overflow-wrap:anywhere; user-select:all; -webkit-user-select:all;
+  font-size:12px;
+}
+.profile-security-actions { display:flex; flex-wrap:wrap; gap:10px; }
+#mfaStatus { color:#a9c8e4; }
+#mfaNotice { min-height:22px; color:#a6e6c3; }
+#mfaNotice.error { color:#ffbac4; }
+@media (max-width:620px) {
+  .profile-security { gap:13px; }
+  .profile-security .mfa-step { padding:15px 11px; }
+}
