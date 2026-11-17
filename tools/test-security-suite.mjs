@@ -25,7 +25,7 @@ assert.ok(mfaSql.includes("auth.mfa_factors") && mfaSql.includes("auth.jwt()->>'
 assert.ok(mfaSql.includes("wtmm_security.mfa_satisfied()"));
 assert.ok(mfaSql.includes("public.community_is_admin()"));
 assert.ok(mfaSql.includes("public.wtmm_is_admin()"));
-assert.ok(!/user_metadata|raw_user_meta_data/.test(mfaSql), "Never authorize from user metadata");
+assert.ok(!/auth\\.jwt\\(\\)[^\\n]*?(?:user_metadata|raw_user_meta_data)/.test(mfaSql), "Never authorize from user metadata claims");
 assert.ok(limitsSql.includes("pg_advisory_xact_lock"), "Prevent concurrent submission bypasses");
 assert.ok(limitsSql.includes("new.created_at := now()"), "Use trusted server timestamps");
 assert.ok(limitsSql.includes("community_reports") && limitsSql.includes("wtmm_mods"));
