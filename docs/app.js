@@ -112,12 +112,12 @@ const translations = {
         previewSoundsNote1: "Audio", previewSoundsNote2: "Playback", previewSoundsNote3: "Profiles",
         previewSettingsNote1: "Themes", previewSettingsNote2: "Languages", previewSettingsNote3: "Preferences",
         contactTitle: "Contact the developer",
-        contactDesc: "Have a project question, an improvement idea or feedback? Reach out through our Support Center.",
+        contactDesc: "Questions, partnership proposals or feedback? Open the dedicated developer contact panel and send us a message.",
         contactButton: "Get in touch",
         q4: "What does WT Mod Manager help organize?",
         a4: "The goal is to bring supported custom sights, camouflage files, audio resources and personal settings into one Windows interface. The website illustration shows the idea of these sections; it is not a live screenshot of the application. Check the release notes for what each public version actually supports.",
         q5: "How can I reach the developer?",
-        a5: "Open the Support Center to report a technical problem, propose a feature or send a question. If a direct developer email is configured, you will also see a contact option there. Please do not include passwords, account tokens or sensitive personal information.",
+        a5: "Use the dedicated Contact the Developer panel for general questions and cooperation. For reproducible bugs or feature requests, use the Support Center. Do not send passwords, account tokens or private documents.",
         footerNote: "Independent fan-made project. War Thunder is a trademark of its respective owner."
     },
 
@@ -228,12 +228,12 @@ const translations = {
         previewSoundsNote1: "Звуки", previewSoundsNote2: "Просмотр", previewSoundsNote3: "Профили",
         previewSettingsNote1: "Темы", previewSettingsNote2: "Языки", previewSettingsNote3: "Параметры",
         contactTitle: "Связаться с разработчиком",
-        contactDesc: "Есть вопрос по проекту, идея для новой функции или предложение? Напиши нам через Центр поддержки.",
+        contactDesc: "Вопрос по проекту, сотрудничеству или предложение? Открой отдельную панель связи с разработчиком и напиши нам напрямую.",
         contactButton: "Написать разработчику",
         q4: "Что помогает организовывать WT Mod Manager?",
         a4: "Цель проекта — собрать в удобном интерфейсе Windows пользовательские прицелы, файлы камуфляжей, поддерживаемые аудиоматериалы и личные настройки. Иллюстрация на главной показывает концепцию разделов, а не живой скриншот. Фактические возможности каждой публичной версии будут указаны в её описании.",
         q5: "Как связаться с разработчиком?",
-        a5: "Перейди в Центр поддержки: там можно описать ошибку, предложить улучшение или задать вопрос о проекте. Если указан прямой адрес разработчика, он появится в разделе контактов. Не отправляй пароли, коды и другие личные данные.",
+        a5: "Для вопросов и сотрудничества открывай отдельную панель «Связаться с разработчиком». Для ошибок и технических предложений остаётся Центр поддержки. Не отправляй пароли, коды и личные документы.",
         footerNote: "Независимый фанатский проект. War Thunder — товарный знак соответствующего правообладателя."
     },
 
@@ -344,12 +344,12 @@ const translations = {
         previewSoundsNote1: "Звуки", previewSoundsNote2: "Перегляд", previewSoundsNote3: "Профілі",
         previewSettingsNote1: "Теми", previewSettingsNote2: "Мови", previewSettingsNote3: "Параметри",
         contactTitle: "Зв'язатися з розробником",
-        contactDesc: "Маєш запитання щодо проєкту, ідею нової функції чи пропозицію? Напиши через Центр підтримки.",
+        contactDesc: "Маєш запитання, пропозицію співпраці чи відгук? Відкрий окрему сторінку зв’язку з розробником та напиши нам.",
         contactButton: "Написати розробнику",
         q4: "Що допомагає впорядковувати WT Mod Manager?",
         a4: "Мета проєкту — поєднати в одному інтерфейсі Windows користувацькі приціли, файли камуфляжів, підтримувані аудіоматеріали та власні налаштування. Ілюстрація на головній показує концепцію, а не живий знімок програми. Фактичні можливості публічних версій будуть описані в нотатках до випуску.",
         q5: "Як зв'язатися з розробником?",
-        a5: "Перейди в Центр підтримки, щоб описати проблему, запропонувати покращення чи поставити запитання. Якщо доступна пряма електронна адреса розробника, її буде показано в розділі контактів. Не надсилай паролі або особисті дані.",
+        a5: "Для запитань і співпраці відкрий окрему сторінку «Зв’язатися з розробником». Для помилок і технічних пропозицій користуйся Центром підтримки. Не надсилай паролі, коди та особисті документи.",
         footerNote: "Незалежний фанатський проєкт. War Thunder — торгова марка відповідного правовласника."
     }
 };
