@@ -84,7 +84,7 @@ async function coverUrl(row) {
     });
     return data.signedUrl;
 }
-const MOD_PAGE_SIZE = 100;
+const MOD_PAGE_SIZE = 150; // Preserve the original first-page coverage.
 let hasMoreMods = false;
 let loadingMoreMods = false;
 let pendingSearchRender = null;
