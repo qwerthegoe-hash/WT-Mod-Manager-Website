@@ -1023,7 +1023,8 @@ function setupDeveloperContact() {
 async function loadSettings() {
     try {
         const response = await fetch("../json/site-config.json", {
-            cache: "no-store"
+            cache: "no-store",
+            signal: AbortSignal.timeout(8000)
         });
 
         if (!response.ok) {
@@ -1111,12 +1112,15 @@ function setupSubmission() {
         byId("submitLabel").textContent = translate("sending");
         setStatus("");
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
         try {
             const response = await fetch(
                 `https://formspree.io/f/${formspreeId}`,
                 {
                     method: "POST",
                     body: data,
+                    signal: controller.signal,
                     headers: {
                         Accept: "application/json"
                     }
@@ -1136,6 +1140,7 @@ function setupSubmission() {
             console.error("Support submission failed:", error);
             setStatus(translate("error"), "error");
         } finally {
+            clearTimeout(timeout);
             submitting = false;
             submitButton.disabled = !formspreeId;
             byId("submitLabel").textContent = translate("send");
