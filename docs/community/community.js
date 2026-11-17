@@ -142,6 +142,23 @@ let isLoadingOlder = false;
 let initialized = false;
 
 let realtimeSubscription = null;
+let realtimeReconnectTimer = null;
+let realtimeReconnectAttempts = 0;
+let realtimeNeedsReconnect = false;
+
+function scheduleRealtimeReconnect(channel, subscriptionGeneration) {
+    if (realtimeReconnectTimer) return;
+    const delay = Math.min(30000, 4000 * Math.pow(2, Math.min(realtimeReconnectAttempts, 3)));
+    realtimeReconnectTimer = window.setTimeout(async () => {
+        realtimeReconnectTimer = null;
+        if (channel !== activeChannel || subscriptionGeneration !== realtimeGeneration) return;
+        if (document.hidden || navigator.onLine === false) return;
+        realtimeReconnectAttempts++;
+        try { await subscribeToChannel(); }
+        catch (error) { console.warn("Realtime retry failed:", error?.message); }
+    }, delay);
+}
+
 
 let oldestMessageDate = null;
 let oldestMessageId = null;
@@ -1731,6 +1748,12 @@ async function subscribeToChannel() {
 
         if (statusValue === "SUBSCRIBED") {
             connection("", true);
+            realtimeNeedsReconnect = false;
+            realtimeReconnectAttempts = 0;
+            if (realtimeReconnectTimer) {
+                clearTimeout(realtimeReconnectTimer);
+                realtimeReconnectTimer = null;
+            }
 
             loadMessages();
             reconcileVisibleMessages();
@@ -1740,6 +1763,8 @@ async function subscribeToChannel() {
             statusValue === "TIMED_OUT"
         ) {
             connection("Проблема соединения");
+            realtimeNeedsReconnect = true;
+            scheduleRealtimeReconnect(currentChannel, myGeneration);
 
         } else if (
             statusValue === "CLOSED"
@@ -1758,6 +1783,12 @@ async function selectChannel(next) {
     if (!CHANNELS[next]) {
         return;
     }
+    if (realtimeReconnectTimer) {
+        clearTimeout(realtimeReconnectTimer);
+        realtimeReconnectTimer = null;
+    }
+    realtimeReconnectAttempts = 0;
+    realtimeNeedsReconnect = false;
 
     const currentGeneration = ++generation;
     const composer = $("messageInput");
@@ -2336,6 +2367,7 @@ function startRefreshTimer() {
             if (!document.hidden) {
                 unreadWhileHidden = 0;
                 updateUnreadBadge();
+                if (realtimeNeedsReconnect) void subscribeToChannel();
                 refreshCommunity();
             }
         }
@@ -2344,6 +2376,7 @@ function startRefreshTimer() {
     window.addEventListener(
         "online",
         () => {
+            if (realtimeNeedsReconnect) void subscribeToChannel();
             refreshCommunity();
         }
     );
