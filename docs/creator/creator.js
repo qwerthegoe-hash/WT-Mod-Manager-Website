@@ -1,6 +1,6 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { COMMUNITY_CONFIG as config } from "./community-config.js";
+import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 
 const $ = id => document.getElementById(id);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,7 +55,7 @@ async function renderMod(db, item) {
     );
     const end = textNode("div", "", "mod-card-end");
     const link = textNode("a", "Подробнее", "mod-card-button");
-    link.href = "mods.html?mod=" + encodeURIComponent(item.id);
+    link.href = "../mods/mods.html?mod=" + encodeURIComponent(item.id);
     end.append(link);
     content.append(end);
     card.append(cover, content);
