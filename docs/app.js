@@ -912,7 +912,7 @@ async function loadSiteConfig() {
     try {
         const response = await fetch(
             "json/site-config.json",
-            { cache: "no-store" }
+            { cache: "no-store", signal: AbortSignal.timeout(8000) }
         );
 
         if (!response.ok) {
