@@ -84,26 +84,90 @@ async function coverUrl(row) {
     });
     return data.signedUrl;
 }
-async function queryAll() {
+const MOD_PAGE_SIZE = 100;
+let hasMoreMods = false;
+let loadingMoreMods = false;
+let pendingSearchRender = null;
+
+// Fetch full records in bounded pages so large collections can be loaded on demand.
+// Stable ordering prevents duplicate cards when multiple records have the same timestamp.
+async function fetchModPage(offset) {
     const { data, error } = await db.from("wtmm_mods")
         .select("id,owner_id,title,description,category,version,status,file_path,cover_path,rejection_reason,created_at")
-        .order("created_at", { ascending: false }).limit(150);
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + MOD_PAGE_SIZE - 1);
     if (error) throw error;
-    records = data || [];
-    const ids = [...new Set(records.map(row => row.owner_id))];
-    profiles = new Map();
-    if (ids.length) {
-        const { data: users, error: profileError } = await db
-            .from("community_user_profiles")
-            .select("user_id,nickname,avatar_path,is_public")
-            .in("user_id", ids);
-        if (profileError) console.warn("Profile lookup:", profileError.message);
-        else for (const item of users || []) {
-            if (item.is_public !== false || item.user_id === user.id)
+    return data || [];
+}
+
+async function extendAuthorProfiles(rows) {
+    const ids = [...new Set(rows.map(row => row.owner_id))]
+        .filter(id => !profiles.has(id));
+    // Split ID lists so request URLs remain bounded in larger catalogs.
+    for (let start = 0; start < ids.length; start += 50) {
+        const group = ids.slice(start, start + 50);
+        const { data: users, error } = await db.from("community_user_profiles")
+            .select("user_id,nickname,avatar_path,is_public").in("user_id", group);
+        if (error) {
+            console.warn("Profile lookup:", error.message);
+            continue;
+        }
+        for (const item of users || []) {
+            if (item.is_public !== false || item.user_id === user.id) {
                 profiles.set(item.user_id, item);
+            }
         }
     }
 }
+
+function updateLoadMoreControl() {
+    let button = $("modsLoadMore");
+    if (!button) {
+        button = node("button", "mods-secondary", "Загрузить ещё моды");
+        button.id = "modsLoadMore";
+        button.type = "button";
+        button.style.display = "block";
+        button.style.margin = "18px auto";
+        $("modsGrid").insertAdjacentElement("afterend", button);
+        button.addEventListener("click", loadMoreMods);
+    }
+    button.hidden = !hasMoreMods;
+    button.disabled = loadingMoreMods;
+    button.textContent = loadingMoreMods ? "Загрузка..." : "Загрузить ещё моды";
+    // Inline display should not override the native hidden attribute.
+    button.style.display = hasMoreMods ? "block" : "none";
+}
+
+async function queryAll() {
+    const data = await fetchModPage(0);
+    records = data;
+    profiles = new Map();
+    hasMoreMods = data.length === MOD_PAGE_SIZE;
+    await extendAuthorProfiles(data);
+    updateLoadMoreControl();
+}
+
+async function loadMoreMods() {
+    if (loadingMoreMods || !hasMoreMods || !db) return;
+    loadingMoreMods = true;
+    updateLoadMoreControl();
+    try {
+        const next = await fetchModPage(records.length);
+        const known = new Set(records.map(row => row.id));
+        records.push(...next.filter(row => !known.has(row.id)));
+        hasMoreMods = next.length === MOD_PAGE_SIZE;
+        await extendAuthorProfiles(next);
+        await render();
+        say("");
+    } catch (error) {
+        say("Не удалось загрузить следующую страницу: " + (error?.message || "ошибка сети"), true);
+    } finally {
+        loadingMoreMods = false;
+        updateLoadMoreControl();
+    }
+}
+
 function visibleRecords() {
     const q = $("modsSearch").value.trim().toLocaleLowerCase();
     const category = $("modsCategory").value;
@@ -178,7 +242,7 @@ function updateAdminOverview() {
     }
     const heading = node("h2", "mods-admin-heading", "Панель модерации");
     const details = node("p", "mods-admin-copy",
-        "Обзор заявок, которые разрешены сервером для текущего администратора.");
+        "Обзор загруженных заявок, разрешённых сервером. При наличии других страниц используй «Загрузить ещё»");
     const indicators = node("div", "mods-admin-stats");
     for (const [key, title] of [
         ["pending", "Ожидают проверки"],
@@ -203,8 +267,8 @@ async function render() {
     });
     const rows = visibleRecords();
     updateAdminOverview();
-    $("modsCounter").textContent = rows.length + " модов";
-    $("modsEmpty").hidden = rows.length !== 0;
+    $("modsCounter").textContent = rows.length + (hasMoreMods ? " модов (загружено; есть ещё)" : " модов");
+    $("modsEmpty").hidden = rows.length !== 0 || hasMoreMods;
     const fragment = document.createDocumentFragment();
     // Bound signed-image URL requests while preserving card order and all results.
     const cards = await mapWithConcurrency(rows, 6, makeCard);
@@ -478,7 +542,14 @@ function bind() {
         });
     });
     for (const id of ["modsSearch", "modsCategory", "modsSort"]) {
-        $(id).addEventListener(id === "modsSearch" ? "input" : "change", () => render());
+        $(id).addEventListener(id === "modsSearch" ? "input" : "change", () => {
+            // Debounce expensive signed-image re-rendering during typing.
+            if (pendingSearchRender) clearTimeout(pendingSearchRender);
+            pendingSearchRender = setTimeout(() => {
+                pendingSearchRender = null;
+                render();
+            }, id === "modsSearch" ? 130 : 0);
+        });
     }
     $("showSubmit").addEventListener("click", () => {
         $("submitPanel").hidden = false;
