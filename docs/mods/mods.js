@@ -22,6 +22,7 @@ const IMAGE_MIMES = {
 
 let db, user, isAdmin = false, records = [], profiles = new Map();
 let currentView = new URLSearchParams(location.search).get("mine") === "1" ? "mine" : "catalog";
+let moderationStatus = "pending"; // Admin can filter existing statuses; default stays pending.
 let currentModId = null, sending = false;
 const coverCache = new Map();
 
@@ -175,7 +176,7 @@ function visibleRecords() {
     const rows = records.filter(row => {
         if (view === "catalog" && row.status !== "approved") return false;
         if (view === "mine" && row.owner_id !== user.id) return false;
-        if (view === "moderation" && row.status !== "pending") return false;
+        if (view === "moderation" && row.status !== moderationStatus) return false;
         if (category !== "all" && row.category !== category) return false;
         if (q && !(row.title + " " + row.description + " " + authorName(row))
             .toLocaleLowerCase().includes(q)) return false;
@@ -249,9 +250,16 @@ function updateAdminOverview() {
         ["approved", "Опубликованы"],
         ["rejected", "Отклонены"]
     ]) {
-        const tile = node("div", "mods-admin-stat");
+        const tile = node("button", "mods-admin-stat");
+        tile.type = "button";
+        tile.classList.toggle("active", moderationStatus === key);
+        tile.setAttribute("aria-pressed", String(moderationStatus === key));
         tile.append(node("strong", "", String(statuses[key])));
         tile.append(node("span", "", title));
+        tile.addEventListener("click", () => {
+            moderationStatus = key;
+            render();
+        });
         indicators.append(tile);
     }
     panel.replaceChildren(heading, details, indicators);
