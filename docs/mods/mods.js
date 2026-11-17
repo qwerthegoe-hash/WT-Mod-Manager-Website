@@ -1,6 +1,7 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
+import { validateModZip } from "../js/mod-zip-validator.mjs";
 
 const $ = id => document.getElementById(id);
 const FILE_BUCKET = "wtmm-mod-packages";
@@ -326,6 +327,14 @@ async function uploadMod(event) {
     const prefix = new Uint8Array(await pack.slice(0, 4).arrayBuffer());
     if (!zipLooksValid(prefix)) {
         say("Файл не похож на ZIP-архив.", true, "submitNotice"); return;
+    }
+    // Client-side preflight saves users from uploading unsafe/invalid packages.
+    // It does not replace mandatory server-side moderation and storage RLS.
+    try {
+        await validateModZip(pack);
+    } catch (error) {
+        say("ZIP не прошёл проверку: " + (error?.message || String(error)), true, "submitNotice");
+        return;
     }
     let coverExt = null;
     try { if (cover) coverExt = await imageExtension(cover); }
