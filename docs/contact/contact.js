@@ -1,5 +1,7 @@
 "use strict";
-import { normalizeContactTopic, validFormspreeId, validDeveloperEmail, validateContact } from "./contact-core.mjs";
+import { normalizeContactTopic, validateContact } from "./contact-core.mjs";
+import { getContactBridge } from "../js/contact-bridge.mjs";
+import { contactLocalesExtra } from "./contact-extra-i18n.mjs";
 
 const copy = {
   ru: {
@@ -103,6 +105,8 @@ const copy = {
   }
 };
 
+Object.assign(copy, contactLocalesExtra);
+
 const $ = id => document.getElementById(id);
 const form = $("contactForm");
 const submit = $("contactSubmit");
@@ -112,8 +116,7 @@ const topicButtons = Array.from(document.querySelectorAll("[data-topic]"));
 const TOPIC_NAMES = {question:"General question",cooperation:"Collaboration",feedback:"Feedback or idea",other:"Other"};
 let lang = "ru";
 let topic = "question";
-let formId = "";
-let contactEmail = "";
+let bridge = null;
 let busy = false;
 let lastSentAt = 0;
 
@@ -145,10 +148,9 @@ function applyLanguage(next) {
   for (const element of document.querySelectorAll("[data-placeholder]")) {
     element.placeholder = t(element.dataset.placeholder);
   }
-  $("contactEmail").required = $("contactReply").value === "email";
-  document.querySelector('label[for="contactEmail"]').textContent =
-    t($("contactEmail").required ? "emailLabel" : "emailOptionalLabel");
+  syncReplySetting();
   $("contactCounter").textContent = $("contactMessage").value.length + " / 4000";
+  if (bridge) $("contactIdentityNotice").textContent = t("identityReady") + " " + bridge.nickname;
   // Keep errors from getting overwritten while switching language.
   if (status.dataset.mode === "ready") setStatus(t("ready"));
   else if (status.dataset.mode === "unavailable") setStatus(t("unavailable"), true);
@@ -164,49 +166,37 @@ function selectTopic(next) {
     button.setAttribute("aria-pressed", String(selected));
   }
 }
-function emailRequired() {
-  const required = $("contactReply").value === "email";
-  $("contactEmail").required = required;
-  document.querySelector('label[for="contactEmail"]').textContent =
-    t(required ? "emailLabel" : "emailOptionalLabel");
-}
-function showFallback() {
-  const link = $("contactEmailFallback");
-  if (validDeveloperEmail(contactEmail)) {
-    link.hidden = false;
-    link.href = "mailto:" + contactEmail + "?subject=" + encodeURIComponent("WT Mod Manager — Developer contact");
-  } else {
-    link.hidden = true;
-    link.removeAttribute("href");
-  }
+function syncReplySetting() {
+  const hasReplyEmail = Boolean(bridge?.hasReplyEmail);
+  const choice = $("contactReply");
+  const emailOption = choice.querySelector('option[value="email"]');
+  if(emailOption) emailOption.disabled = !hasReplyEmail;
+  if(!hasReplyEmail) choice.value = "none";
 }
 async function loadService() {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
+  const notice = $("contactIdentityNotice");
   try {
-    const response = await fetch("../json/site-config.json", {cache:"no-store",signal:controller.signal});
-    if (!response.ok) throw new Error("Configuration unavailable");
-    const settings = await response.json();
-    contactEmail = validDeveloperEmail(settings.developer_email) ? settings.developer_email.trim() : "";
-    if (!validFormspreeId(settings.formspree_form_id)) throw new Error("Contact form not configured");
-    formId = settings.formspree_form_id;
+    bridge = await getContactBridge();
+    notice.textContent = t("identityReady") + " " + bridge.nickname;
+    syncReplySetting();
     submit.disabled = false;
     status.dataset.mode = "ready";
     setStatus(t("ready"));
-  } catch (error) {
-    console.warn("Contact configuration unavailable", error);
+  } catch(error) {
+    bridge = null;
     submit.disabled = true;
     status.dataset.mode = "unavailable";
-    setStatus(t("unavailable"), true);
-    // Best-effort direct email fallback, only if it was loaded before failure.
-    showFallback();
-  } finally { clearTimeout(timeout); }
+    setStatus(error?.message === "PROFILE_REQUIRED" ? t("identityMissing") : t("unavailable"),true);
+    notice.textContent = t("identityMissing") + " ";
+    const link = document.createElement("a");
+    link.href = "../profile/profile.html";
+    link.textContent = t("openProfile");
+    notice.append(link);
+  }
 }
 function readValues() {
   return {
     website: $("contactWebsite").value,
-    name: $("contactName").value,
-    email: $("contactEmail").value,
     title: $("contactTitle").value,
     message: $("contactMessage").value,
     reference: $("contactReference").value,
@@ -216,8 +206,8 @@ function readValues() {
 }
 async function sendMessage(event) {
   event.preventDefault();
-  if (busy || !formId) return;
-  if (Date.now() - lastSentAt < 45000) {
+  if (busy || !bridge) return;
+  if (Date.now() - lastSentAt < 60000) {
     setStatus(t("cooldown"), true);
     return;
   }
@@ -234,43 +224,26 @@ async function sendMessage(event) {
   submit.querySelector("[data-t=send]").textContent = t("sending");
   status.dataset.mode = "sending";
   setStatus(t("sending"));
-  const data = new FormData(form);
-  data.set("request_type", "Developer contact");
-  data.set("topic", topic);
-  data.set("name", values.name.trim());
-  data.set("email", values.email.trim());
-  data.set("title", values.title.trim());
-  data.set("message", values.message.trim());
-  data.set("reply_preference", values.reply);
-  data.set("language", lang);
-  data.set("page", window.location.origin + window.location.pathname);
-  data.delete("contactConsent");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch("https://formspree.io/f/" + formId, {
-      method:"POST",body:data,signal:controller.signal,
-      headers:{Accept:"application/json"}
+    await bridge.send({
+      kind:"contact",topic,title:values.title,message:values.message,
+      reference:values.reference,reply:values.reply,language:lang,website:values.website
     });
-    if (!response.ok) throw new Error("Formspree HTTP " + response.status);
-    // Formspree responds with JSON when requested. A 2xx indicates accepted submission.
     lastSentAt = Date.now();
     form.reset();
     selectTopic("question");
-    emailRequired();
+    syncReplySetting();
     $("contactCounter").textContent = "0 / 4000";
     form.hidden = true;
     success.hidden = false;
     success.focus();
   } catch(error) {
-    console.warn("Developer message send failed:", error);
+    console.warn("Developer message send failed:", error?.message || "request error");
     status.dataset.mode = "error";
-    setStatus(t("sendError"), true);
-    showFallback();
+    setStatus(error?.message === "RATE_LIMIT" ? t("rateLimit") : t("sendError"),true);
   } finally {
-    clearTimeout(timeout);
     busy = false;
-    submit.disabled = !formId;
+    submit.disabled = !bridge;
     submit.querySelector("[data-t=send]").textContent = t("send");
   }
 }
@@ -280,7 +253,11 @@ function detectLanguage() {
     if (Object.prototype.hasOwnProperty.call(copy, saved)) return saved;
   } catch { /* storage may be unavailable */ }
   const locale = (navigator.language || "").toLowerCase();
-  return locale.startsWith("uk") ? "uk" : locale.startsWith("ru") ? "ru" : "en";
+  if(locale.startsWith("uk")) return "uk";
+  if(locale.startsWith("ru")) return "ru";
+  if(locale.startsWith("pl")) return "pl";
+  if(locale.startsWith("de")) return "de";
+  return "en";
 }
 function init() {
   $("contactYear").textContent = String(new Date().getFullYear());
@@ -288,13 +265,13 @@ function init() {
   selectTopic("question");
   topicButtons.forEach(button => button.addEventListener("click", () => selectTopic(button.dataset.topic)));
   $("contactLanguage").addEventListener("change", event => applyLanguage(event.target.value));
-  $("contactReply").addEventListener("change", emailRequired);
+  $("contactReply").addEventListener("change", syncReplySetting);
   $("contactMessage").addEventListener("input", () => {
     $("contactCounter").textContent = $("contactMessage").value.length + " / 4000";
   });
   form.addEventListener("submit", sendMessage);
   $("contactAgain").addEventListener("click", () => {
-    if (Date.now() - lastSentAt < 45000) {
+    if (Date.now() - lastSentAt < 60000) {
       // Restore a blank form but keep cooldown (prevents accidental duplicate sends).
       status.dataset.mode = "cooldown";
     }
