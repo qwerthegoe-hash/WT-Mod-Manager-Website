@@ -25,7 +25,7 @@ let enrolled = false;
 let assured = false;
 let enrollCalls = 0, verifyCalls = 0, unEnrollCalls = 0;
 const auth = {
-  async getUser() { return { data: { user: { id:"sample", email:"a@example.test", is_anonymous: false } }, error:null }; },
+  async getUser() { return { data: { user: { id:"sample", email:"a@example.test", email_confirmed_at:"2026-11-18T00:00:00Z", is_anonymous: false } }, error:null }; },
   mfa: {
     async listFactors() { return { data:{ totp: enrolled ? [{id:"fac-1", status:"verified"}] : [] },error:null }; },
     async getAuthenticatorAssuranceLevel() {
