@@ -911,7 +911,7 @@ function updateStatuses() {
 async function loadSiteConfig() {
     try {
         const response = await fetch(
-            "site-config.json",
+            "json/site-config.json",
             { cache: "no-store" }
         );
 
