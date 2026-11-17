@@ -13,10 +13,48 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "600",
 };
+// An untrusted client can omit Content-Length and send an arbitrarily large body.
+// Cap the actual bytes before decoding/parsing JSON to avoid avoidable memory spikes.
+const MAX_REQUEST_BYTES = 8192;
+class RequestBodyTooLarge extends Error {}
+async function readLimitedJson(request: Request): Promise<Record<string, unknown> | null> {
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_REQUEST_BYTES) {
+        await reader.cancel();
+        throw new RequestBodyTooLarge("Request too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
 const response = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+    headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" },
   });
 
 function serverKey(): string {
@@ -110,11 +148,15 @@ Deno.serve(async (request: Request) => {
     const length = Number(request.headers.get("content-length") || 0);
     if (length > 8192) return response({ error: "Request too large" }, 413);
 
-    const input: unknown = await request.json().catch(() => null);
-    if (!input || typeof input !== "object" || Array.isArray(input))
-      return response({ error: "Invalid JSON body" }, 400);
-    const data = input as Record<string, unknown>;
-    if (JSON.stringify(data).length > 8192) return response({ error: "Request too large" }, 413);
+    let data: Record<string, unknown> | null;
+    try {
+      data = await readLimitedJson(request);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLarge)
+        return response({ error: "Request too large" }, 413);
+      throw error;
+    }
+    if (!data) return response({ error: "Invalid JSON body" }, 400);
     const action = data.action;
 
     if (action === "cleanup") {
