@@ -6,6 +6,9 @@ import { spawnSync } from "node:child_process";
 const root = path.resolve(import.meta.dirname, "..");
 const docs = path.join(root, "docs");
 const errors = [];
+const configSource = fs.readFileSync(path.join(docs, "js", "community-config.js"), "utf8");
+const configuredSupabase = configSource.match(/supabaseUrl:\s*["'](https:\/\/[a-z0-9-]+\.supabase\.co)["']/i)?.[1];
+if (!configuredSupabase) errors.push("Could not locate configured Supabase origin for CSP checking");
 let checkedLinks = 0, checkedScripts = 0, checkedPages = 0;
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
@@ -58,6 +61,13 @@ for (const file of walk(docs)) {
         fail(relative, "CSP must disable objects and external base URLs");
       if (/script-src[^;]*'unsafe-inline'/.test(csp[0]))
         fail(relative, "CSP must not allow inline scripts");
+      if (/https:\/\/\*\.supabase\.co|wss:\/\/\*\.supabase\.co/.test(csp[0]))
+        fail(relative, "CSP must not allow wildcard Supabase projects");
+      if (/img-src[^;]*\shttps:(?:[\s;'"]|$)/.test(csp[0]))
+        fail(relative, "CSP must not allow all HTTPS image hosts");
+      if (configuredSupabase && (!csp[0].includes(configuredSupabase) ||
+          !csp[0].includes(configuredSupabase.replace("https://", "wss://"))))
+        fail(relative, "CSP does not match the configured Supabase origin");
     }
     for (const match of html.matchAll(/<a\b([^>]*)>/g)) {
       if (/target=["']_blank["']/.test(match[1]) && !/rel=["'][^"']*noopener[^"']*["']/.test(match[1]))
@@ -74,6 +84,14 @@ if (fs.existsSync(path.join(root, "tools", "test-zip-validator.mjs"))) {
   const result = spawnSync(process.execPath, [path.join(root, "tools", "test-zip-validator.mjs")], { encoding: "utf8" });
   if (result.status !== 0) fail("ZIP validation tests", (result.stderr || result.stdout).slice(0, 1000));
   else process.stdout.write(result.stdout);
+}
+const reviewPolicyTest = spawnSync(process.execPath, [
+  path.join(root, "tools", "test-mod-review-policy.mjs")
+], { encoding: "utf8" });
+if (reviewPolicyTest.status !== 0) {
+  fail("Mod review policy tests", (reviewPolicyTest.stderr || reviewPolicyTest.stdout).slice(0, 1000));
+} else {
+  process.stdout.write(reviewPolicyTest.stdout);
 }
 console.log("Checked " + checkedPages + " pages, " + checkedLinks + " local links, " + checkedScripts + " JS scripts.");
 if (errors.length) {
