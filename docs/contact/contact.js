@@ -26,7 +26,7 @@ const copy = {
     optionsNote:"Не прикрепляй пароли, токены, документы и приватные файлы. Пожалуйста, не публикуй чужие личные данные.",
     consentText:"Я согласен отправить указанные данные для обработки моего обращения.",
     loading:"Подключение к службе обращений…",ready:"Форма готова к отправке.",
-    unavailable:"Служба отправки временно недоступна. Можно использовать электронную почту, если она указана.",
+    unavailable:"Служба отправки временно недоступна. Можно использовать электронную почту, если она указана.",cooldown:"Сообщение уже отправлено. Повтори попытку немного позже.",
     invalid:"Проверь заполнение полей и согласие на отправку.",
     sending:"Отправляем сообщение…",send:"Отправить сообщение",
     sendError:"Не удалось отправить сообщение. Проверь подключение и попробуй ещё раз.",
@@ -59,7 +59,7 @@ const copy = {
     optionsNote:"Не додавай паролі, токени, документи та приватні файли. Не поширюй чужі особисті дані.",
     consentText:"Я погоджуюся на передавання вказаних даних для опрацювання звернення.",
     loading:"Підключення до служби звернень…",ready:"Форма готова до надсилання.",
-    unavailable:"Служба надсилання тимчасово недоступна. За наявності адреси можна написати електронною поштою.",
+    unavailable:"Служба надсилання тимчасово недоступна. За наявності адреси можна написати електронною поштою.",cooldown:"Повідомлення вже надіслано. Повтори спробу трохи пізніше.",
     invalid:"Перевір заповнення полів і згоду на надсилання.",
     sending:"Надсилаємо повідомлення…",send:"Надіслати повідомлення",
     sendError:"Не вдалося надіслати повідомлення. Перевір з'єднання та спробуй ще раз.",
@@ -92,7 +92,7 @@ const copy = {
     optionsNote:"Never include passwords, access tokens, documents, or private files. Do not share anyone else's personal data.",
     consentText:"I agree to send the provided information so my message can be processed.",
     loading:"Connecting to the contact service…",ready:"Ready to send.",
-    unavailable:"The contact service is unavailable. You can use email if a developer address is configured.",
+    unavailable:"The contact service is unavailable. You can use email if a developer address is configured.",cooldown:"Your message was just sent. Please try again shortly.",
     invalid:"Please check the required fields and consent.",
     sending:"Sending your message…",send:"Send message",
     sendError:"The message could not be sent. Check your connection and try again.",
@@ -187,9 +187,9 @@ async function loadService() {
     const response = await fetch("../json/site-config.json", {cache:"no-store",signal:controller.signal});
     if (!response.ok) throw new Error("Configuration unavailable");
     const settings = await response.json();
+    contactEmail = validDeveloperEmail(settings.developer_email) ? settings.developer_email.trim() : "";
     if (!validFormspreeId(settings.formspree_form_id)) throw new Error("Contact form not configured");
     formId = settings.formspree_form_id;
-    contactEmail = validDeveloperEmail(settings.developer_email) ? settings.developer_email.trim() : "";
     submit.disabled = false;
     status.dataset.mode = "ready";
     setStatus(t("ready"));
@@ -218,7 +218,7 @@ async function sendMessage(event) {
   event.preventDefault();
   if (busy || !formId) return;
   if (Date.now() - lastSentAt < 45000) {
-    setStatus(t("sendError"), true);
+    setStatus(t("cooldown"), true);
     return;
   }
   const values = readValues();
