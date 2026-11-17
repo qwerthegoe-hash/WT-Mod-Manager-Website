@@ -1,8 +1,0 @@
-{
-  "deno.enablePaths": [
-    "./supabase/functions",
-    "./docs/supabase/functions",
-    "./index.ts"
-  ],
-  "deno.lint": true
-}
