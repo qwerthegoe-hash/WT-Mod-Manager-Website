@@ -106,6 +106,24 @@ const copy = {
 };
 
 Object.assign(copy, contactLocalesExtra);
+Object.assign(copy.ru,{
+  identityReady:"Отправитель из профиля:",identityMissing:"Сначала установи никнейм в своём профиле.",
+  openProfile:"Открыть профиль",rateLimit:"Слишком много обращений. Попробуй позже.",
+  formDesc:"Отправка через твой профиль WT Mod Manager. Никнейм и подтверждённый email добавляются автоматически.",
+  successText:"Служба приняла обращение. Ответ возможен, если к профилю привязан подтверждённый email."
+});
+Object.assign(copy.uk,{
+  identityReady:"Відправник із профілю:",identityMissing:"Спочатку встанови нікнейм у профілі.",
+  openProfile:"Відкрити профіль",rateLimit:"Забагато звернень. Спробуй пізніше.",
+  formDesc:"Повідомлення надсилається з твого профілю WT Mod Manager. Нікнейм і підтверджений email підставляються автоматично.",
+  successText:"Служба прийняла звернення. Відповідь можлива за наявності підтвердженого email."
+});
+Object.assign(copy.en,{
+  identityReady:"Sender from profile:",identityMissing:"Set a nickname in your profile before sending.",
+  openProfile:"Open profile",rateLimit:"Too many requests. Please try later.",
+  formDesc:"Messages are sent through your WT Mod Manager profile. Nickname and verified email are filled automatically.",
+  successText:"The service accepted your message. A reply is possible if a verified email is linked to your profile."
+});
 
 const $ = id => document.getElementById(id);
 const form = $("contactForm");
