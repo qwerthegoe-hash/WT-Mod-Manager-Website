@@ -115,3 +115,7 @@ body { background:radial-gradient(ellipse 70% 35% at 48% 9%,#163761b3,transparen
 @media (prefers-reduced-motion:reduce) {
   .contact-topic,.contact-submit {transition:none!important;transform:none!important;}
 }
+
+.contact-fallback {display:inline-flex;align-items:center;gap:8px;margin-top:15px;font-size:13px;font-weight:720;color:#9ed0ff;text-decoration:underline;text-underline-offset:3px;}
+.contact-fallback[hidden] {display:none!important;}
+.contact-fallback:focus-visible {outline:2px solid #b5deff;outline-offset:4px;}
