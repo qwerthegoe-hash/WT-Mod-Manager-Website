@@ -973,12 +973,12 @@ function setupSupportLinks() {
     );
 
     if (bugLink) {
-        bugLink.href = "support.html?type=bug";
+        bugLink.href = "support/support.html?type=bug";
         bugLink.removeAttribute("target");
     }
 
     if (ideaLink) {
-        ideaLink.href = "support.html?type=idea";
+        ideaLink.href = "support/support.html?type=idea";
         ideaLink.removeAttribute("target");
     }
 }
