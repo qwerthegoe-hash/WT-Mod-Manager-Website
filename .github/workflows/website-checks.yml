@@ -20,6 +20,10 @@ jobs:
           node-version: "22"
       - name: Validate JS, HTML, file references and ZIP checks
         run: node tools/check-site.mjs
+      - name: Run Python archive-scanner safety regression tests
+        run: python3 -m unittest discover -s tools -p "test_scan_mod_packages.py" -v
+      - name: Validate scanner Python syntax
+        run: python3 -m py_compile tools/scan_mod_packages.py
       - name: Set up Deno for server-function validation
         uses: denoland/setup-deno@v2
         with:
