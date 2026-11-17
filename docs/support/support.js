@@ -169,6 +169,24 @@ const texts = {
 };
 
 Object.assign(texts, supportTextsExtra);
+Object.assign(texts.ru,{
+  identityReady:"Отправитель из профиля:",identityMissing:"Для отправки сначала установи никнейм в профиле.",
+  openProfile:"Открыть профиль",rateLimit:"Слишком много обращений. Попробуй позже.",
+  readyNote:"Обращение отправится разработчику от твоего профиля. Никнейм и email подставляются автоматически.",
+  invalid:"Проверь обязательные поля."
+});
+Object.assign(texts.uk,{
+  identityReady:"Відправник із профілю:",identityMissing:"Для надсилання спочатку встанови нікнейм у профілі.",
+  openProfile:"Відкрити профіль",rateLimit:"Забагато звернень. Спробуй пізніше.",
+  readyNote:"Звернення надійде розробнику від твого профілю. Нікнейм і email додаються автоматично.",
+  invalid:"Перевір обов'язкові поля."
+});
+Object.assign(texts.en,{
+  identityReady:"Sender from profile:",identityMissing:"Set a profile nickname before sending a request.",
+  openProfile:"Open profile",rateLimit:"Too many requests. Try again later.",
+  readyNote:"Your request will be delivered from your profile. Nickname and verified email are filled automatically.",
+  invalid:"Please check the required fields."
+});
 
 // Detailed explanation for every form field.
 // Each entry: title, description, example, additional note.
