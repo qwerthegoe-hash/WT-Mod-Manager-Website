@@ -1,0 +1,3 @@
+WT Mod Manager Website GitHub automatic sync test.
+Created 2026-11-17.
+If you can read this file on your PC, synchronization worked.
