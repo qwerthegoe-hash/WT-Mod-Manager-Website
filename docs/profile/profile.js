@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
+import { createSessionDrafts } from "../js/session-drafts.mjs";
 
 const $ = id => document.getElementById(id);
 const COLORS = new Set(["blue", "teal", "purple"]);
@@ -26,6 +27,34 @@ const MEDIA = {
 let db;
 let user;
 let saving = false;
+let draftStorage = null;
+try { draftStorage = sessionStorage; } catch { /* Session storage may be disabled. */ }
+const profileDrafts = createSessionDrafts(draftStorage, "profile");
+function saveProfileDraft() {
+    if (!user || saving) return;
+    const draft = {
+        nickname: $("profileNickname").value.slice(0, 24),
+        bio: $("profileBio").value.slice(0, 320),
+        accent: accentValue(),
+        isPublic: $("profileIsPublic").checked
+    };
+    profileDrafts.write(user.id, JSON.stringify(draft));
+}
+function restoreProfileDraft() {
+    if (!user) return false;
+    try {
+        const text = profileDrafts.read(user.id);
+        if (!text) return false;
+        const draft = JSON.parse(text);
+        if (!draft || typeof draft.nickname !== "string" || typeof draft.bio !== "string") return false;
+        $("profileNickname").value = draft.nickname.slice(0, 24);
+        $("profileBio").value = draft.bio.slice(0, 320);
+        $("profileIsPublic").checked = draft.isPublic === true;
+        setAccent(draft.accent);
+        updateHeading();
+        return true;
+    } catch { return false; }
+}
 
 function report(text, error = false, id = "profileNotice") {
     const el = $(id);
@@ -172,6 +201,8 @@ async function saveProfile(event) {
         if (error) throw error;
 
         saveLocalNickname(name);
+        // The database committed successfully; no longer need the local text draft.
+        profileDrafts.clear(user.id);
         for (const [kind, item] of Object.entries(MEDIA)) {
             const oldPath = item.current;
             item.current = nextPaths[kind];
@@ -237,8 +268,12 @@ async function runAccountChange(action, payload, message) {
 function bind() {
     $("profileForm").addEventListener("submit", saveProfile);
     $("profileNickname").addEventListener("input", updateHeading);
+    for (const id of ["profileNickname", "profileBio", "profileIsPublic"]) {
+        $(id).addEventListener("input", saveProfileDraft);
+        $(id).addEventListener("change", saveProfileDraft);
+    }
     document.querySelectorAll('input[name="profileAccent"]').forEach(el =>
-        el.addEventListener("change", () => setAccent(accentValue())));
+        el.addEventListener("change", () => { setAccent(accentValue()); saveProfileDraft(); }));
     for (const kind of Object.keys(MEDIA)) {
         const item = MEDIA[kind];
         $(item.input).addEventListener("change", event => fileSelected(kind, event));
@@ -315,9 +350,10 @@ async function init() {
         // Identity can load even when the profile database is temporarily unavailable.
         $("userProfileTitle").textContent = user.email || "Player_" + user.id.slice(0, 6);
         await loadProfile();
+        const recoveredDraft = restoreProfileDraft();
         window.WTDiagnostics?.record?.("profile-load-ok");
         setSaving(false);
-        report("");
+        report(recoveredDraft ? "Восстановлен несохранённый текст профиля из этой вкладки." : "");
     } catch (error) {
         window.WTDiagnostics?.record?.("profile-load-failed");
         console.error("Profile initialization:", error);
