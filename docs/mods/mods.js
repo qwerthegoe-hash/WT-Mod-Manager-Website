@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
 import { modReviewReady } from "../js/mod-review-policy.mjs";
+import { mapWithConcurrency } from "../js/async-pool.mjs";
 
 const $ = id => document.getElementById(id);
 const FILE_BUCKET = "wtmm-mod-packages";
@@ -168,7 +169,8 @@ async function render() {
     $("modsCounter").textContent = rows.length + " модов";
     $("modsEmpty").hidden = rows.length !== 0;
     const fragment = document.createDocumentFragment();
-    const cards = await Promise.all(rows.map(makeCard));
+    // Bound signed-image URL requests while preserving card order and all results.
+    const cards = await mapWithConcurrency(rows, 6, makeCard);
     if (version !== renderVersion) return;
     for (const card of cards) fragment.append(card);
     $("modsGrid").replaceChildren(fragment);
