@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
+import { modReviewReady } from "../js/mod-review-policy.mjs";
 
 const $ = id => document.getElementById(id);
 const FILE_BUCKET = "wtmm-mod-packages";
@@ -234,9 +235,13 @@ async function showModDetails(id) {
         const previewArea = node("div", "mods-review-link");
         const checkArchive = node("button", "mods-secondary", "Проверить структуру ZIP");
         checkArchive.type = "button";
-        const checkStatus = node("p", "mods-review-note", "");
+        const checkStatus = node("p", "mods-review-note", "Для одобрения проверь ZIP и открой архив для ручного просмотра.");
+        let archiveValidated = false;
+        let manualReviewOpened = false;
         checkArchive.addEventListener("click", async () => {
             checkArchive.disabled = true;
+            archiveValidated = false;
+            approve.disabled = true;
             checkStatus.textContent = "Проверяю ZIP без распаковки...";
             try {
                 const { data, error } = await db.storage.from(FILE_BUCKET)
@@ -250,6 +255,8 @@ async function showModDetails(id) {
                 const file = await response.blob();
                 if (file.size > FILE_LIMIT) throw new Error("ZIP превышает 20 МБ.");
                 const result = await validateModZip(file);
+                archiveValidated = true;
+                approve.disabled = !modReviewReady(archiveValidated, manualReviewOpened);
                 checkStatus.textContent = "Структура ZIP проверена: " + result.files +
                     " файлов. Это не антивирусная проверка — всё ещё нужна ручная модерация.";
             } catch (error) {
@@ -271,13 +278,19 @@ async function showModDetails(id) {
                 if (error) throw error;
                 const a = link(data.signedUrl, "Открыть/скачать архив для ручной проверки");
                 a.target = "_blank"; a.rel = "noopener noreferrer";
-                a.addEventListener("click", () => { approve.disabled = false; });
+                a.addEventListener("click", () => {
+                    manualReviewOpened = true;
+                    approve.disabled = !modReviewReady(archiveValidated, manualReviewOpened);
+                });
                 previewArea.replaceChildren(a);
             } catch (error) {
                 previewArea.textContent = "Не удалось открыть архив: " + error.message;
             } finally { preview.disabled = false; }
         });
-        approve.addEventListener("click", () => decideMod(row, "approved"));
+        approve.addEventListener("click", () => {
+            if (!modReviewReady(archiveValidated, manualReviewOpened)) return;
+            decideMod(row, "approved");
+        });
         reject.addEventListener("click", () => decideMod(row, "rejected"));
         actions.append(checkArchive, checkStatus, preview, previewArea, approve, reject);
     }
