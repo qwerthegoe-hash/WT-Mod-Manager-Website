@@ -45,11 +45,24 @@ for (const file of walk(docs)) {
     const html = fs.readFileSync(file, "utf8");
     for (const match of html.matchAll(/\b(?:href|src)=["']([^"']+)["']/g)) checkLocalPath(match[1], file);
     for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-      if (!/\bsrc=/.test(match[1]) && match[2].trim())
+      if (!/\bsrc=/.test(match[1]) && match[2].trim()) {
+        fail(relative, "Inline JavaScript conflicts with strict CSP");
         checkSyntax(match[2], relative + ":inline-script", /\btype=["']module["']/.test(match[1]));
+      }
     }
     if (!/<meta\b[^>]*\bname=["']referrer["']/.test(html)) fail(relative, "Missing referrer meta");
-    if (!/<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["']/.test(html)) fail(relative, "Missing CSP meta");
+    const csp = html.match(/<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["'][^>]*>/);
+    if (!csp) fail(relative, "Missing CSP meta");
+    else {
+      if (!csp[0].includes("object-src 'none'") || !csp[0].includes("base-uri 'self'"))
+        fail(relative, "CSP must disable objects and external base URLs");
+      if (/script-src[^;]*'unsafe-inline'/.test(csp[0]))
+        fail(relative, "CSP must not allow inline scripts");
+    }
+    for (const match of html.matchAll(/<a\b([^>]*)>/g)) {
+      if (/target=["']_blank["']/.test(match[1]) && !/rel=["'][^"']*noopener[^"']*["']/.test(match[1]))
+        fail(relative, "External tab link missing noopener");
+    }
   }
   if ([".js", ".html", ".json", ".ts"].includes(extension)) {
     const text = fs.readFileSync(file, "utf8");
