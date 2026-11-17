@@ -28,28 +28,46 @@ try {
         exit 0
     }
     if (Test-GameRunning) { exit 0 }
+    # Scheduled tasks may not inherit the interactive terminal's PATH.
+    $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
+    $gitExecutable = if ($gitCommand) { $gitCommand.Source } else { "" }
+    if (-not $gitExecutable) {
+        foreach ($candidate in @(
+            (Join-Path $env:ProgramFiles "Git\cmd\git.exe"),
+            "D:\Git\Git\cmd\git.exe"
+        )) {
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                $gitExecutable = $candidate
+                break
+            }
+        }
+    }
+    if (-not $gitExecutable) {
+        Write-LocalLog "SKIP: git.exe was not found on PATH or known installation paths"
+        exit 0
+    }
     $gitDir = Join-Path $RepositoryPath ".git"
     if (-not (Test-Path -LiteralPath $gitDir)) {
         Write-LocalLog "SKIP: local folder is not a Git working tree"
         exit 0
     }
-    $branchName = (& git -C $RepositoryPath branch --show-current 2>$null)
+    $branchName = (& $gitExecutable -C $RepositoryPath branch --show-current 2>$null)
     if ($LASTEXITCODE -ne 0 -or $branchName.Trim() -ne "main") {
         Write-LocalLog "SKIP: expected current branch main"
         exit 0
     }
     # Respect untracked files as well as tracked changes (including README.md).
-    $changes = @(& git -C $RepositoryPath status --porcelain --untracked-files=all)
+    $changes = @(& $gitExecutable -C $RepositoryPath status --porcelain --untracked-files=all)
     if ($LASTEXITCODE -ne 0 -or $changes.Count -gt 0) {
         Write-LocalLog "SKIP: local changes or untracked files require manual review"
         exit 0
     }
     if (Test-GameRunning) { exit 0 }
-    & git -C $RepositoryPath fetch --quiet origin main 2>$null
+    & $gitExecutable -C $RepositoryPath fetch --quiet origin main 2>$null
     if ($LASTEXITCODE -ne 0) { throw "Fetch failed" }
     # War Thunder could start during fetch: check again before touching local files.
     if (Test-GameRunning) { exit 0 }
-    & git -C $RepositoryPath merge --ff-only --quiet origin/main 2>$null
+    & $gitExecutable -C $RepositoryPath merge --ff-only --quiet origin/main 2>$null
     if ($LASTEXITCODE -ne 0) { throw "Fast-forward merge refused" }
     Write-LocalLog "OK: clean working tree fast-forwarded safely"
 } catch {
