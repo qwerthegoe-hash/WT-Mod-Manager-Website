@@ -315,7 +315,8 @@ async function decideMod(row, status) {
             status, rejection_reason: reason,
             reviewed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-        }).eq("id", row.id).eq("status", "pending").select("id");
+        }).eq("id", row.id).eq("status", "pending")
+          .eq("file_path", row.file_path).select("id");
     if (error || !data?.length) {
         say("Не удалось изменить статус: " + (error?.message || "заявка уже обработана"), true);
         return;
