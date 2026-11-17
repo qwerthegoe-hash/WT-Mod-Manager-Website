@@ -11,21 +11,24 @@ export function createSessionDrafts(storage, namespace) {
   };
   return Object.freeze({
     read(suffix) {
+      const storageKey = key(suffix);
       try {
-        const value = storage?.getItem(key(suffix));
+        const value = storage?.getItem(storageKey);
         return typeof value === "string" ? value.slice(0, MAX_DRAFT_CHARS) : "";
       } catch { return ""; }
     },
     write(suffix, value) {
+      const storageKey = key(suffix);
       if (typeof value !== "string") return false;
       try {
-        if (!value) storage?.removeItem(key(suffix));
-        else storage?.setItem(key(suffix), value.slice(0, MAX_DRAFT_CHARS));
+        if (!value) storage?.removeItem(storageKey);
+        else storage?.setItem(storageKey, value.slice(0, MAX_DRAFT_CHARS));
         return true;
       } catch { return false; }
     },
     clear(suffix) {
-      try { storage?.removeItem(key(suffix)); } catch { /* storage optional */ }
+      const storageKey = key(suffix);
+      try { storage?.removeItem(storageKey); } catch { /* storage optional */ }
     }
   });
 }
