@@ -1,6 +1,6 @@
 "use strict";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { COMMUNITY_CONFIG as config } from "./community-config.js";
+import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 
 const $ = id => document.getElementById(id);
 const FILE_BUCKET = "wtmm-mod-packages";
@@ -65,7 +65,7 @@ function authorName(row) {
 }
 function authorLink(row) {
     const publicProfile = profile(row);
-    return publicProfile ? "creator.html?id=" + encodeURIComponent(row.owner_id) : null;
+    return publicProfile ? "../creator/creator.html?id=" + encodeURIComponent(row.owner_id) : null;
 }
 async function coverUrl(row) {
     if (!row.cover_path) return null;
