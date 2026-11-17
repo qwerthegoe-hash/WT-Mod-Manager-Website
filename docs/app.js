@@ -356,7 +356,7 @@ const translations = {
 
 Object.assign(translations, window.WTMM_HOME_TRANSLATIONS || {});
 for (const [lang,label] of Object.entries({en:"Community",ru:"Сообщество",uk:"Спільнота",pl:"Społeczność",de:"Community"})) {
-    translations[lang].navCommunity = label;
+    if (translations[lang]) translations[lang].navCommunity = label;
 }
 
 // Help guides in five languages.
