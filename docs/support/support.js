@@ -722,6 +722,7 @@ function applyLanguage(language) {
 
     const sharedFields = {
         homeLink: "home",
+        developerPageLink: "contactTitle",
         supportEyebrow: "eyebrow",
         supportTitle: "title",
         supportSubtitle: "subtitle",
