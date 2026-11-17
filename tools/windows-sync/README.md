@@ -30,3 +30,36 @@ which is intentional: local data is more important than forced updates.
 **Note:** Task Scheduler can create tasks from a local administrator session.
 Setting up or disabling your existing Windows task requires action on the PC;
 changing files in GitHub cannot do it for you.
+
+
+## One-command setup on your Windows computer
+
+After updating this repository on the PC, open PowerShell **on your own
+computer** in the repository folder. The safe setup does not delete files.
+
+Disable the original task immediately (recommended when the console appears
+during games):
+
+```powershell
+powershell -NoProfile -File ".\\tools\\windows-sync\\setup-windows-sync.ps1" -Mode Disable
+```
+
+Show task states without changing anything:
+
+```powershell
+powershell -NoProfile -File ".\\tools\\windows-sync\\setup-windows-sync.ps1" -Mode Status
+```
+
+Only if you want a replacement, install a hidden, **logon-only** task (no
+per-minute popups; the worker skips known games and dirty working trees):
+
+```powershell
+powershell -NoProfile -File ".\\tools\\windows-sync\\setup-windows-sync.ps1" -Mode InstallSafe
+```
+
+Task Scheduler permissions might require opening PowerShell as an
+administrator. `InstallSafe` also disables the old task before registering
+the new one; it never runs `git reset --hard` or `git clean`.
+
+Important: a GitHub commit cannot operate Task Scheduler on the PC remotely.
+These commands must be executed locally by the Windows account owner.
