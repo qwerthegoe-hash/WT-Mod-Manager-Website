@@ -1,7 +1,7 @@
 // WT Mod Manager Community — secure photo review Edge Function.
 // Server-side authorization and manual moderation; NOT an automatic malware scanner.
 // Never place secret keys in the repository or frontend files.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 
 const PROJECT_URL = Deno.env.get("SUPABASE_URL") || "";
 const MAX_BYTES = 5 * 1024 * 1024;
