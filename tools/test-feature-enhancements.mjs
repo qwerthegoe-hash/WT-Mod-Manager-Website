@@ -9,14 +9,17 @@ const features = [
   ["docs/community/community.js", [
     "chatDrafts.write(activeChannel", "chatDrafts.read(next)",
     "messageSignature(message)", "previousById", "updateUnreadBadge",
-    "eventFilter.addEventListener", "Обновить статусы"
+    "eventFilter.addEventListener", "Обновить статусы",
+    "realtimeNeedsReconnect", "scheduleRealtimeReconnect"
   ]],
   ["docs/mods/mods.js", [
     "fetchModPage", ".range(offset, offset + MOD_PAGE_SIZE - 1)",
-    "loadMoreMods", "modsLoadMore", "extendAuthorProfiles"
+    "loadMoreMods", "modsLoadMore", "extendAuthorProfiles",
+    "mod-versions", "moderationStatus"
   ]],
   ["docs/profile/profile.js", [
-    "saveProfileDraft", "restoreProfileDraft", "profileDrafts.clear"
+    "saveProfileDraft", "restoreProfileDraft", "profileDrafts.clear",
+    'window.addEventListener("storage"'
   ]],
   ["docs/support/support.js", [
     "saveSupportDraft", "restoreSupportDraft", "clearSupportDraft",
