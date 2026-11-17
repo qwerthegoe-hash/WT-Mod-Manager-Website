@@ -278,18 +278,24 @@ function bind() {
         await runAccountChange("password", { password }, "Пароль установлен. Теперь аккаунт можно использовать для входа.");
     });
     $("loginAccount").addEventListener("click", async () => {
+        const button = $("loginAccount");
+        if (button.disabled) return;
         const email = $("loginEmail").value.trim();
         const password = $("loginPassword").value;
         if (!email || !password) {
             report("Введи email и пароль.", true, "accountNotice"); return;
         }
+        button.disabled = true;
         try {
             report("Выполняю вход...", false, "accountNotice");
             const { error } = await db.auth.signInWithPassword({ email, password });
             if (error) throw error;
+            $("loginPassword").value = "";
             window.location.reload();
         } catch (error) {
-            report("Не удалось войти: " + error.message, true, "accountNotice");
+            report("Не удалось войти: " + (error?.message || "ошибка сети"), true, "accountNotice");
+        } finally {
+            button.disabled = false;
         }
     });
     window.addEventListener("pagehide", () =>
