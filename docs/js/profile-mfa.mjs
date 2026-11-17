@@ -67,7 +67,7 @@ export function setupProfileMfa(auth, root = document) {
 
   els.begin.addEventListener("click", () => run(async () => {
     const identity = await check(await auth.getUser());
-    if (!identity?.user?.email || identity.user.is_anonymous) {
+    if (!identity?.user?.email || !identity.user.email_confirmed_at || identity.user.is_anonymous) {
       throw new Error("Сначала привяжи и подтверди email.");
     }
     const data = await check(await auth.mfa.enroll({
