@@ -5,7 +5,7 @@
  * The DOM decoration is idempotent and safe for dynamically added controls.
  */
 (() => {
-    const SPRITE = "assets/community-icons.svg";
+    const SPRITE = "../assets/community-icons.svg";
     const CHANNELS = {
         general: "chat",
         updates: "updates",
