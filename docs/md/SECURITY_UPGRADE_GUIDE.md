@@ -89,3 +89,51 @@ reduces risk but never guarantees that a mod is harmless. A successful GitHub
 push **does not** apply SQL or grant the scanner access to Supabase. Existing
 published files are not guaranteed clean until backfill has finished.
 Production deployment and database state must be verified separately.
+
+
+## November 17, 2026: full-site stability and live Supabase review
+
+### Verified in the connected production project
+
+- Project `wt-mod-manager-community` was reachable and its existing user-facing
+  public tables had RLS enabled.
+- Explicit `EXECUTE` access for `anon` and `authenticated` was revoked on
+  `public.rls_auto_enable()`. A post-change SQL check confirmed both roles
+  cannot execute it; privileged database execution remains available.
+- `mod_package_integrity_upgrade.sql` was applied to protect ZIP files
+  and preview paths while submissions are awaiting moderation.
+- `performance_rls_policy_merge.sql` was applied; profile SELECT and
+  mod UPDATE access rules were merged without intentionally changing access.
+- The missing `community-media` Edge Function was deployed with JWT
+  verification enabled and its ACTIVE status was confirmed.
+- Supabase security and performance advisors were checked. Because community
+  supports anonymous sign-in, not every anonymous-role advisory implies
+  a vulnerability. Known additional operational work includes leaked-password
+  protection in Auth, careful audit of privileged RPC functions and
+  end-to-end role testing using controlled test accounts.
+
+### Additional source improvements
+
+- `docs/js/supabase-session.mjs` centralizes verified session initialization,
+  preserving both anonymous users and email accounts.
+- `docs/js/error-monitor.js` exposes generic, in-memory health counters through
+  `WTDiagnostics.health()`. It never sends metrics over the network.
+- `mods/mods.js` adds an administrator-only summary based on records already
+  authorized by Supabase RLS.
+- Public creator pages use bounded image-request concurrency.
+- Community refresh pauses while offline and resumes through its existing
+  online event listener; essential messages and channels remain intact.
+- CI protects the existing navigation, forms, features, session behavior
+  and diagnostics with regression tests.
+
+### Still not activated
+
+The GitHub-hosted ZIP antivirus worker remains opt-in. Do NOT apply
+`mod_malware_scanning_upgrade.sql` until encrypted repository secrets,
+an initial successful scan and the scheduled worker are ready. Otherwise
+new mod approvals will fail closed. A deployed Edge Function for chat images
+is not a substitute for server-side ZIP antivirus scanning.
+
+Also note: a passing CI run does not verify real browser interactions, existing
+form delivery, Auth settings, or every runtime RLS permission. Test those before
+claiming a complete security audit.
