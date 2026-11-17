@@ -75,6 +75,14 @@ if (fs.existsSync(path.join(root, "tools", "test-zip-validator.mjs"))) {
   if (result.status !== 0) fail("ZIP validation tests", (result.stderr || result.stdout).slice(0, 1000));
   else process.stdout.write(result.stdout);
 }
+const reviewPolicyTest = spawnSync(process.execPath, [
+  path.join(root, "tools", "test-mod-review-policy.mjs")
+], { encoding: "utf8" });
+if (reviewPolicyTest.status !== 0) {
+  fail("Mod review policy tests", (reviewPolicyTest.stderr || reviewPolicyTest.stdout).slice(0, 1000));
+} else {
+  process.stdout.write(reviewPolicyTest.stdout);
+}
 console.log("Checked " + checkedPages + " pages, " + checkedLinks + " local links, " + checkedScripts + " JS scripts.");
 if (errors.length) {
   for (const error of errors) console.error("FAIL: " + error);
