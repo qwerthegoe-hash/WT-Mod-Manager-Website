@@ -13,6 +13,9 @@ vm.runInNewContext(program, { window, document, console: consoleStub, navigator:
 assert.equal(window.WTDiagnostics.record("mods-refresh-ok"), true);
 assert.equal(window.WTDiagnostics.record("private-user-input"), false);
 assert.equal(window.WTDiagnostics.health().counters["mods-refresh-ok"], 1);
+const exportedReport = JSON.parse(window.WTDiagnostics.exportJSON());
+assert.equal(exportedReport.product, "WT Mod Manager Website");
+assert.equal(exportedReport.counters["mods-refresh-ok"], 1);
 events.error[0]({ error: { name: "TypeError", message: "private data" } });
 const eventsBefore = window.WTDiagnostics.summary();
 assert.equal(eventsBefore.length, 1);
