@@ -70,14 +70,19 @@ function authorLink(row) {
 }
 async function coverUrl(row) {
     if (!row.cover_path) return null;
-    if (coverCache.has(row.cover_path)) return coverCache.get(row.cover_path);
+    const cached = coverCache.get(row.cover_path);
+    if (cached && cached.expiresAt > Date.now()) return cached.url;
     const { data, error } = await db.storage.from(COVER_BUCKET)
         .createSignedUrl(row.cover_path, 1200);
     if (error || !data?.signedUrl) {
         console.warn("Cover URL unavailable:", error?.message);
         return null;
     }
-    coverCache.set(row.cover_path, data.signedUrl);
+    // Signed links expire; refresh before they stop displaying previews.
+    coverCache.set(row.cover_path, {
+        url: data.signedUrl,
+        expiresAt: Date.now() + 18 * 60 * 1000
+    });
     return data.signedUrl;
 }
 async function queryAll() {
@@ -128,6 +133,7 @@ async function makeCard(row) {
         img.src = signed;
         img.alt = "Обложка: " + row.title;
         img.loading = "lazy";
+        img.decoding = "async";
         cover.replaceChildren(img);
     }
     const content = node("div", "mod-card-content");
