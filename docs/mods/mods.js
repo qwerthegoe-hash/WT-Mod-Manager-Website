@@ -154,6 +154,45 @@ async function makeCard(row) {
     card.append(cover, content);
     return card;
 }
+// Administrator-only overview using records already authorized by Supabase RLS.
+// No extra requests, private credentials, or new permissions are introduced.
+function updateAdminOverview() {
+    let panel = document.getElementById("modAdminOverview");
+    if (!isAdmin) {
+        if (panel) panel.hidden = true;
+        return;
+    }
+    if (!panel) {
+        panel = node("section", "mods-admin-overview");
+        panel.id = "modAdminOverview";
+        panel.setAttribute("aria-label", "Обзор модерации модификаций");
+        const toolbar = document.querySelector(".mods-toolbar");
+        toolbar?.insertAdjacentElement("afterend", panel);
+    }
+    panel.hidden = currentView !== "moderation";
+    if (panel.hidden) return;
+
+    const statuses = { pending: 0, approved: 0, rejected: 0 };
+    for (const record of records) {
+        if (Object.hasOwn(statuses, record.status)) statuses[record.status]++;
+    }
+    const heading = node("h2", "mods-admin-heading", "Панель модерации");
+    const details = node("p", "mods-admin-copy",
+        "Обзор заявок, которые разрешены сервером для текущего администратора.");
+    const indicators = node("div", "mods-admin-stats");
+    for (const [key, title] of [
+        ["pending", "Ожидают проверки"],
+        ["approved", "Опубликованы"],
+        ["rejected", "Отклонены"]
+    ]) {
+        const tile = node("div", "mods-admin-stat");
+        tile.append(node("strong", "", String(statuses[key])));
+        tile.append(node("span", "", title));
+        indicators.append(tile);
+    }
+    panel.replaceChildren(heading, details, indicators);
+}
+
 let renderVersion = 0;
 async function render() {
     const version = ++renderVersion;
@@ -163,6 +202,7 @@ async function render() {
         button.setAttribute("aria-pressed", String(selected));
     });
     const rows = visibleRecords();
+    updateAdminOverview();
     $("modsCounter").textContent = rows.length + " модов";
     $("modsEmpty").hidden = rows.length !== 0;
     const fragment = document.createDocumentFragment();
