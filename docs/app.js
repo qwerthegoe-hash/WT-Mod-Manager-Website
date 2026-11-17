@@ -537,6 +537,56 @@ function activateLink(element, url) {
     return true;
 }
 
+// An interactive, purely illustrative mock interface on the homepage.
+// This is not connected to local game files or the actual desktop application.
+const mockModes = {
+    sights: { title: "previewSightsTitle", description: "previewSightsDesc",
+        labels: ["previewSightsNote1", "previewSightsNote2", "previewSightsNote3"] },
+    camouflages: { title: "previewCamoTitle", description: "previewCamoDesc",
+        labels: ["previewCamoNote1", "previewCamoNote2", "previewCamoNote3"] },
+    sounds: { title: "previewSoundsTitle", description: "previewSoundsDesc",
+        labels: ["previewSoundsNote1", "previewSoundsNote2", "previewSoundsNote3"] },
+    settings: { title: "previewSettingsTitle", description: "previewSettingsDesc",
+        labels: ["previewSettingsNote1", "previewSettingsNote2", "previewSettingsNote3"] }
+};
+let selectedMockMode = "sights";
+
+function renderMockPreview() {
+    const data = mockModes[selectedMockMode];
+    const heading = document.getElementById("previewHeading");
+    const description = document.getElementById("previewDescription");
+    const panel = document.getElementById("mockPreviewPanel");
+    if (!data || !heading || !description || !panel) return;
+
+    heading.textContent = tr(data.title);
+    description.textContent = tr(data.description);
+    panel.dataset.mode = selectedMockMode;
+
+    document.querySelectorAll(".mock-item[data-preview]").forEach(button => {
+        const selected = button.dataset.preview === selectedMockMode;
+        button.classList.toggle("current", selected);
+        button.setAttribute("aria-pressed", String(selected));
+    });
+    document.querySelectorAll(".preview-scene[data-scene]").forEach(scene => {
+        scene.hidden = scene.dataset.scene !== selectedMockMode;
+    });
+    document.querySelectorAll("#previewGrid > div").forEach((item, index) => {
+        const label = item.querySelector("span");
+        if (label && data.labels[index]) label.textContent = tr(data.labels[index]);
+    });
+}
+
+function setupMockShowcase() {
+    document.querySelectorAll(".mock-item[data-preview]").forEach(button => {
+        button.addEventListener("click", () => {
+            if (!Object.prototype.hasOwnProperty.call(mockModes, button.dataset.preview)) return;
+            selectedMockMode = button.dataset.preview;
+            renderMockPreview();
+        });
+    });
+    renderMockPreview();
+}
+
 // Main language system.
 
 function renderLanguage(nextLanguage) {
@@ -564,6 +614,8 @@ function renderLanguage(nextLanguage) {
             element.textContent = value;
         }
     });
+
+    renderMockPreview();
 
     document.querySelectorAll(".lang-option").forEach(button => {
         const active = button.dataset.lang === currentLanguage;
@@ -903,10 +955,26 @@ function setupRevealAnimations() {
         "(prefers-reduced-motion: reduce)"
     ).matches;
 
+    // Run the homepage entrance only on its first visit in this tab.
+    // Moving to Community, Mods, Profile, Help or Support and returning
+    // should never replay the entire page reveal sequence.
+    const introKey = "wtmm-home-intro-seen-v1";
+    let introAlreadySeen = false;
+    try {
+        introAlreadySeen = sessionStorage.getItem(introKey) === "1";
+        sessionStorage.setItem(introKey, "1");
+    } catch {
+        // Private browsing may disallow storage; the website still works.
+    }
+
     if (
+        introAlreadySeen ||
         reducedMotion ||
         !("IntersectionObserver" in window)
     ) {
+        document.querySelectorAll(".reveal").forEach(element => {
+            element.classList.add("revealed");
+        });
         return;
     }
 
@@ -1094,6 +1162,7 @@ async function init() {
     setupHelpCenter();
     setupScrollFeatures();
     setupSupportLinks();
+    setupMockShowcase();
 
     renderLanguage(detectInitialLanguage());
     setupRevealAnimations();
