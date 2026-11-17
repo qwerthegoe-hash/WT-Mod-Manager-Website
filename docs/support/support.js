@@ -1022,7 +1022,7 @@ function setupDeveloperContact() {
 
 async function loadSettings() {
     try {
-        const response = await fetch("site-config.json", {
+        const response = await fetch("../json/site-config.json", {
             cache: "no-store"
         });
 
