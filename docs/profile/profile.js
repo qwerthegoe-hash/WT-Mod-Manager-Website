@@ -296,19 +296,31 @@ function bind() {
         Object.values(MEDIA).forEach(revokePreview));
 }
 async function init() {
-    bind();
+    // A failed API request must never leave the page on "Загрузка..." forever.
+    const loadingWatchdog = setTimeout(() => {
+        if (!user || $("userProfileTitle")?.textContent === "Загрузка...") {
+            $("userProfileTitle").textContent = "Профиль временно недоступен";
+            report("Сервер авторизации отвечает слишком долго. Проверь подключение и попробуй обновить страницу.", true);
+        }
+    }, 12000);
     try {
+        bind();
         if (!config.supabaseUrl || !config.supabasePublishableKey)
             throw new Error("Подключение Supabase не настроено.");
         db = createClient(config.supabaseUrl, config.supabasePublishableKey);
         user = await getIdentity();
+        // Identity can load even when the profile database is temporarily unavailable.
+        $("userProfileTitle").textContent = user.email || "Player_" + user.id.slice(0, 6);
         await loadProfile();
         setSaving(false);
         report("");
     } catch (error) {
         console.error("Profile initialization:", error);
-        report("Не удалось открыть профиль: " + error.message +
-            ". Возможно, требуется выполнить SQL-скрипты profile_upgrade.sql и community_platform_upgrade.sql.", true);
+        $("userProfileTitle").textContent = "Не удалось загрузить профиль";
+        report("Не удалось открыть профиль: " + (error?.message || String(error)) +
+            ". Проверь подключение к Supabase и настройки базы данных.", true);
+    } finally {
+        clearTimeout(loadingWatchdog);
     }
 }
 init();
