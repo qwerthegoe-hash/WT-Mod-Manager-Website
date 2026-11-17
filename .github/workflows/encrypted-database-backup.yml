@@ -1,0 +1,67 @@
+name: WTMM encrypted database backup (opt-in)
+
+on:
+  schedule:
+    - cron: "27 3 * * *"
+  workflow_dispatch:
+
+# Never publish raw DB dumps to repository or web site.
+permissions:
+  contents: read
+
+concurrency:
+  group: wtmm-encrypted-db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Requires explicit owner opt-in. GitHub secrets/variables must be configured
+    # in repository Settings, never committed to Git.
+    if: vars.WTMM_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WTMM_BACKUP_DATABASE_URL: ${{ secrets.WTMM_BACKUP_DATABASE_URL }}
+      WTMM_BACKUP_AGE_RECIPIENT: ${{ vars.WTMM_BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Validate settings without leaking credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$WTMM_BACKUP_DATABASE_URL" || -z "$WTMM_BACKUP_AGE_RECIPIENT" ]]; then
+            echo "Backup not configured: set database URL secret and age recipient variable" >&2
+            exit 1
+          fi
+          if [[ ! "$WTMM_BACKUP_AGE_RECIPIENT" =~ ^age1[a-z0-9]{30,}$ ]]; then
+            echo "Invalid age recipient key format" >&2
+            exit 1
+          fi
+          if [[ "$WTMM_BACKUP_DATABASE_URL" != *"sslmode=require"* && "$WTMM_BACKUP_DATABASE_URL" != *"sslmode=verify-full"* ]]; then
+            echo "Backup URL must require TLS (sslmode=require or verify-full)" >&2
+            exit 1
+          fi
+      - name: Install public-key encryption utility
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y age
+      - name: Stream Postgres 17 backup directly into encrypted file
+        id: dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p encrypted
+          file="encrypted/wtmm-$(date -u +%Y%m%dT%H%M%SZ).dump.age"
+          # No plaintext dump is ever written to disk or GitHub Actions artifacts.
+          docker run --rm --env WTMM_BACKUP_DATABASE_URL postgres:17             sh -ec 'pg_dump --dbname "$WTMM_BACKUP_DATABASE_URL" --format=custom --no-owner --no-acl'             | age -r "$WTMM_BACKUP_AGE_RECIPIENT" -o "$file"
+          test -s "$file"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - name: Upload encrypted artifact only
+        uses: actions/upload-artifact@v4
+        with:
+          name: wtmm-encrypted-database-backup
+          path: ${{ steps.dump.outputs.file }}
+          retention-days: 14
+          if-no-files-found: error
