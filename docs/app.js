@@ -354,7 +354,12 @@ const translations = {
     }
 };
 
-// Help guides in three languages.
+Object.assign(translations, window.WTMM_HOME_TRANSLATIONS || {});
+for (const [lang,label] of Object.entries({en:"Community",ru:"Сообщество",uk:"Спільнота",pl:"Społeczność",de:"Community"})) {
+    translations[lang].navCommunity = label;
+}
+
+// Help guides in five languages.
 
 const guides = {
     en: {
@@ -457,10 +462,14 @@ const guides = {
     }
 };
 
+Object.assign(guides,window.WTMM_HOME_GUIDES || {});
+
 const languageLabels = {
     en: "EN",
     ru: "RU",
-    uk: "UA"
+    uk: "UA",
+    pl: "PL",
+    de: "DE"
 };
 
 const guideTitleKeys = {
@@ -635,7 +644,9 @@ function renderLanguage(nextLanguage) {
     const backTitles = {
         en: "Back to top",
         ru: "Наверх",
-        uk: "Нагору"
+        uk: "Нагору",
+        pl: "Do góry",
+        de: "Nach oben"
     };
 
     if (backToTop) {
@@ -651,7 +662,9 @@ function renderLanguage(nextLanguage) {
     const closeTitles = {
         en: "Close guide",
         ru: "Закрыть инструкцию",
-        uk: "Закрити інструкцію"
+        uk: "Закрити інструкцію",
+        pl: "Zamknij instrukcję",
+        de: "Anleitung schließen"
     };
 
     if (closeGuide) {
@@ -1140,10 +1153,9 @@ function detectInitialLanguage() {
         return "uk";
     }
 
-    if (browserLang.startsWith("ru")) {
-        return "ru";
-    }
-
+    if (browserLang.startsWith("ru")) return "ru";
+    if (browserLang.startsWith("pl")) return "pl";
+    if (browserLang.startsWith("de")) return "de";
     return "en";
 }
 
