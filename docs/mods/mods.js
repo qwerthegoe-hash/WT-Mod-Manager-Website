@@ -89,17 +89,35 @@ const MOD_PAGE_SIZE = 150; // Preserve the original first-page coverage.
 let hasMoreMods = false;
 let loadingMoreMods = false;
 let pendingSearchRender = null;
+let queryGeneration = 0;
+function getModQuery() {
+    return {
+        p_view: currentView === "moderation" && !isAdmin ? "catalog" : currentView,
+        p_status: moderationStatus,
+        p_category: $("modsCategory").value,
+        p_text: $("modsSearch").value.trim().slice(0, 90),
+        p_sort: $("modsSort").value
+    };
+}
 
 // Fetch full records in bounded pages so large collections can be loaded on demand.
 // Stable ordering prevents duplicate cards when multiple records have the same timestamp.
-async function fetchModPage(offset) {
-    const { data, error } = await db.from("wtmm_mods")
+async function fetchModPage(offset, query = getModQuery()) {
+    // Global search/filter/order is evaluated by PostgreSQL with caller RLS.
+    // A legacy project without this optional RPC retains its original listing.
+    const { data, error } = await db.rpc("wtmm_search_mods", {
+        ...query, p_offset: offset, p_limit: MOD_PAGE_SIZE
+    });
+    if (!error) return data || [];
+    if (error.code !== "PGRST202" && error.code !== "42883") throw error;
+    console.warn("Global catalog search RPC missing; using legacy listing", error.message);
+    const fallback = await db.from("wtmm_mods")
         .select("id,owner_id,title,description,category,version,status,file_path,cover_path,rejection_reason,created_at")
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(offset, offset + MOD_PAGE_SIZE - 1);
-    if (error) throw error;
-    return data || [];
+    if (fallback.error) throw fallback.error;
+    return fallback.data || [];
 }
 
 async function extendAuthorProfiles(rows) {
@@ -141,20 +159,28 @@ function updateLoadMoreControl() {
 }
 
 async function queryAll() {
-    const data = await fetchModPage(0);
+    const generation = ++queryGeneration;
+    const query = getModQuery();
+    const data = await fetchModPage(0, query);
+    if (generation !== queryGeneration) return false;
     records = data;
     profiles = new Map();
     hasMoreMods = data.length === MOD_PAGE_SIZE;
     await extendAuthorProfiles(data);
+    if (generation !== queryGeneration) return false;
     updateLoadMoreControl();
+    return true;
 }
 
 async function loadMoreMods() {
     if (loadingMoreMods || !hasMoreMods || !db) return;
+    const generation = queryGeneration;
+    const query = getModQuery();
     loadingMoreMods = true;
     updateLoadMoreControl();
     try {
-        const next = await fetchModPage(records.length);
+        const next = await fetchModPage(records.length, query);
+        if (generation !== queryGeneration) return;
         const known = new Set(records.map(row => row.id));
         records.push(...next.filter(row => !known.has(row.id)));
         hasMoreMods = next.length === MOD_PAGE_SIZE;
@@ -258,7 +284,7 @@ function updateAdminOverview() {
         tile.append(node("span", "", title));
         tile.addEventListener("click", () => {
             moderationStatus = key;
-            render();
+            refresh().catch(error => say("Ошибка фильтра модерации: " + error.message, true));
         });
         indicators.append(tile);
     }
@@ -287,7 +313,7 @@ async function render() {
 async function refresh() {
     say("Загружаю модификации...");
     try {
-        await queryAll();
+        if (!await queryAll()) return;
         await render();
         window.WTDiagnostics?.record?.("mods-refresh-ok");
         say("");
@@ -575,17 +601,19 @@ function bind() {
     document.querySelectorAll(".mods-tab").forEach(button => {
         button.addEventListener("click", async () => {
             currentView = button.dataset.view;
-            await render();
+            try { await refresh(); }
+            catch (error) { say("Ошибка загрузки раздела: " + error.message, true); }
         });
     });
     for (const id of ["modsSearch", "modsCategory", "modsSort"]) {
         $(id).addEventListener(id === "modsSearch" ? "input" : "change", () => {
-            // Debounce expensive signed-image re-rendering during typing.
+            // Debounced server-side search includes mods beyond loaded pages.
             if (pendingSearchRender) clearTimeout(pendingSearchRender);
+            ++queryGeneration;
             pendingSearchRender = setTimeout(() => {
                 pendingSearchRender = null;
-                render();
-            }, id === "modsSearch" ? 130 : 0);
+                refresh().catch(error => say("Ошибка поиска модов: " + error.message, true));
+            }, id === "modsSearch" ? 250 : 0);
         });
     }
     $("showSubmit").addEventListener("click", () => {
