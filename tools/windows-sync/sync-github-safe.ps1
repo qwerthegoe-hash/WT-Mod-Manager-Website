@@ -16,7 +16,7 @@ function Write-LocalLog([string]$Text) {
 function Test-GameRunning {
     foreach ($processName in $GameProcessNames) {
         if (Get-Process -Name $processName -ErrorAction SilentlyContinue) {
-            Write-LocalLog ("SKIP: running game process {0}" -f $processName)
+            Write-LocalLog ("SKIP: game currently running ({0})" -f $processName)
             return $true
         }
     }
