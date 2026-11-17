@@ -2367,7 +2367,10 @@ function startRefreshTimer() {
             if (!document.hidden) {
                 unreadWhileHidden = 0;
                 updateUnreadBadge();
-                if (realtimeNeedsReconnect) void subscribeToChannel();
+                if (realtimeNeedsReconnect) {
+                    void subscribeToChannel().catch(error =>
+                        console.warn("Realtime recovery failed:", error?.message));
+                }
                 refreshCommunity();
             }
         }
@@ -2376,7 +2379,10 @@ function startRefreshTimer() {
     window.addEventListener(
         "online",
         () => {
-            if (realtimeNeedsReconnect) void subscribeToChannel();
+            if (realtimeNeedsReconnect) {
+                    void subscribeToChannel().catch(error =>
+                        console.warn("Realtime recovery failed:", error?.message));
+                }
             refreshCommunity();
         }
     );
