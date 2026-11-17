@@ -497,6 +497,35 @@ let formspreeId = "";
 let developerEmail = "";
 let submitting = false;
 
+// Restore unfinished feedback in this tab only. Never store email, name or credentials.
+const SUPPORT_DRAFT_KEY = "wtmm:support:session-draft";
+const SUPPORT_DRAFT_FIELDS = ["requestTitle", "requestMessage", "appVersion", "reproduceSteps", "referenceUrl"];
+function saveSupportDraft() {
+    try {
+        const fields = Object.fromEntries(SUPPORT_DRAFT_FIELDS.map(id =>
+            [id, String(document.getElementById(id)?.value || "").slice(0, 5000)]));
+        sessionStorage.setItem(SUPPORT_DRAFT_KEY, JSON.stringify({ kind: requestKind, fields }));
+    } catch { /* In private browsers, drafts are optional. */ }
+}
+function restoreSupportDraft() {
+    try {
+        const raw = sessionStorage.getItem(SUPPORT_DRAFT_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (!draft || draft.kind !== requestKind || typeof draft.fields !== "object") return;
+        for (const id of SUPPORT_DRAFT_FIELDS) {
+            const input = document.getElementById(id);
+            if (input && typeof draft.fields[id] === "string") {
+                input.value = draft.fields[id].slice(0, input.maxLength > 0 ? input.maxLength : 5000);
+            }
+        }
+        updateCharacterCounter();
+    } catch { /* Broken drafts never prevent form submission. */ }
+}
+function clearSupportDraft() {
+    try { sessionStorage.removeItem(SUPPORT_DRAFT_KEY); } catch { /* Optional. */ }
+}
+
 let activeHelpKey = null;
 let helpOpener = null;
 
@@ -872,6 +901,7 @@ function setupCategories() {
             }
 
             applyRequestKind(button.dataset.type);
+            saveSupportDraft();
         });
     });
 }
@@ -1060,6 +1090,8 @@ async function loadSettings() {
 // Formspree submission.
 
 function setupSubmission() {
+    form.addEventListener("input", saveSupportDraft);
+    form.addEventListener("change", saveSupportDraft);
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
@@ -1134,6 +1166,7 @@ function setupSubmission() {
             }
 
             form.reset();
+            clearSupportDraft();
             updateCharacterCounter();
             setStatus(translate("success"), "success");
         } catch (error) {
@@ -1179,6 +1212,33 @@ function detectLanguage() {
     return "en";
 }
 
+// Optional, user-triggered local diagnostics export. No telemetry is sent.
+function setupDiagnosticsExport() {
+    if (!window.WTDiagnostics?.exportJSON || byId("supportDiagnosticsExport")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "supportDiagnosticsExport";
+    button.className = "support-diagnostics-export";
+    button.textContent = ({
+        ru: "Скопировать технический отчёт",
+        uk: "Скопіювати технічний звіт",
+        en: "Copy technical report"
+    })[currentLanguage] || "Copy technical report";
+    button.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(window.WTDiagnostics.exportJSON());
+            setStatus(currentLanguage === "ru" ? "Технический отчёт скопирован без личных данных." :
+                currentLanguage === "uk" ? "Технічний звіт скопійовано без особистих даних." :
+                "Technical report copied without personal data.", "success");
+        } catch {
+            setStatus(currentLanguage === "ru" ? "Не удалось скопировать отчёт." :
+                currentLanguage === "uk" ? "Не вдалося скопіювати звіт." :
+                "Could not copy the report.", "error");
+        }
+    });
+    statusElement.insertAdjacentElement("afterend", button);
+}
+
 // Startup.
 
 async function initSupport() {
@@ -1193,12 +1253,14 @@ async function initSupport() {
     setupDeveloperContact();
 
     applyLanguage(detectLanguage());
+    setupDiagnosticsExport();
 
     const params = new URLSearchParams(
         window.location.search
     );
 
     applyRequestKind(params.get("type"), false);
+    restoreSupportDraft();
 
     await loadSettings();
 }

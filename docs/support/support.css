@@ -826,3 +826,24 @@ body.help-dialog-open {
         animation: none;
     }
 }
+
+
+/* Optional user-triggered local diagnostics export: no personal logs uploaded. */
+.support-diagnostics-export {
+    display: inline-flex;
+    align-items: center;
+    margin: 8px 0 12px;
+    padding: 8px 13px;
+    border: 1px solid #496889;
+    border-radius: 8px;
+    background: transparent;
+    color: #c5d8ed;
+    font: inherit;
+    font-size: .84rem;
+    cursor: pointer;
+}
+.support-diagnostics-export:hover,
+.support-diagnostics-export:focus-visible {
+    border-color: #8cbef4;
+    color: #f0f7ff;
+}

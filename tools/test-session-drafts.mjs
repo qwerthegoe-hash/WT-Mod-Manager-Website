@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import { createSessionDrafts } from "../docs/js/session-drafts.mjs";
+const store = new Map();
+const storage = { getItem: k => store.get(k) ?? null,
+  setItem: (k,v) => store.set(k,v), removeItem: k => store.delete(k) };
+const drafts = createSessionDrafts(storage,"community");
+assert.equal(drafts.read("general"), "");
+assert.equal(drafts.write("general","Hello"),true);
+assert.equal(drafts.read("general"),"Hello");
+drafts.write("updates","News");
+assert.equal(drafts.read("updates"),"News");
+assert.equal(drafts.read("general"),"Hello");
+drafts.clear("general");
+assert.equal(drafts.read("general"),"");
+assert.equal(drafts.read("updates"),"News");
+assert.ok(drafts.write("updates","x".repeat(6000)));
+assert.equal(drafts.read("updates").length,5000);
+assert.throws(() => drafts.read("../private"),TypeError);
+assert.equal(createSessionDrafts(null,"profile").read("nickname"),"");
+console.log("PASS session-only drafts, channel isolation, safety limits");

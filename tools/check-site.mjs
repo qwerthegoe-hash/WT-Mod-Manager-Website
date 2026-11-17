@@ -105,7 +105,9 @@ if (asyncPoolTest.status !== 0) {
 for (const test of [
   "test-supabase-session.mjs",
   "test-error-monitor.mjs",
-  "test-site-functionality.mjs"
+  "test-site-functionality.mjs",
+  "test-session-drafts.mjs",
+  "test-feature-enhancements.mjs"
 ]) {
   const result = spawnSync(process.execPath, [
     path.join(root, "tools", test)
