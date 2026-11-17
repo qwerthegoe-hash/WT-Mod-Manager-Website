@@ -1,5 +1,5 @@
 "use strict";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
 
