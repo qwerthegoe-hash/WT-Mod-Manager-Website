@@ -22,8 +22,11 @@ Nothing in this folder changes Windows Task Scheduler automatically.
    as its argument. Choose a cadence such as 15 minutes instead of one minute.
 5. Check `%LOCALAPPDATA%\WTModManagerGitSync\sync-safe.log` for results.
 
-The worker skips selected games (process names configurable in PowerShell)
-and only runs `git fetch` plus `git merge --ff-only` on a clean `main`
+The worker detects War Thunder using `aces.exe`, `aces_BE.exe`, or
+`aces-min-cpu.exe`, and also skips a few other configured game processes.
+It checks at startup, before fetching, and immediately before merging, so a
+game opened during a fetch will prevent the update from being applied.
+It only runs `git fetch` plus `git merge --ff-only` on a clean `main`
 branch. It cannot make the local folder conflict-free automatically,
 which is intentional: local data is more important than forced updates.
 
@@ -63,3 +66,21 @@ the new one; it never runs `git reset --hard` or `git clean`.
 
 Important: a GitHub commit cannot operate Task Scheduler on the PC remotely.
 These commands must be executed locally by the Windows account owner.
+
+## Check the War Thunder pause rule
+
+While War Thunder is open, run:
+
+```powershell
+Get-Process -Name aces,aces_BE,aces-min-cpu -ErrorAction SilentlyContinue | Select-Object ProcessName, Id
+```
+
+If Windows reports one of these processes, the background sync worker will
+skip its Git operations. Its decisions are logged to
+`%LOCALAPPDATA%\WTModManagerGitSync\sync-safe.log`.
+
+After pulling these script updates into the existing local repository, the
+already-installed scheduled task uses the updated worker and launcher via
+its existing file paths. There is no need to reinstall the task.
+The launcher starts local PowerShell using a process-scoped
+`-ExecutionPolicy RemoteSigned` option; it does not modify system policies.
