@@ -35,6 +35,7 @@ import { createClient } from
 
 import { COMMUNITY_CONFIG as config } from
     "../js/community-config.js";
+import { createSessionDrafts } from "../js/session-drafts.mjs";
 
 
 // ============================================================
@@ -110,6 +111,16 @@ const MEDIA_PATH_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|gif)$/;
 
 const $ = id => document.getElementById(id);
+// Session-only text drafts; no credentials or image bytes are stored.
+let draftStorage = null;
+try { draftStorage = window.sessionStorage; } catch { /* Storage is optional. */ }
+const chatDrafts = createSessionDrafts(draftStorage, "community");
+const initialPageTitle = document.title;
+let unreadWhileHidden = 0;
+function updateUnreadBadge() {
+    document.title = unreadWhileHidden ? `(${unreadWhileHidden}) ${initialPageTitle}` : initialPageTitle;
+}
+
 
 
 // ============================================================
@@ -1227,6 +1238,7 @@ function createMessageElement(message) {
 
     article.className = "chat-message";
     article.dataset.messageId = message.id;
+    article.dataset.renderKey = messageSignature(message);
 
     if (message.user_id === user?.id) {
         article.classList.add("own");
@@ -1325,6 +1337,14 @@ function compareMessages(a, b) {
 // RENDER MESSAGES
 // ============================================================
 
+function messageSignature(message) {
+    return JSON.stringify([
+        message.id, message.user_id, message.nickname,
+        message.body, message.attachment_path, message.created_at,
+        Boolean(message.is_hidden)
+    ]);
+}
+
 function renderMessages({
     preserveScroll = false
 } = {}) {
@@ -1345,15 +1365,18 @@ function renderMessages({
         )
         .sort(compareMessages);
 
-    const fragment = document.createDocumentFragment();
-
-    for (const message of sorted) {
-        fragment.append(
-            createMessageElement(message)
-        );
-    }
-
-    list.replaceChildren(fragment);
+    // Preserve unchanged message nodes, including already-loaded images and click listeners.
+    // Reconcile only when content/order changed instead of replacing the entire chat.
+    const previous = [...list.children];
+    const previousById = new Map(previous.map(element => [element.dataset.messageId, element]));
+    const nextNodes = sorted.map(message => {
+        const existing = previousById.get(String(message.id));
+        return existing?.dataset.renderKey === messageSignature(message)
+            ? existing : createMessageElement(message);
+    });
+    const changed = nextNodes.length !== previous.length ||
+        nextNodes.some((element, index) => element !== previous[index]);
+    if (changed) list.replaceChildren(...nextNodes);
 
     if (preserveScroll) {
         list.scrollTop =
@@ -1385,11 +1408,15 @@ function addMessage(message) {
         return;
     }
 
+    const wasKnown = visibleMessages.has(message.id);
     visibleMessages.set(
         message.id,
         message
     );
-
+    if (!wasKnown && document.hidden && message.user_id !== user?.id) {
+        unreadWhileHidden = Math.min(999, unreadWhileHidden + 1);
+        updateUnreadBadge();
+    }
     renderMessages();
 }
 
@@ -1720,8 +1747,12 @@ async function selectChannel(next) {
     }
 
     const currentGeneration = ++generation;
-
+    const composer = $("messageInput");
+    if (composer) chatDrafts.write(activeChannel, composer.value);
+    unreadWhileHidden = 0;
+    updateUnreadBadge();
     activeChannel = next;
+    if (composer) composer.value = chatDrafts.read(next);
     oldestMessageDate = null;
     oldestMessageId = null;
     canLoadOlder = false;
@@ -1943,9 +1974,12 @@ async function sendMessage() {
         // ====================================================
 
         if (
-            $("messageInput").value.trim() === text
+            $("messageInput").value.trim() === text && activeChannel === targetChannel
         ) {
             $("messageInput").value = "";
+        }
+        if (chatDrafts.read(targetChannel).trim() === text) {
+            chatDrafts.clear(targetChannel);
         }
 
         if (
@@ -1978,6 +2012,11 @@ async function sendMessage() {
 // ============================================================
 
 function setupComposer() {
+    const composer = $("messageInput");
+    composer.value = chatDrafts.read(activeChannel);
+    composer.addEventListener("input", () => {
+        chatDrafts.write(activeChannel, composer.value);
+    });
     $("sendMessage").addEventListener(
         "click",
         sendMessage
@@ -2282,6 +2321,8 @@ function startRefreshTimer() {
         "visibilitychange",
         () => {
             if (!document.hidden) {
+                unreadWhileHidden = 0;
+                updateUnreadBadge();
                 refreshCommunity();
             }
         }
