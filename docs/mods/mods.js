@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
 import { modReviewReady } from "../js/mod-review-policy.mjs";
+import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { mapWithConcurrency } from "../js/async-pool.mjs";
 
 const $ = id => document.getElementById(id);
@@ -41,15 +42,11 @@ function link(href, text, className = "") {
     return a;
 }
 async function ensureSession() {
-    const { data, error } = await db.auth.getSession();
-    if (error) throw error;
-    if (!data.session) {
-        const result = await db.auth.signInAnonymously();
-        if (result.error) throw result.error;
-    }
-    const { data: identity, error: userError } = await db.auth.getUser();
-    if (userError || !identity.user) throw userError || new Error("Нет аккаунта.");
-    return identity.user;
+    // Reuse the same verified auth bootstrap as the other site modules.
+    // Each call checks the real server identity; duplicate startup calls coalesce.
+    const identity = await ensureAuthenticatedUser(db);
+    if (!identity?.id) throw new Error("Нет аккаунта.");
+    return identity;
 }
 async function getAdminStatus() {
     const { data, error } = await db.from("community_admins")
