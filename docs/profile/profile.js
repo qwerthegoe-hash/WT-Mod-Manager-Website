@@ -29,9 +29,26 @@ let db;
 let user;
 let saving = false;
 let mfaController = null;
+let nicknameChangedAt = null;
+let serverNickname = "";
 let draftStorage = null;
 try { draftStorage = sessionStorage; } catch { /* Session storage may be disabled. */ }
 const profileDrafts = createSessionDrafts(draftStorage, "profile");
+function nicknameUnlockDate(stamp) {
+    const parsed = Date.parse(stamp || "");
+    return Number.isFinite(parsed) ? new Date(parsed + 7 * 24 * 60 * 60 * 1000) : null;
+}
+function updateNicknameCooldown() {
+    const unlock = nicknameUnlockDate(nicknameChangedAt);
+    const locked = Boolean(unlock && unlock.getTime() > Date.now());
+    const note = $("nicknameCooldownNote");
+    $("profileNickname").disabled = locked;
+    if (note) note.textContent = locked
+        ? "Никнейм можно будет изменить после " + unlock.toLocaleString() +
+          ". Отсчёт ведётся на сервере независимо от страны и часового пояса."
+        : "Никнейм можно менять не чаще одного раза в 7 дней.";
+    return locked;
+}
 function saveProfileDraft() {
     if (!user || saving) return;
     const draft = {
@@ -49,7 +66,7 @@ function restoreProfileDraft() {
         if (!text) return false;
         const draft = JSON.parse(text);
         if (!draft || typeof draft.nickname !== "string" || typeof draft.bio !== "string") return false;
-        $("profileNickname").value = draft.nickname.slice(0, 24);
+        if (!updateNicknameCooldown()) $("profileNickname").value = draft.nickname.slice(0, 24);
         $("profileBio").value = draft.bio.slice(0, 320);
         $("profileIsPublic").checked = draft.isPublic === true;
         setAccent(draft.accent);
@@ -138,12 +155,15 @@ async function getIdentity() {
 }
 async function loadProfile() {
     const { data, error } = await db.from("community_user_profiles")
-        .select("nickname,avatar_path,banner_path,bio,accent,is_public")
+        .select("nickname,nickname_changed_at,avatar_path,banner_path,bio,accent,is_public")
         .eq("user_id", user.id).maybeSingle();
     if (error) throw error;
 
     $("profileNickname").value = data?.nickname || readLocalNickname() ||
         "Player_" + user.id.slice(0, 6);
+    serverNickname = data?.nickname || "";
+    nicknameChangedAt = data?.nickname_changed_at || null;
+    updateNicknameCooldown();
     $("profileBio").value = data?.bio || "";
     $("profileUserId").value = user.id;
     $("profileIsPublic").checked = data?.is_public === true;
@@ -170,6 +190,11 @@ async function saveProfile(event) {
     if (saving || !user) return;
     const name = $("profileNickname").value.trim();
     const bio = $("profileBio").value.trim();
+    if (updateNicknameCooldown() && serverNickname && name !== serverNickname) {
+        report("Изменение никнейма временно недоступно. Дождись завершения 7 дней.", true);
+        $("profileNickname").value = serverNickname;
+        return;
+    }
     if (name.length < 2 || name.length > 24) {
         report("Никнейм должен содержать от 2 до 24 символов.", true); return;
     }
@@ -203,6 +228,13 @@ async function saveProfile(event) {
         if (error) throw error;
 
         saveLocalNickname(name);
+        serverNickname = name;
+        const {data: cooldownState} = await db.from("community_user_profiles")
+            .select("nickname_changed_at").eq("user_id",user.id).maybeSingle();
+        if (cooldownState) {
+            nicknameChangedAt = cooldownState.nickname_changed_at;
+            updateNicknameCooldown();
+        }
         // The database committed successfully; no longer need the local text draft.
         profileDrafts.clear(user.id);
         for (const [kind, item] of Object.entries(MEDIA)) {
@@ -224,7 +256,9 @@ async function saveProfile(event) {
             const { error: cleanupError } = await db.storage.from(file.item.bucket).remove([file.path]);
             if (cleanupError) console.warn("Failed to clean upload", cleanupError.message);
         }
-        report("Ошибка сохранения: " + (error?.message || String(error)) +
+        report((error?.message || "").includes("NICKNAME_COOLDOWN") ?
+            "Сменить никнейм можно только через 7 дней после предыдущей смены." :
+            "Ошибка сохранения: " + (error?.message || String(error)) +
             ". Проверь, выполнены ли SQL-скрипты профиля.", true);
     } finally {
         setSaving(false);
