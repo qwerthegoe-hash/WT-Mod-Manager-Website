@@ -7,7 +7,7 @@ const root = path.resolve(import.meta.dirname, "..");
 const docs = path.join(root, "docs");
 const errors = [];
 const configSource = fs.readFileSync(path.join(docs, "js", "community-config.js"), "utf8");
-const configuredSupabase = configSource.match(/supabaseUrl:\\s*["'](https:\\/\\/[a-z0-9-]+\\.supabase\\.co)["']/i)?.[1];
+const configuredSupabase = configSource.match(/supabaseUrl:\s*["'](https:\/\/[a-z0-9-]+\.supabase\.co)["']/i)?.[1];
 if (!configuredSupabase) errors.push("Could not locate configured Supabase origin for CSP checking");
 let checkedLinks = 0, checkedScripts = 0, checkedPages = 0;
 function walk(dir) {
@@ -63,7 +63,7 @@ for (const file of walk(docs)) {
         fail(relative, "CSP must not allow inline scripts");
       if (/https:\/\/\*\.supabase\.co|wss:\/\/\*\.supabase\.co/.test(csp[0]))
         fail(relative, "CSP must not allow wildcard Supabase projects");
-      if (/img-src[^;]*\\shttps:(?:[\\s;'"]|$)/.test(csp[0]))
+      if (/img-src[^;]*\shttps:(?:[\s;'"]|$)/.test(csp[0]))
         fail(relative, "CSP must not allow all HTTPS image hosts");
       if (configuredSupabase && (!csp[0].includes(configuredSupabase) ||
           !csp[0].includes(configuredSupabase.replace("https://", "wss://"))))
