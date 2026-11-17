@@ -598,6 +598,10 @@ function mediaStatusText(value) {
         case "rejected":
             return "Отклонено";
 
+        case "processing":
+        case "scanning":
+            return "Проверка изображения выполняется";
+
         default:
             return "Неизвестный статус";
     }
@@ -644,7 +648,16 @@ async function openMediaStatus() {
             dialog.close();
         });
 
-        dialog.append(title, closeButton);
+        const reloadButton = document.createElement("button");
+        reloadButton.type = "button";
+        reloadButton.textContent = "Обновить статусы";
+        reloadButton.setAttribute("aria-label", "Обновить статусы отправленных изображений");
+        reloadButton.addEventListener("click", () => {
+            reloadButton.disabled = true;
+            dialog.close();
+            openMediaStatus();
+        });
+        dialog.append(title, closeButton, reloadButton);
 
         if (!jobs.length) {
             const empty = document.createElement("p");
