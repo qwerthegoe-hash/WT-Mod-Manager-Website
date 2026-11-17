@@ -171,3 +171,16 @@ body { background:#0b121e; }
 }
 .mods-admin-stat strong { color: #edf6ff; font-size: 1.4rem; }
 .mods-admin-stat span { color: #bcd0e4; font-size: .86rem; }
+
+
+/* Optional published-version history (reuses existing mod submissions). */
+.mod-versions:not(:empty) {
+    margin: 18px 0;
+    padding: 13px 17px;
+    border: 1px solid rgba(117, 162, 211, .28);
+    border-radius: 12px;
+    background: rgba(17, 35, 55, .56);
+}
+.mod-versions h3 { margin: 0 0 9px; font-size: 1rem; color: #e3efff; }
+.mod-versions ul { margin: 0; padding-left: 20px; }
+.mod-versions li { padding: 3px 0; color: #c4d7ea; }
