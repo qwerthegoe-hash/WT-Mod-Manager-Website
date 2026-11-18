@@ -46,6 +46,14 @@ jobs:
       - name: Test WAV waveform analyzer
         run: python -m unittest discover -s tests -p test_audio_analysis.py -v
 
+      - name: Test verified portable updates and tamper rejection
+        run: python -m unittest discover -s tests -p test_portable_updates.py -v
+
+      - name: Smoke test all Qt desktop panels
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests -p test_gui_smoke.py -v
+
       - name: Check site JavaScript syntax
         run: |
           node --check docs/mods/mods.js

@@ -1,6 +1,6 @@
 
 """
-WT Mod Manager 1.2
+WT Mod Manager 1.3
 Main Window
 
 Главное окно менеджера модификаций.
@@ -28,6 +28,7 @@ import ctypes
 from PySide6.QtCore import (
     Qt,
     QTimer,
+    Signal,
     QPropertyAnimation,
     QEasingCurve,
 )
@@ -750,6 +751,7 @@ class LaunchPrompt(QDialog):
 # ==========================================
 
 class ManagerWindow(QMainWindow):
+    check_update_requested = Signal()
     """
     Главное окно WT Mod Manager.
 
@@ -946,7 +948,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION BETA 1.2"
+            "VERSION BETA 1.3"
         )
 
         self.version.setObjectName(
@@ -1133,6 +1135,7 @@ class ManagerWindow(QMainWindow):
         self.pages.addWidget(self.online_page)
         self.online_page.account_changed.connect(self.refresh_online_assets)
         self.online_page.assets_changed.connect(self.refresh_online_assets)
+        self.online_page.check_update_requested.connect(self.check_update_requested)
 
         # ==================================
         # SETTINGS SIGNAL

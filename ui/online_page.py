@@ -21,6 +21,7 @@ from src.profile_paths import (
 class OnlinePage(QWidget):
     assets_changed = Signal(str)
     account_changed = Signal()
+    check_update_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -59,6 +60,9 @@ class OnlinePage(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             controls.addWidget(button)
         layout.addLayout(controls)
+        self.update_button = QPushButton("Проверить обновления WT Mod Manager")
+        self.update_button.clicked.connect(self.check_update_requested.emit)
+        layout.addWidget(self.update_button)
 
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs, 1)
