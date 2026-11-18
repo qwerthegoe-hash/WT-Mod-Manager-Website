@@ -8,7 +8,7 @@ from src.profile_paths import DATA_DIR
 
 VERSION = "1.2.0"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CONFIG_FILE = PROJECT_ROOT / "update_config.json"
+CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
 MAX_INSTALLER_BYTES = 350 * 1024 * 1024
 
 
