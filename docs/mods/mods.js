@@ -16,7 +16,7 @@ const COVER_BUCKET = "wtmm-mod-previews";
 const FILE_LIMIT = 20 * 1024 * 1024;
 const COVER_LIMIT = 5 * 1024 * 1024;
 const CATEGORIES = {
-    visuals: "Графика и эффекты", camouflage: "Камуфляжи",
+    visuals: "Графика и эффекты", camouflage: "Камуфляжи", sights: "Прицелы",
     sounds: "Звуки", interface: "Интерфейс", other: "Другое"
 };
 const IMAGE_MIMES = {
@@ -98,7 +98,7 @@ let queryGeneration = 0;
 let refreshGeneration = 0;
 function getModQuery() {
     return {
-        p_view: currentView === "moderation" && !isAdmin ? "catalog" : currentView,
+        p_view: currentView === "downloads" || (currentView === "moderation" && !isAdmin) ? "catalog" : currentView,
         p_status: moderationStatus,
         p_category: $("modsCategory").value,
         p_text: $("modsSearch").value.trim().slice(0, 90),
@@ -108,9 +108,63 @@ function getModQuery() {
     };
 }
 
+// Personal downloads are never global; the caller's Supabase user ID and RLS
+// both scope the collection. The Windows client receives nothing at download time.
+async function fetchDownloadedModPage(offset) {
+    const {data: saved, error} = await db.from("wtmm_user_downloads")
+        .select("mod_id,downloaded_at").eq("user_id",user.id)
+        .order("downloaded_at",{ascending:false})
+        .range(offset, offset + MOD_PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!saved?.length) return [];
+    const ids = saved.map(item => item.mod_id);
+    const response = await db.from("wtmm_mods")
+        .select("id,owner_id,title,description,category,version,status,file_path,cover_path,rejection_reason,created_at")
+        .in("id", ids).eq("status","approved");
+    if (response.error) throw response.error;
+    const found = new Map((response.data || []).map(item => [item.id,item]));
+    return saved.map(item => found.get(item.mod_id)).filter(Boolean);
+}
+// Downloading or choosing a mod never automatically installs it.
+async function rememberDownloadedMod(modId) {
+    const {error} = await db.from("wtmm_user_downloads")
+        .insert({user_id:user.id,mod_id:modId});
+    if (error && error.code !== "23505") throw error;
+}
+async function alreadyDownloadedMod(modId) {
+    const {data,error} = await db.from("wtmm_user_downloads")
+        .select("mod_id").eq("user_id",user.id).eq("mod_id",modId).maybeSingle();
+    if (error) throw error;
+    return Boolean(data);
+}
+function addExplicitTransferButton(row,container) {
+    if (!["sights","sounds","camouflage"].includes(row.category)) return;
+    if (container.querySelector(".wtmm-explicit-transfer")) return;
+    const transfer = node("button","mods-secondary wtmm-explicit-transfer","Добавить в приложение");
+    transfer.type = "button";
+    const report = node("p","mods-review-note","");
+    transfer.addEventListener("click", async () => {
+        transfer.disabled = true;
+        try {
+            // One row per user and mod. Repeated clicks requeue, not duplicate.
+            const {error} = await db.from("wtmm_app_transfer_queue").upsert({
+                user_id: user.id,mod_id:row.id,state:"pending",
+                requested_at:new Date().toISOString(),
+                processed_at:null,error_message:null
+            },{onConflict:"user_id,mod_id"});
+            if (error) throw error;
+            report.textContent = "Добавлено в очередь. Мод появится только в приложении, связанном с этим аккаунтом.";
+        } catch (error) {
+            report.textContent = "Не удалось отправить: " + error.message;
+        } finally { transfer.disabled = false; }
+    });
+    container.append(transfer,report);
+}
+
 // Fetch full records in bounded pages so large collections can be loaded on demand.
 // Stable ordering prevents duplicate cards when multiple records have the same timestamp.
 async function fetchModPage(offset, query = getModQuery()) {
+    if (currentView === "downloads") return fetchDownloadedModPage(offset);
     // Global search/filter/order is evaluated by PostgreSQL with caller RLS.
     // A legacy project without this optional RPC retains its original listing.
     if(query.p_view==="catalog") {
@@ -255,7 +309,7 @@ function visibleRecords() {
     const category = $("modsCategory").value;
     const view = currentView === "moderation" && !isAdmin ? "catalog" : currentView;
     const rows = records.filter(row => {
-        if (view === "catalog" && row.status !== "approved") return false;
+        if ((view === "catalog" || currentView === "downloads") && row.status !== "approved") return false;
         if (view === "mine" && row.owner_id !== user.id) return false;
         if (view === "moderation" && row.status !== moderationStatus) return false;
         if (category !== "all" && row.category !== category) return false;
@@ -465,12 +519,19 @@ async function showModDetails(id) {
                 if (error) throw error;
                 const a = link(data.signedUrl, "Скачать ZIP (ссылка действует 90 секунд)");
                 a.target = "_blank"; a.rel = "noopener noreferrer";
+                // Treat obtaining the download link as opting into the
+                // account's downloadable library, not automatic installation.
+                await rememberDownloadedMod(row.id);
                 downloadBox.replaceChildren(a);
+                addExplicitTransferButton(row, actions);
             } catch (error) {
                 downloadBox.textContent = "Ошибка скачивания: " + error.message;
             } finally { button.disabled = false; }
         });
         actions.append(button, downloadBox);
+        if (currentView === "downloads" || await alreadyDownloadedMod(row.id)) {
+            addExplicitTransferButton(row,actions);
+        }
     }
     if (currentView === "moderation" && isAdmin && row.status === "pending") {
         const warning = node("p", "mods-review-note",
