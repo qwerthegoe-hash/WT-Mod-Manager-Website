@@ -1,4 +1,6 @@
 "use strict";
+import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
@@ -28,13 +30,13 @@ const coverCache = new Map();
 
 function say(message, error = false, target = "modsNotice") {
     const element = $(target);
-    element.textContent = message || "";
+    element.textContent = uiText(message || "");
     element.classList.toggle("error", error);
 }
 function node(tag, className = "", text = "") {
     const element = document.createElement(tag);
     if (className) element.className = className;
-    if (text) element.textContent = text;
+    if (text) element.textContent = uiText(text);
     return element;
 }
 function link(href, text, className = "") {
@@ -56,7 +58,7 @@ async function getAdminStatus() {
     return Boolean(data);
 }
 function modLabel(row) {
-    return CATEGORIES[row.category] || CATEGORIES.other;
+    return uiText(CATEGORIES[row.category] || CATEGORIES.other);
 }
 function profile(row) {
     return profiles.get(row.owner_id) || null;
