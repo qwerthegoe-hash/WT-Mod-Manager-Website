@@ -66,3 +66,5 @@ jobs:
         run: |
           node --check docs/mods/mods.js
           node --check docs/js/desktop-link.mjs
+          node --check docs/js/updates-center.mjs
+          node --check docs/js/assistant.mjs
