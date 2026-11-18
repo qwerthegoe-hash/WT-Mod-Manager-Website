@@ -106,6 +106,10 @@ const copy = {
 };
 
 Object.assign(copy, contactLocalesExtra);
+for(const [lang,label] of Object.entries({
+ ru:"Мои обращения",uk:"Мої звернення",en:"My requests",
+ pl:"Moje zgłoszenia",de:"Meine Anfragen"
+}))copy[lang].historyLink=label;
 Object.assign(copy.ru,{
   identityReady:"Отправитель из профиля:",identityMissing:"Сначала установи никнейм в своём профиле.",
   openProfile:"Открыть профиль",rateLimit:"Слишком много обращений. Попробуй позже.",
