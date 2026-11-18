@@ -140,7 +140,7 @@ def apply_verified_update(args: list[str]) -> int:
         _save_status("Обновление установлено. Предыдущая версия сохранена в updates.")
         try:
             subprocess.Popen(
-                [str(target)],
+                [str(target), "--updated"],
                 cwd=str(target.parent),
                 env=_reset_env(),
                 close_fds=True,
