@@ -12,6 +12,7 @@
   <link rel="icon" href="../assets/LogotipProject.png" type="image/png">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="mods.css">
+  <link rel="stylesheet" href="../community2.css">
   <link rel="preconnect" href="https://esm.sh" crossorigin>
     <script type="module" src="mods.js"></script>
 </head>
@@ -26,6 +27,7 @@
         <a href="../index.html">Главная</a>
         <a href="../community/community.html">Community</a>
         <a href="../profile/profile.html">Мой профиль</a>
+        <a href="../profile/profile.html#community2NotificationsSection">🔔 Уведомления</a>
       </div>
     </nav>
   </header>
@@ -73,10 +75,21 @@
           <option value="new">Сначала новые</option>
           <option value="old">Сначала старые</option>
           <option value="name">По названию</option>
+          <option value="popular">По популярности</option>
+          <option value="relevance">По соответствию</option>
         </select>
       </label>
     </div>
 
+    <div class="community2-search-extras">
+        <label class="community2-check"><input id="modsFavoritesOnly" type="checkbox"> Только избранные моды</label>
+        <label class="mods-input-wrap" for="modsAuthorFilter">Автор
+          <select id="modsAuthorFilter" class="community2-select" aria-label="Фильтр по автору">
+            <option value="">Все авторы</option>
+          </select>
+        </label>
+        <span class="community2-muted">Умный поиск по названию, описанию и авторам.</span>
+    </div>
     <p id="modsNotice" role="status" aria-live="polite"></p>
     <section id="modsGrid" class="mods-grid" aria-label="Модификации"></section>
     <div id="modsEmpty" class="mods-empty" hidden>
@@ -116,6 +129,13 @@
         <label>Обложка (необязательно, до 5 МБ)
           <input name="cover" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
         </label>
+        <label>Скриншот «До» (необязательно, до 5 МБ)
+          <input name="before" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+        </label>
+        <label>Скриншот «После» (необязательно, до 5 МБ)
+          <input name="after" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+        </label>
+        <p class="mods-full community2-upload-note">Для сравнения укажи оба изображения. Они будут доступны после одобрения модификации.</p>
         <button id="submitModButton" type="submit" class="mods-primary mods-full">Отправить на модерацию</button>
       </form>
       <p id="submitNotice" role="status" aria-live="polite"></p>

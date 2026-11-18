@@ -12,6 +12,7 @@
     <link rel="icon" href="../assets/LogotipProject.png" type="image/png">
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="../mods/mods.css">
+    <link rel="stylesheet" href="../community2.css">
     <link rel="preconnect" href="https://esm.sh" crossorigin>
     <script type="module" src="creator.js"></script>
 </head>
@@ -26,6 +27,7 @@
                 <a href="../index.html">Главная</a>
                 <a href="../mods/mods.html">Библиотека модов</a>
                 <a href="../profile/profile.html">Мой профиль</a>
+                <a href="../profile/profile.html#community2NotificationsSection">🔔 Уведомления</a>
             </div>
         </nav>
     </header>
@@ -52,6 +54,10 @@
                     <h2 class="creator-name" id="creatorName">Автор</h2>
                     <p class="creator-bio" id="creatorBio"></p>
                     <span id="creatorModCount" class="mods-count"></span>
+                    <div class="community2-actions">
+                      <button id="followCreatorButton" type="button" class="community2-button" hidden aria-pressed="false">Подписаться на автора</button>
+                      <span id="creatorFollowNotice" role="status" aria-live="polite" class="community2-muted"></span>
+                    </div>
                 </div>
             </div>
         </section>

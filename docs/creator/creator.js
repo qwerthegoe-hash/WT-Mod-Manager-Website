@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { mapWithConcurrency } from "../js/async-pool.mjs";
+import { createCommunity2 } from "../js/community2-api.mjs";
 
 const $ = id => document.getElementById(id);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,7 +36,7 @@ async function signed(db, bucket, path) {
 async function session(db) {
     // The same authenticated/anonymous user contract as the community and mods.
     // Access checks for public profiles continue to be enforced by server RLS.
-    await ensureAuthenticatedUser(db);
+    return ensureAuthenticatedUser(db);
 }
 async function renderMod(db, item) {
     const card = textNode("article", "", "mod-card");
@@ -70,7 +71,8 @@ async function init() {
     }
     try {
         const db = createClient(config.supabaseUrl, config.supabasePublishableKey);
-        await session(db);
+        const viewer=await session(db);
+        const social=createCommunity2(db,viewer);
         const { data: player, error } = await db.from("community_user_profiles")
             .select("user_id,nickname,bio,avatar_path,banner_path,is_public,accent")
             .eq("user_id", userId).maybeSingle();
@@ -97,6 +99,33 @@ async function init() {
         if (modError) throw modError;
         const items = mods || [];
         $("creatorModCount").textContent = "Одобренных модов: " + items.length;
+        if(viewer.id!==userId) {
+            const control=$("followCreatorButton");
+            let followed=false;
+            try {
+                const follows=await social.follows();
+                followed=follows.some(f=>f.author_id===userId);
+                const paint=()=>{
+                  control.textContent=uiText(followed?"✓ Вы подписаны":"Подписаться на автора");
+                  control.setAttribute("aria-pressed",String(followed));
+                };
+                paint();control.hidden=false;
+                control.addEventListener("click",async()=>{
+                    control.disabled=true;
+                    try {
+                      followed=await social.toggleFollow(userId,followed);
+                      paint();
+                      $("creatorFollowNotice").textContent=uiText(followed
+                        ?"Теперь ты получишь уведомления о новых модах автора."
+                        :"Подписка отменена.");
+                    }catch(e){
+                      $("creatorFollowNotice").textContent=uiText("Не удалось изменить подписку: ")+e.message;
+                    }finally{control.disabled=false;}
+                });
+            }catch(e){
+                $("creatorFollowNotice").textContent=uiText("Подписки временно недоступны.");
+            }
+        }
         $("creatorHeader").hidden = false;
         $("creatorModsHeading").hidden = false;
         // Limit simultaneous signed-URL requests while keeping every published card.

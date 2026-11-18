@@ -169,6 +169,10 @@ const texts = {
 };
 
 Object.assign(texts, supportTextsExtra);
+for(const [lang,label] of Object.entries({
+  ru:"Мои обращения",uk:"Мої звернення",en:"My requests",
+  pl:"Moje zgłoszenia",de:"Meine Anfragen"
+}))texts[lang].historyLink=label;
 Object.assign(texts.ru,{
   identityReady:"Отправитель из профиля:",identityMissing:"Для отправки сначала установи никнейм в профиле.",
   openProfile:"Открыть профиль",rateLimit:"Слишком много обращений. Попробуй позже.",
@@ -738,6 +742,7 @@ function applyLanguage(language) {
     const sharedFields = {
         homeLink: "home",
         developerPageLink: "contactTitle",
+        supportHistoryLink: "historyLink",
         supportEyebrow: "eyebrow",
         supportTitle: "title",
         supportSubtitle: "subtitle",
