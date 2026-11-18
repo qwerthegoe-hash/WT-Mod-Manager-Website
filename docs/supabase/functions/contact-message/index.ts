@@ -128,11 +128,33 @@ Deno.serve(async (request: Request) => {
     const email = authenticated.user.email_confirmed_at &&
       !authenticated.user.is_anonymous ? authenticated.user.email || "" : "";
 
+    // Save the support ticket under the verified account before contacting the
+    // external email service. Only its owner and authorized moderators can read
+    // private message content; the public browser cannot insert or forge tickets.
+    const {data:ticket,error:ticketError}=await admin
+      .from("wtmm_support_tickets")
+      .insert({
+        user_id:authenticated.user.id,kind:payload.kind,title:payload.title,
+        message:payload.message,details:payload.details,
+        reference_url:payload.reference,language:payload.lang,status:"sending"
+      }).select("id").single();
+    if(ticketError || !ticket?.id) {
+      console.error("Support history creation failed",ticketError?.code || "missing-ticket");
+      return reply({error:"TICKET_NOT_SAVED"},503);
+    }
+    const markDelivery=async(status:"received"|"delivery_failed")=>{
+      const {error}=await admin.from("wtmm_support_tickets")
+        .update({status,updated_at:new Date().toISOString()})
+        .eq("id",ticket.id).eq("user_id",authenticated.user.id);
+      if(error)console.error("Support ticket status update failed",error.code);
+      return !error;
+    };
     const data = new FormData();
     const typeLabels:Record<string,string> = {
       bug:"Bug report",idea:"Feature request",contact:"Developer contact"
     };
     data.set("_subject", "WT Mod Manager — " + typeLabels[payload.kind] + " — " + payload.title);
+    data.set("ticket_id",ticket.id);
     data.set("request_type",typeLabels[payload.kind]);
     data.set("name",nickname);
     if(email) data.set("email",email);
@@ -159,9 +181,17 @@ Deno.serve(async (request: Request) => {
       });
       if (!response.ok) {
         console.warn("Formspree rejected contact request, status",response.status);
-        return reply({error:"DELIVERY_FAILED"},502);
+        await markDelivery("delivery_failed");
+        return reply({error:"DELIVERY_FAILED",ticket_id:ticket.id},502);
       }
-      return reply({ok:true,status:"accepted"},200);
+      const historyUpdated=await markDelivery("received");
+      // If delivery succeeded but status update failed, avoid sending a second
+      // email on retry. Client sees success and history can be reconciled.
+      return reply({ok:true,status:"accepted",ticket_id:ticket.id,
+        history_updated:historyUpdated},200);
+    } catch(error) {
+      await markDelivery("delivery_failed");
+      throw error;
     } finally { clearTimeout(timeout); }
   } catch(error) {
     if(error instanceof Error && error.message === "REQUEST_TOO_LARGE")
