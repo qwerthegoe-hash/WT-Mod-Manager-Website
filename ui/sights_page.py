@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from src.profile_paths import MODS_DIR, online_visible_files
+from ui.game_install_ui import install_sight_dialog, restore_last_game_install
 import shutil
 
 from PySide6.QtCore import Qt
@@ -154,6 +155,13 @@ class SightsPage(QWidget):
         left_layout.addWidget(list_title)
         left_layout.addWidget(self.sight_list, 1)
         left_layout.addLayout(buttons_row)
+        game_button = QPushButton("Установить игровой .blk")
+        game_button.setToolTip("PNG используется только для предпросмотра. Для игры требуется .blk.")
+        game_button.clicked.connect(lambda: install_sight_dialog(self))
+        restore_button = QPushButton("Откатить установку в игре")
+        restore_button.clicked.connect(lambda: restore_last_game_install(self))
+        left_layout.addWidget(game_button)
+        left_layout.addWidget(restore_button)
 
         # =====================================
         # ПРАВАЯ КАРТОЧКА
