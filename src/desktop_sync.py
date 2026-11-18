@@ -360,6 +360,7 @@ class DesktopSync(QObject):
     status_changed = Signal(str)
     account_changed = Signal(str)
     files_changed = Signal(str)
+    catalog_changed = Signal(object)
     _completed = Signal(object)
 
     def __init__(self, parent=None):
@@ -368,6 +369,7 @@ class DesktopSync(QObject):
         self._pairing_token = None
         self.user_id = None
         self._busy = False
+        self._polls_since_catalog = 0
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="wtmm-sync")
         self._completed.connect(self._on_completed)
         self._timer = QTimer(self)
@@ -403,6 +405,11 @@ class DesktopSync(QObject):
         if token:
             self._start("poll", token)
 
+    def refresh_catalog(self) -> None:
+        token = self._pairing_token or self._token
+        if token:
+            self._start("catalog", token)
+
     def unlink_account(self) -> None:
         token = self._token or self._pairing_token
         self._token = None
@@ -428,6 +435,10 @@ class DesktopSync(QObject):
         user_id = str(state.get("user_id", ""))
         if not UUID.fullmatch(user_id):
             raise RuntimeError("Account verification failed.")
+        if action == "catalog":
+            catalog = _call("catalog", token)
+            return {"paired": True, "user_id": user_id,
+                    "catalog_items": catalog.get("items", [])}
         queued = _call("poll", token)
         changes = []
         for entry in queued.get("items", []):
@@ -488,8 +499,17 @@ class DesktopSync(QObject):
             self.user_id = user_id
             self.account_changed.emit(user_id)
             self.status_changed.emit("Аккаунт сайта подключён. Ожидаю команды из «Скачанных модов».")
+            QTimer.singleShot(150, self.refresh_catalog)
+        if action == "catalog":
+            items = result.get("catalog_items", [])
+            self.catalog_changed.emit(items if isinstance(items, list) else [])
+            return
         for category in result.get("changed", []):
             self.files_changed.emit(category)
+        self._polls_since_catalog += 1
+        if self._polls_since_catalog >= 12:
+            self._polls_since_catalog = 0
+            QTimer.singleShot(150, self.refresh_catalog)
 
     def stop(self) -> None:
         self._timer.stop()
