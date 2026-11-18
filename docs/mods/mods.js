@@ -567,7 +567,10 @@ async function deleteSubmission(row) {
     if (error) { say("Ошибка удаления: " + error.message, true); return; }
     await Promise.all([
         db.storage.from(FILE_BUCKET).remove([row.file_path]),
-        row.cover_path ? db.storage.from(COVER_BUCKET).remove([row.cover_path]) : Promise.resolve()
+        [row.cover_path,row.before_image_path,row.after_image_path].some(Boolean)
+          ? db.storage.from(COVER_BUCKET).remove(
+              [row.cover_path,row.before_image_path,row.after_image_path].filter(Boolean))
+          : Promise.resolve()
     ]);
     $("modDetailsDialog").close();
     await refresh();
@@ -599,6 +602,12 @@ async function uploadMod(event) {
     const version = form.elements.version.value.trim();
     const pack = form.elements.package.files[0];
     const cover = form.elements.cover.files[0];
+    const beforeFile=form.elements.before.files[0];
+    const afterFile=form.elements.after.files[0];
+    if(Boolean(beforeFile)!==Boolean(afterFile)){
+        say("Для сравнения загрузи оба изображения: «До» и «После».",true,"submitNotice");
+        return;
+    }
     if (title.length < 3 || title.length > 90 || !CATEGORIES[category] ||
         !version || version.length > 32 || description.length > 2500) {
         say("Проверь название, категорию, версию и описание.", true, "submitNotice"); return;
@@ -619,12 +628,17 @@ async function uploadMod(event) {
         say("ZIP не прошёл проверку: " + (error?.message || String(error)), true, "submitNotice");
         return;
     }
-    let coverExt = null;
-    try { if (cover) coverExt = await imageExtension(cover); }
-    catch (error) { say(error.message, true, "submitNotice"); return; }
+    let coverExt = null, beforeExt=null, afterExt=null;
+    try {
+        if(cover)coverExt=await imageExtension(cover);
+        if(beforeFile)beforeExt=await imageExtension(beforeFile);
+        if(afterFile)afterExt=await imageExtension(afterFile);
+    }catch(error){say(error.message,true,"submitNotice");return;}
     const id = crypto.randomUUID();
     const path = user.id + "/" + id + "/" + crypto.randomUUID() + ".zip";
     const coverPath = cover ? user.id + "/" + id + "/" + crypto.randomUUID() + "." + coverExt : null;
+    const beforePath=beforeFile ? user.id+"/"+id+"/"+crypto.randomUUID()+"."+beforeExt : null;
+    const afterPath=afterFile ? user.id+"/"+id+"/"+crypto.randomUUID()+"."+afterExt : null;
     sending = true;
     $("submitModButton").disabled = true;
     const uploaded = [];
@@ -643,9 +657,18 @@ async function uploadMod(event) {
             if (coverError) throw coverError;
             uploaded.push({ bucket: COVER_BUCKET, path: coverPath });
         }
+        for(const [file,uploadPath] of [[beforeFile,beforePath],[afterFile,afterPath]]) {
+            if(!file)continue;
+            say("Загружаю изображения сравнения...",false,"submitNotice");
+            const {error:previewError}=await db.storage.from(COVER_BUCKET)
+                .upload(uploadPath,file,{contentType:file.type,upsert:false});
+            if(previewError)throw previewError;
+            uploaded.push({bucket:COVER_BUCKET,path:uploadPath});
+        }
         const { error: dbError } = await db.from("wtmm_mods").insert({
             id, owner_id: user.id, title, description, category, version,
-            status: "pending", file_path: path, cover_path: coverPath
+            status: "pending", file_path: path, cover_path: coverPath,
+            before_image_path:beforePath,after_image_path:afterPath
         });
         if (dbError) throw dbError;
         form.reset();
