@@ -83,7 +83,12 @@
     </div>
 
     <div class="community2-search-extras">
-        <label class="community2-check"><input id="modsFavoritesOnly" type="checkbox"> Только избранные моды</label>
+        <label class="mods-favorites-switch">
+          <input id="modsFavoritesOnly" type="checkbox" role="switch">
+          <span class="mods-switch-track" aria-hidden="true"><span class="mods-switch-thumb"></span></span>
+          <span class="mods-switch-title">Только избранные моды</span>
+          <span class="mods-switch-state" aria-hidden="true"><span class="mods-switch-off">Выкл</span><span class="mods-switch-on">Вкл</span></span>
+        </label>
         <label class="mods-input-wrap" for="modsAuthorFilter">Автор
           <select id="modsAuthorFilter" class="community2-select" aria-label="Фильтр по автору">
             <option value="">Все авторы</option>
@@ -92,6 +97,10 @@
         <span class="community2-muted">Умный поиск по названию, описанию и авторам.</span>
     </div>
     <p id="modsNotice" role="status" aria-live="polite"></p>
+    <p id="modsLoading" class="mods-loading" role="status" aria-live="polite" hidden>
+      <span class="mods-loading-spinner" aria-hidden="true"></span>
+      <span>Загружаются ресурсы...</span>
+    </p>
     <section id="modsGrid" class="mods-grid" aria-label="Модификации"></section>
     <div id="modsEmpty" class="mods-empty" hidden>
       <h2>Здесь пока пусто</h2>

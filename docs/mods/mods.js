@@ -95,6 +95,7 @@ let hasMoreMods = false;
 let loadingMoreMods = false;
 let pendingSearchRender = null;
 let queryGeneration = 0;
+let refreshGeneration = 0;
 function getModQuery() {
     return {
         p_view: currentView === "moderation" && !isAdmin ? "catalog" : currentView,
@@ -371,15 +372,28 @@ async function render() {
     $("modsGrid").replaceChildren(fragment);
 }
 async function refresh() {
-    say("Загружаю модификации...");
+    const request = ++refreshGeneration;
+    const loader = $("modsLoading");
+    loader.hidden = false;
+    $("modsGrid").setAttribute("aria-busy", "true");
+    $("modsGrid").classList.add("is-loading");
+    $("modsCounter").textContent = uiText("Загружаются ресурсы...");
+    say("");
     try {
         if (!await queryAll()) return;
         await render();
         window.WTDiagnostics?.record?.("mods-refresh-ok");
-        say("");
     } catch (error) {
         window.WTDiagnostics?.record?.("mods-refresh-failed");
+        if (request === refreshGeneration) $("modsCounter").textContent = uiText("Ошибка загрузки.");
         throw error;
+    } finally {
+        // A stale request must not hide the spinner of a newer tab/filter load.
+        if (request === refreshGeneration) {
+            loader.hidden = true;
+            $("modsGrid").setAttribute("aria-busy", "false");
+            $("modsGrid").classList.remove("is-loading");
+        }
     }
 }
 async function showModDetails(id) {
@@ -688,7 +702,13 @@ async function uploadMod(event) {
 function bind() {
     document.querySelectorAll(".mods-tab").forEach(button => {
         button.addEventListener("click", async () => {
+            if (button.dataset.view === currentView) return;
             currentView = button.dataset.view;
+            document.querySelectorAll(".mods-tab").forEach(tab => {
+                const selected = tab === button;
+                tab.classList.toggle("active", selected);
+                tab.setAttribute("aria-pressed", String(selected));
+            });
             try { await refresh(); }
             catch (error) { say("Ошибка загрузки раздела: " + error.message, true); }
         });
