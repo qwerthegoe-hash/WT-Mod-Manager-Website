@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://esm.sh; connect-src 'self' https://ovvubbwzxikqcnuvvtjb.supabase.co wss://ovvubbwzxikqcnuvvtjb.supabase.co https://esm.sh https://api.github.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; frame-src 'none'; form-action 'none'; worker-src 'none'">
+<title>Обновления и уведомления — WT Mod Manager</title>
+<link rel="icon" href="assets/LogotipProject.png" type="image/png">
+<style>
+:root{color-scheme:dark;background:#0e1420;color:#e9f2ff;font:15px/1.6 system-ui,Segoe UI,Arial}
+*{box-sizing:border-box}body{margin:0}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px max(22px,calc((100vw - 1100px)/2));background:#152033;border-bottom:1px solid #2b4058}
+.top a{color:#a8cdff;text-decoration:none}.wrap{max-width:1100px;margin:auto;padding:40px 22px}
+h1{font-size:clamp(25px,4vw,42px);margin:0 0 4px}h2{font-size:21px;margin-top:0}
+p,.muted{color:#b4c5da}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.panel{border:1px solid #354a68;border-radius:16px;padding:22px;background:#192638}
+.item{border-bottom:1px solid #31445c;padding:15px 0}.item:last-child{border-bottom:0}
+.item h3{font-size:16px;margin:0}.item p{margin:3px 0 7px}
+button,.action{display:inline-block;border:1px solid #4c7fbd;background:#275285;color:#fff;border-radius:9px;padding:9px 14px;cursor:pointer;font:inherit;text-decoration:none}
+button.secondary{background:transparent}button:disabled{opacity:.55;cursor:default}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{min-height:20px}
+small{color:#a3b6d0}.pill{font-size:12px;border:1px solid #5d7b9d;padding:1px 7px;border-radius:99px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:28px 16px}.top{padding:16px}}
+</style>
+<script type="module" src="js/updates-center.mjs"></script>
+</head><body>
+<header class="top"><strong>WT MOD MANAGER</strong><nav class="row">
+<a href="index.html">Главная</a><a href="mods/mods.html">Библиотека модов</a><a href="profile/profile.html">Профиль</a></nav></header>
+<main class="wrap">
+<h1>Центр обновлений и уведомлений</h1>
+<p>Здесь доступны выпуски Windows-приложения и персональные уведомления аккаунта. Обновления модов не устанавливаются автоматически.</p>
+<div class="grid">
+<section class="panel" aria-labelledby="releasesTitle">
+<div class="row"><h2 id="releasesTitle">Выпуски WT Mod Manager</h2><button type="button" class="secondary" id="refreshReleases">Обновить</button></div>
+<p id="releaseStatus" class="status" role="status" aria-live="polite">Получаем список версий...</p>
+<div id="releases" aria-live="polite"></div>
+</section>
+<section class="panel" aria-labelledby="notificationTitle">
+<div class="row"><h2 id="notificationTitle">Мои уведомления</h2><button type="button" class="secondary" id="markRead">Прочитано</button></div>
+<p id="notificationStatus" class="status" role="status" aria-live="polite">Проверяем аккаунт...</p>
+<div id="notifications" aria-live="polite"></div>
+</section>
+</div>
+</main></body></html>
