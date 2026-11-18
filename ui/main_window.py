@@ -1,6 +1,6 @@
 
 """
-WT Mod Manager 1.2
+WT Mod Manager 1.3
 Main Window
 
 Главное окно менеджера модификаций.
@@ -946,7 +946,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION BETA 1.2"
+            "VERSION BETA 1.3"
         )
 
         self.version.setObjectName(
