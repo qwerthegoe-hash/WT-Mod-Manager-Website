@@ -271,6 +271,22 @@ TABLE.push(
   ["Новый мод от автора","New mod from creator","Новий мод від автора","Nowy mod od autora","Neuer Mod vom Ersteller"],
   ["Статус обращения изменён","Support status updated","Статус звернення змінено","Zmieniono status zgłoszenia","Supportstatus geändert"]
 );
+// Explicit per-account desktop sync: the same vocabulary on all five site languages.
+TABLE.push(
+  ["Скачанные моды","Downloaded mods","Завантажені моди","Pobrane mody","Heruntergeladene Mods"],
+  ["Прицелы","Sights","Приціли","Celowniki","Visiere"],
+  ["Добавить в приложение","Add to application","Додати в програму","Dodaj do aplikacji","Zur App hinzufügen"],
+  ["Архивы остаются в личном разделе «Скачанные моды». Передача в Windows-приложение происходит только после нажатия «Добавить в приложение».",
+   "ZIP archives stay in your personal Downloaded mods section. They reach the Windows app only when you press Add to application.",
+   "Архіви залишаються в особистому розділі «Завантажені моди». Передавання до Windows-програми починається лише після натискання «Додати в програму».",
+   "Archiwa pozostają w Twojej sekcji Pobrane mody. Przekazanie do aplikacji Windows następuje dopiero po kliknięciu Dodaj do aplikacji.",
+   "Archive bleiben im persönlichen Bereich Heruntergeladene Mods. Sie werden erst nach einem Klick auf Zur App hinzufügen an Windows übertragen."],
+  ["Добавлено в очередь. Мод появится только в приложении, связанном с этим аккаунтом.",
+   "Queued for transfer to the Windows app linked to this account.",
+   "Додано в чергу передавання до Windows-програми, пов'язаної з цим обліковим записом.",
+   "Dodano do kolejki aplikacji Windows połączonej z tym kontem.",
+   "Zur Übertragung an die mit diesem Konto verknüpfte Windows-App vorgemerkt."]
+);
 const normalized = text => String(text || "").trim().replace(/\s+/g," ");
 const langs = ["ru","en","uk","pl","de"];
 const dictionary = new Map(TABLE.map(([ru,en,uk,pl,de]) => [normalized(ru), {ru,en,uk,pl,de}]));
