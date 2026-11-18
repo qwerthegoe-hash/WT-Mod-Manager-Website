@@ -271,10 +271,13 @@ class DesktopSync(QObject):
         return True
 
     def link_account(self) -> None:
-        self._pairing_token = secrets.token_urlsafe(32)
-        if not self._start("register", self._pairing_token):
-            self.status_changed.emit("Проверка выполняется. Нажми привязку ещё раз.")
+        if self._busy:
+            self.status_changed.emit("Проверка выполняется. Попробуй привязку ещё раз.")
             return
+        pending = secrets.token_urlsafe(32)
+        if not self._start("register", pending):
+            return
+        self._pairing_token = pending
         self.status_changed.emit("Создаю защищённое подключение...")
 
     def sync_now(self) -> None:
