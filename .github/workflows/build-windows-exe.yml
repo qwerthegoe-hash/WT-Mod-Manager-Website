@@ -1,0 +1,51 @@
+name: Build WT Mod Manager Windows EXE
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: One-file Windows executable
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt
+
+      - name: Check Python source
+        run: |
+          python -m compileall -q src ui
+          python -c "import src.main; import ui.main_window; print('Python and Qt imports OK')"
+
+      - name: Build EXE
+        run: python tools/build_windows_exe.py
+
+      - name: SHA256 of executable
+        shell: pwsh
+        run: Get-FileHash -Algorithm SHA256 dist/WTModManager.exe | Format-List
+
+      - name: Upload standalone EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: WTModManager-Windows-${{ github.run_number }}
+          path: dist/WTModManager.exe
+          if-no-files-found: error
+          retention-days: 14
