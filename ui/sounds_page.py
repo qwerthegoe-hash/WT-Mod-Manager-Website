@@ -446,6 +446,7 @@ class SoundsPage(QWidget):
         )
 
         settings = load_settings()
+        self.repeat_enabled = bool(settings.get("audio_repeat", False))
 
         self.audio_output.setVolume(
             settings["preview_volume"] / 100.0
@@ -768,10 +769,19 @@ class SoundsPage(QWidget):
             self.player.stop
         )
 
+        self.repeat_button = QPushButton(
+            "Повтор: вкл" if self.repeat_enabled else "Повтор: выкл"
+        )
+        self.repeat_button.setObjectName("SoundSecondary")
+        self.repeat_button.setCheckable(True)
+        self.repeat_button.setChecked(self.repeat_enabled)
+        self.repeat_button.toggled.connect(self.toggle_repeat)
+
         for button in (
             self.play_button,
             self.pause_button,
-            self.stop_button
+            self.stop_button,
+            self.repeat_button
         ):
             button.setCursor(
                 Qt.CursorShape.PointingHandCursor
@@ -920,6 +930,9 @@ class SoundsPage(QWidget):
 
         self.player.errorOccurred.connect(
             self.on_player_error
+        )
+        self.player.mediaStatusChanged.connect(
+            self.on_media_status
         )
 
     # ======================================
@@ -1132,6 +1145,21 @@ class SoundsPage(QWidget):
                 self.playback_status.setText(
                     "Воспроизведение остановлено"
                 )
+
+    def toggle_repeat(self, checked):
+        self.repeat_enabled = bool(checked)
+        self.repeat_button.setText(
+            "Повтор: вкл" if self.repeat_enabled else "Повтор: выкл"
+        )
+        save_settings({"audio_repeat": self.repeat_enabled})
+
+    def on_media_status(self, status):
+        if (status == QMediaPlayer.MediaStatus.EndOfMedia
+                and self.repeat_enabled
+                and self.current_file
+                and self.current_file.exists()):
+            self.player.setPosition(0)
+            self.player.play()
 
     # ======================================
     # DURATION
