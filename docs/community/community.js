@@ -36,6 +36,8 @@ import { createClient } from
 import { COMMUNITY_CONFIG as config } from
     "../js/community-config.js";
 import { createSessionDrafts } from "../js/session-drafts.mjs";
+import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+setupSiteLanguage();
 
 
 // ============================================================
