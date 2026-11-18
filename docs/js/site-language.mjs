@@ -283,10 +283,21 @@ function applyElement(root) {
     else translateAttributes(node);
   }
 }
+let titleMemory = null;
 function render(language = readSiteLanguage()) {
   activeLanguage = LANGUAGES.has(language) ? language : "en";
   document.documentElement.lang = activeLanguage;
-  document.title = uiText(document.title, activeLanguage);
+  const title = normalized(document.title);
+  const originalTitle = dictionary.has(title) ? title
+    : titleMemory?.rendered === title ? titleMemory.source : null;
+  if (originalTitle) {
+    const translatedTitle = uiText(originalTitle, activeLanguage);
+    titleMemory = {source:originalTitle,rendered:normalized(translatedTitle)};
+    document.title = translatedTitle;
+  } else {
+    // The creator profile may set a personalized title: never overwrite it.
+    titleMemory = null;
+  }
   applyElement(document.body);
 }
 export function setupSiteLanguage() {
