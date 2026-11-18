@@ -49,9 +49,13 @@ for(const lang of ["pl","de"]){
 const html=[
  read("docs/index.html"),read("docs/support/support.html"),read("docs/contact/contact.html")
 ];
-for(const [i,page] of html.entries()){
- assert.ok(page.includes('data-lang="pl"')||page.includes('value="pl"'),"Polish missing page "+i);
- assert.ok(page.includes('data-lang="de"')||page.includes('value="de"'),"German missing page "+i);
+// Only the homepage should expose language buttons; other pages inherit the
+// saved choice while keeping complete Polish and German dictionaries.
+for(const lang of ["pl","de"])
+ assert.ok(html[0].includes('data-lang="'+lang+'"'),"Homepage missing "+lang);
+for(const page of html.slice(1)){
+ assert.ok(!page.includes('data-lang="pl"') && !page.includes('value="pl"'));
+ assert.ok(!page.includes('data-lang="de"') && !page.includes('value="de"'));
 }
 assert.ok(read("docs/app.js").includes("Object.assign(translations, window.WTMM_HOME_TRANSLATIONS"));
 assert.ok(read("docs/app.js").includes("Object.assign(guides,window.WTMM_HOME_GUIDES"));

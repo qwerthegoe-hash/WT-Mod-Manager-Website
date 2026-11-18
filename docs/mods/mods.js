@@ -1,4 +1,6 @@
 "use strict";
+import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
+setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
@@ -28,13 +30,13 @@ const coverCache = new Map();
 
 function say(message, error = false, target = "modsNotice") {
     const element = $(target);
-    element.textContent = message || "";
+    element.textContent = uiText(message || "");
     element.classList.toggle("error", error);
 }
 function node(tag, className = "", text = "") {
     const element = document.createElement(tag);
     if (className) element.className = className;
-    if (text) element.textContent = text;
+    if (text) element.textContent = text; // User-supplied mod titles/descriptions must remain unchanged.
     return element;
 }
 function link(href, text, className = "") {
@@ -56,13 +58,13 @@ async function getAdminStatus() {
     return Boolean(data);
 }
 function modLabel(row) {
-    return CATEGORIES[row.category] || CATEGORIES.other;
+    return uiText(CATEGORIES[row.category] || CATEGORIES.other);
 }
 function profile(row) {
     return profiles.get(row.owner_id) || null;
 }
 function authorName(row) {
-    return profile(row)?.nickname || (row.owner_id === user?.id ? "Я" : "Автор");
+    return profile(row)?.nickname || uiText(row.owner_id === user?.id ? "Я" : "Автор");
 }
 function authorLink(row) {
     const publicProfile = profile(row);
@@ -153,7 +155,7 @@ function updateLoadMoreControl() {
     }
     button.hidden = !hasMoreMods;
     button.disabled = loadingMoreMods;
-    button.textContent = loadingMoreMods ? "Загрузка..." : "Загрузить ещё моды";
+    button.textContent = loadingMoreMods ? uiText("Загрузка...") : uiText("Загрузить ещё моды");
     // Inline display should not override the native hidden attribute.
     button.style.display = hasMoreMods ? "block" : "none";
 }
@@ -209,7 +211,7 @@ function visibleRecords() {
         return true;
     });
     const sort = $("modsSort").value;
-    if (sort === "name") rows.sort((a, b) => a.title.localeCompare(b.title, "ru"));
+    if (sort === "name") rows.sort((a, b) => a.title.localeCompare(b.title, siteLocale()));
     else if (sort === "old") rows.reverse();
     return rows;
 }
@@ -363,7 +365,7 @@ async function showModDetails(id) {
                 const title = node("h3", "", "Опубликованные версии");
                 const entries = node("ul");
                 for (const record of previous) {
-                    const formatted = new Date(record.created_at).toLocaleDateString("ru-RU");
+                    const formatted = new Date(record.created_at).toLocaleDateString(siteLocale());
                     entries.append(node("li", "", "v" + record.version + " · " + formatted));
                 }
                 versions.replaceChildren(title, entries);

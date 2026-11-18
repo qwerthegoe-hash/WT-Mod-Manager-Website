@@ -148,8 +148,6 @@ function applyLanguage(next) {
   if (!Object.prototype.hasOwnProperty.call(copy, next)) next = "ru";
   lang = next;
   document.documentElement.lang = next;
-  $("contactLanguage").value = next;
-  try { localStorage.setItem("wtmm-language", next); } catch { /* optional */ }
   for (const element of document.querySelectorAll("[data-t]")) {
     const key = element.dataset.t;
     if (key === "heading") {
@@ -280,9 +278,13 @@ function detectLanguage() {
 function init() {
   $("contactYear").textContent = String(new Date().getFullYear());
   applyLanguage(detectLanguage());
+  // Only homepage selects language; contact responds to that saved preference.
+  window.addEventListener("storage", event => {
+    if (event.key === "wtmm-language") applyLanguage(detectLanguage());
+  });
+  window.addEventListener("pageshow", () => applyLanguage(detectLanguage()));
   selectTopic("question");
   topicButtons.forEach(button => button.addEventListener("click", () => selectTopic(button.dataset.topic)));
-  $("contactLanguage").addEventListener("change", event => applyLanguage(event.target.value));
   $("contactReply").addEventListener("change", syncReplySetting);
   $("contactMessage").addEventListener("input", () => {
     $("contactCounter").textContent = $("contactMessage").value.length + " / 4000";

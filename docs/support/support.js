@@ -735,17 +735,6 @@ function applyLanguage(language) {
 
     document.documentElement.lang = currentLanguage;
 
-    const languageLabels = {
-        en: "EN",
-        ru: "RU",
-        uk: "UA",
-        pl: "PL",
-        de: "DE"
-    };
-
-    byId("supportLanguageLabel").textContent =
-        languageLabels[currentLanguage];
-
     const sharedFields = {
         homeLink: "home",
         developerPageLink: "contactTitle",
@@ -770,27 +759,6 @@ function applyLanguage(language) {
         setText(id, key);
     });
 
-    document.querySelectorAll(".lang-option").forEach(button => {
-        const selected =
-            button.dataset.lang === currentLanguage;
-
-        button.classList.toggle("selected", selected);
-        button.setAttribute("aria-pressed", String(selected));
-    });
-
-    const languageLabelsAria = {
-        en: "Choose language",
-        ru: "Выбрать язык",
-        uk: "Вибрати мову",
-        pl: "Wybierz język",
-        de: "Sprache wählen"
-    };
-
-    byId("supportLanguageToggle").setAttribute(
-        "aria-label",
-        languageLabelsAria[currentLanguage]
-    );
-
     document.querySelectorAll(".field-help").forEach(button => {
         const helpKey = resolveHelpKey(button.dataset.help);
         const definition = helpTexts[currentLanguage][helpKey];
@@ -807,12 +775,6 @@ function applyLanguage(language) {
     applyRequestKind(requestKind, false);
     renderHelpContent();
 
-
-    try {
-        localStorage.setItem("wtmm-language", currentLanguage);
-    } catch {
-        // Page remains usable without localStorage.
-    }
 }
 
 function applyRequestKind(kind, clearStatus = true) {
@@ -922,76 +884,6 @@ function setupCategories() {
             applyRequestKind(button.dataset.type);
             saveSupportDraft();
         });
-    });
-}
-
-function setupLanguageDropdown() {
-    const toggle = byId("supportLanguageToggle");
-    const menu = byId("supportLanguageMenu");
-    const options = [...menu.querySelectorAll(".lang-option")];
-
-    function close() {
-        menu.hidden = true;
-        toggle.classList.remove("open");
-        toggle.setAttribute("aria-expanded", "false");
-    }
-
-    toggle.addEventListener("click", () => {
-        const opening = menu.hidden;
-
-        menu.hidden = !opening;
-        toggle.classList.toggle("open", opening);
-        toggle.setAttribute("aria-expanded", String(opening));
-
-        if (opening) {
-            const selected = options.find(
-                option => option.dataset.lang === currentLanguage
-            );
-
-            (selected || options[0]).focus();
-        }
-    });
-
-    options.forEach((button, index) => {
-        button.addEventListener("click", () => {
-            applyLanguage(button.dataset.lang);
-            close();
-            toggle.focus();
-        });
-
-        button.addEventListener("keydown", event => {
-            if (
-                event.key === "ArrowDown" ||
-                event.key === "ArrowUp"
-            ) {
-                event.preventDefault();
-
-                const direction = event.key === "ArrowDown" ? 1 : -1;
-
-                const nextIndex =
-                    (index + direction + options.length) %
-                    options.length;
-
-                options[nextIndex].focus();
-            }
-        });
-    });
-
-    document.addEventListener("click", event => {
-        if (!event.target.closest(".lang-wrap")) {
-            close();
-        }
-    });
-
-    document.addEventListener("keydown", event => {
-        if (
-            event.key === "Escape" &&
-            !menu.hidden &&
-            byId("helpOverlay").hidden
-        ) {
-            close();
-            toggle.focus();
-        }
     });
 }
 
@@ -1112,10 +1004,9 @@ function detectLanguage() {
         return "uk";
     }
 
-    if (browserLanguage.startsWith("ru")) {
-        return "ru";
-    }
-
+    if (browserLanguage.startsWith("ru")) return "ru";
+    if (browserLanguage.startsWith("pl")) return "pl";
+    if (browserLanguage.startsWith("de")) return "de";
     return "en";
 }
 
@@ -1153,12 +1044,16 @@ async function initSupport() {
         String(new Date().getFullYear());
 
     setupCategories();
-    setupLanguageDropdown();
     setupHelpModal();
     setupCounter();
     setupSubmission();
 
     applyLanguage(detectLanguage());
+    // Other tabs and browser history follow the language saved by the homepage.
+    window.addEventListener("storage", event => {
+        if (event.key === "wtmm-language") applyLanguage(detectLanguage());
+    });
+    window.addEventListener("pageshow", () => applyLanguage(detectLanguage()));
     setupDiagnosticsExport();
 
     const params = new URLSearchParams(

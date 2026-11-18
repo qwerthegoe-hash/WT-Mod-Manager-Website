@@ -1,4 +1,6 @@
 "use strict";
+import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
+setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
@@ -44,7 +46,7 @@ function updateNicknameCooldown() {
     const note = $("nicknameCooldownNote");
     $("profileNickname").disabled = locked;
     if (note) note.textContent = locked
-        ? "Никнейм можно будет изменить после " + unlock.toLocaleString() +
+        ? "Никнейм можно будет изменить после " + unlock.toLocaleString(siteLocale()) +
           ". Отсчёт ведётся на сервере независимо от страны и часового пояса."
         : "Никнейм можно менять не чаще одного раза в 7 дней.";
     return locked;
@@ -78,7 +80,7 @@ function restoreProfileDraft() {
 function report(text, error = false, id = "profileNotice") {
     const el = $(id);
     if (!el) return;
-    el.textContent = text;
+    el.textContent = uiText(text);
     el.classList.toggle("error", error);
 }
 function accentValue() {

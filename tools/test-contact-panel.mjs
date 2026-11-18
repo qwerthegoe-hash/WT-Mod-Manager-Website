@@ -16,7 +16,7 @@ assert.ok(!support.includes('id="developerContact"') && !support.includes('<span
 assert.ok(!html.includes('id="contactEmailFallback"'));
 assert.ok(script.includes('getContactBridge') && script.includes('bridge.send('));
 assert.ok(!script.includes('https://formspree.io/f/'));
-assert.ok(html.includes('value="pl"') && html.includes('value="de"'));
+assert.ok(!html.includes('id="contactLanguage"') && !html.includes('value="pl"')); // Uses homepage preference
 assert.equal(normalizeContactTopic("cooperation"),"cooperation");
 assert.equal(normalizeContactTopic("bad"),"question");
 const valid = {title:"Developer question",message:"Here is my original question for the developer.",
@@ -51,7 +51,7 @@ const topics=["question","cooperation","feedback","other"].map(topic=>{const e=e
 globalThis.document={documentElement:{lang:""},getElementById:id=>controls[id]||null,
  querySelectorAll:s=>s==="[data-topic]"?topics:[],
  createTextNode:text=>({textContent:text}),createElement:()=>el()};
-globalThis.window={location:{origin:"http://localhost:5500",pathname:"/docs/contact/contact.html"}};
+globalThis.window={location:{origin:"http://localhost:5500",pathname:"/docs/contact/contact.html"},addEventListener(){}};
 Object.defineProperty(globalThis,"navigator",{configurable:true,value:{language:"ru"}});
 globalThis.localStorage={getItem:()=> "ru",setItem(){}};
 globalThis.contactLocalesExtra=contactLocalesExtra;
