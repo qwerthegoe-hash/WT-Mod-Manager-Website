@@ -1,0 +1,65 @@
+name: Smoke test published Windows portable EXE
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/smoke-windows-release.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/smoke-windows-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: \${{ github.token }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the already published 1.3 test beta
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path released -Force | Out-Null
+          gh release download v1.3.0-beta.1 --repo $env:GITHUB_REPOSITORY --pattern WTModManager.exe --dir released
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download published release' }
+          if (-not (Test-Path released/WTModManager.exe)) { throw 'Release EXE is missing' }
+
+      - name: Validate GitHub's published digest
+        shell: pwsh
+        run: |
+          $release = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/v1.3.0-beta.1" | ConvertFrom-Json
+          $asset = $release.assets | Where-Object { $_.name -eq 'WTModManager.exe' } | Select-Object -First 1
+          if (-not $asset) { throw 'Release asset metadata missing' }
+          $expected = ($asset.digest -replace '^sha256:','').ToLowerInvariant()
+          $actual = (Get-FileHash released/WTModManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected -notmatch '^[0-9a-f]{64}$' -or $actual -ne $expected) {
+            throw 'Published EXE checksum mismatch'
+          }
+          Write-Output "Release EXE SHA256 verified: $actual"
+
+      - name: Launch real published EXE in Windows Qt offscreen mode
+        shell: pwsh
+        run: |
+          $path = (Resolve-Path released/WTModManager.exe).Path
+          $process = Start-Process -FilePath $path -ArgumentList '--demo' -PassThru
+          try {
+            Start-Sleep -Seconds 10
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "EXE exited during GUI smoke test (code $($process.ExitCode))"
+            }
+            Write-Output "Published one-file EXE stayed running; Qt GUI initialization smoke passed."
+          }
+          finally {
+            taskkill.exe /PID $process.Id /T /F 2>$null | Out-Null
+          }
