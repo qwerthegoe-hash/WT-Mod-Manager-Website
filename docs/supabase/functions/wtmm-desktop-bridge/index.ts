@@ -130,6 +130,21 @@ Deno.serve(async req=>{
     if(action==="status"){
       return result({paired:true,user_id:device.user_id},200,origin);
     }
+    if(action==="catalog"){
+      // Metadata only. No storage path or signed ZIP URL is disclosed here.
+      // The user must explicitly download and request transfer on the site.
+      const {data,error}=await admin.from("wtmm_mods")
+        .select("id,title,category,version,description,created_at")
+        .eq("status","approved")
+        .order("created_at",{ascending:false})
+        .limit(100);
+      if(error)throw error;
+      return result({user_id:device.user_id,items:(data||[]).map(mod=>({
+        id:mod.id,title:mod.title,category:mod.category,version:mod.version,
+        description:String(mod.description||"").slice(0,180),
+        created_at:mod.created_at
+      }))},200,origin);
+    }
     if(action==="poll"){
       const {data,error}=await admin.from("wtmm_app_transfer_queue")
         .select("id,mod_id,requested_at").eq("user_id",device.user_id)
