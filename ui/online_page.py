@@ -98,7 +98,6 @@ class OnlinePage(QWidget):
         category_names = {
             "sights": "Прицелы", "sounds": "Звуки", "camouflage": "Камуфляжи"
         }
-        rows = sorted(entries.values(), key=lambda x: x.get("imported_at", 0), reverse=True)
         for mod_id, item in sorted(
             entries.items(),
             key=lambda entry: entry[1].get("imported_at", 0)
