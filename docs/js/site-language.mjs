@@ -241,8 +241,8 @@ function translateTextNode(node) {
   }
   const target = dictionary.get(original)[activeLanguage];
   if(!target) return;
-  const leading = before.match(/^\\s*/)?.[0] || "";
-  const trailing = before.match(/\\s*$/)?.[0] || "";
+  const leading = before.match(/^\s*/)?.[0] || "";
+  const trailing = before.match(/\s*$/)?.[0] || "";
   const next = leading + target + trailing;
   originals.set(node, {source:original, rendered:normalized(target)});
   if(next !== before) node.nodeValue = next;
