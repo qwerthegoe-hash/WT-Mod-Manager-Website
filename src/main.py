@@ -351,6 +351,7 @@ class WTManagerApp:
         if self.manager is None:
 
             self.manager = ManagerWindow()
+            self.manager.check_update_requested.connect(self.updater.check_manual)
 
             # Apply custom application logo
             self.manager.setWindowIcon(
