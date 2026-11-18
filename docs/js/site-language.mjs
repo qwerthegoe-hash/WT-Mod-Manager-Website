@@ -158,13 +158,49 @@ const TABLE = [
   ["Профиль скрыт.", "Profile is private.", "Профіль приховано.", "Profil jest ukryty.", "Profil ist privat."],
   ["Нет доступных модов", "No mods available", "Немає доступних модів", "Brak dostępnych modów", "Keine Mods verfügbar"],
 ];
+
+TABLE.push(
+  ["Обсуждение обновлений", "Discuss updates", "Обговорення оновлень", "Dyskusja o aktualizacjach", "Updates diskutieren"],
+  ["Новые версии, изменения и отзывы", "New versions, changes and feedback", "Нові версії, зміни та відгуки", "Nowe wersje, zmiany i opinie", "Neue Versionen, Änderungen und Feedback"],
+  ["Официальные объявления разработчика", "Official developer announcements", "Офіційні оголошення розробника", "Oficjalne ogłoszenia dewelopera", "Offizielle Ankündigungen des Entwicklers"],
+  ["Идеи и предложения", "Ideas and suggestions", "Ідеї та пропозиції", "Pomysły i propozycje", "Ideen und Vorschläge"],
+  ["Обсуждение новых возможностей", "Discuss new features", "Обговорення нових можливостей", "Dyskusja o nowych funkcjach", "Diskussion über neue Funktionen"],
+  ["Вопросы по WT Mod Manager", "Questions about WT Mod Manager", "Запитання про WT Mod Manager", "Pytania o WT Mod Manager", "Fragen zu WT Mod Manager"],
+  ["Загрузить ещё моды", "Load more mods", "Завантажити ще моди", "Wczytaj więcej modów", "Weitere Mods laden"],
+  ["Обзор модерации модификаций", "Mod moderation overview", "Огляд модерації модів", "Przegląd moderacji modów", "Mod-Moderation im Überblick"],
+  ["Панель модерации", "Moderation panel", "Панель модерації", "Panel moderacji", "Moderationsbereich"],
+  ["Ожидают проверки", "Awaiting review", "Очікують перевірки", "Oczekujące na weryfikację", "Warten auf Prüfung"],
+  ["Опубликованы", "Published", "Опубліковані", "Opublikowane", "Veröffentlicht"],
+  ["Отклонены", "Rejected", "Відхилені", "Odrzucone", "Abgelehnt"],
+  ["Проверка", "Review", "Перевірка", "Weryfikacja", "Prüfung"],
+  ["Загружаю модификации...", "Loading mods...", "Завантажую модифікації...", "Wczytywanie modów...", "Mods werden geladen..."],
+  ["Опубликованные версии", "Published versions", "Опубліковані версії", "Opublikowane wersje", "Veröffentlichte Versionen"],
+  ["Описание отсутствует.", "No description provided.", "Опис відсутній.", "Brak opisu.", "Keine Beschreibung vorhanden."],
+  ["Ожидает модерации", "Pending moderation", "Очікує модерації", "Oczekuje na moderację", "Wartet auf Moderation"],
+  ["Получить ссылку для скачивания", "Get download link", "Отримати посилання для завантаження", "Pobierz link do pobrania", "Downloadlink anfordern"],
+  ["Скачать ZIP (ссылка действует 90 секунд)", "Download ZIP (link valid for 90 seconds)", "Завантажити ZIP (посилання діє 90 секунд)", "Pobierz ZIP (link ważny 90 sekund)", "ZIP herunterladen (Link 90 Sekunden gültig)"],
+  ["Сформировать ссылку на ZIP", "Generate ZIP link", "Створити посилання на ZIP", "Utwórz link do ZIP", "ZIP-Link erstellen"],
+  ["Перед публикацией обязательно проверь архив вручную. Не запускай неизвестные файлы.", "Manually review the archive before publishing. Do not run unknown files.", "Перед публікацією перевір архів вручну. Не запускай невідомі файли.", "Przed publikacją sprawdź archiwum ręcznie. Nie uruchamiaj nieznanych plików.", "Prüfe das Archiv vor der Veröffentlichung manuell. Führe keine unbekannten Dateien aus."],
+  ["Мод успешно отправлен на ручную модерацию!", "Mod submitted for manual review!", "Мод надіслано на ручну модерацію!", "Mod wysłany do ręcznej weryfikacji!", "Mod zur manuellen Prüfung eingereicht!"],
+  ["Этот профиль скрыт или пока не создан.", "This profile is private or has not been created.", "Цей профіль прихований або ще не створений.", "Ten profil jest ukryty albo jeszcze nie istnieje.", "Dieses Profil ist privat oder wurde noch nicht erstellt."],
+  ["Игрок сообщества WT Mod Manager", "WT Mod Manager community player", "Гравець спільноти WT Mod Manager", "Gracz społeczności WT Mod Manager", "Spieler der WT Mod Manager-Community"],
+  ["У автора пока нет опубликованных модификаций.", "This creator has no published mods yet.", "Автор ще не має опублікованих модифікацій.", "Autor nie ma jeszcze opublikowanych modów.", "Dieser Ersteller hat noch keine veröffentlichten Mods."],
+  ["Спам", "Spam", "Спам", "Spam", "Spam"],
+  ["Оскорбления или травля", "Harassment or bullying", "Образи або цькування", "Obraźliwe treści lub nękanie", "Belästigung oder Mobbing"],
+  ["Мошенничество", "Scam", "Шахрайство", "Oszustwo", "Betrug"],
+  ["Опасный контент", "Unsafe content", "Небезпечний вміст", "Niebezpieczna treść", "Gefährliche Inhalte"],
+  ["Подключение...", "Connecting...", "Підключення...", "Łączenie...", "Verbindung wird hergestellt..."]
+);
+
 const normalized = text => String(text || "").trim().replace(/\s+/g," ");
 const langs = ["ru","en","uk","pl","de"];
 const dictionary = new Map(TABLE.map(([ru,en,uk,pl,de]) => [normalized(ru), {ru,en,uk,pl,de}]));
 const excluded = [
-  "#messages", ".chat-messages", "#creatorBio", "#modDetailsContent",
-  ".mod-card-copy", ".message-author", ".message-body", ".message-content",
-  "#creatorName", "#profileUserId", ".profile-mini-label .custom-name"
+  "#messages", ".chat-messages", "#creatorBio",
+  ".mod-card-copy", ".mod-details-text", ".mod-details-title",
+  ".mod-card h3", ".message-author", ".message-body", ".message-content",
+  "#creatorName", "#profileUserId", "#attachmentName",
+  ".profile-mini-label .custom-name"
 ].join(",");
 let activeLanguage = "ru";
 const originals = new WeakMap();
@@ -185,40 +221,53 @@ export function uiText(raw, language = activeLanguage) {
 function skip(node) {
   const parent = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
   return !parent || parent.closest(excluded) ||
-    parent.closest("script,style,noscript,code,textarea,input,[contenteditable],svg") ||
-    parent.closest("[data-no-site-translation]");
+    parent.closest("script,style,noscript,code,[contenteditable],svg") ||
+    parent.closest("[data-no-site-translation]") ||
+    (node.nodeType === Node.TEXT_NODE && Boolean(parent.closest("textarea")));
 }
 function translateTextNode(node) {
   if(skip(node)) return;
   const before = node.nodeValue || "";
   const current = normalized(before);
   if(!current) return;
-  const original = dictionary.has(current) ? current : originals.get(node);
-  if(!original || !dictionary.has(original)) return;
-  originals.set(node, original);
+  const cached = originals.get(node);
+  // If app code replaced a translated UI label with a nickname, file name,
+  // profile content or dynamic text, invalidate cached UI state immediately.
+  const original = dictionary.has(current) ? current
+    : cached?.rendered === current ? cached.source : null;
+  if(!original || !dictionary.has(original)) {
+    if(cached) originals.delete(node);
+    return;
+  }
   const target = dictionary.get(original)[activeLanguage];
   if(!target) return;
-  // Preserve whitespace around text nodes next to icons and embedded controls.
-  const leading = before.match(/^\s*/)?.[0] || "";
-  const trailing = before.match(/\s*$/)?.[0] || "";
+  const leading = before.match(/^\\s*/)?.[0] || "";
+  const trailing = before.match(/\\s*$/)?.[0] || "";
   const next = leading + target + trailing;
+  originals.set(node, {source:original, rendered:normalized(target)});
   if(next !== before) node.nodeValue = next;
 }
+const attributeOriginals = new WeakMap();
 function translateAttributes(element) {
   if(skip(element)) return;
+  const originalsForElement = attributeOriginals.get(element) || {};
   for(const attribute of ["placeholder","aria-label","title","alt"]) {
     const value = element.getAttribute(attribute);
     if(!value) continue;
-    const cacheKey = "site-original-" + attribute;
-    const orig = element.dataset[cacheKey.replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase())]
-      || normalized(value);
-    if(!dictionary.has(orig)) continue;
-    const target = dictionary.get(orig)[activeLanguage];
-    if(target && target !== value) element.setAttribute(attribute,target);
-    // Preserve original without changing public DOM attribute semantics.
-    if(!element.__siteI18nOriginals) element.__siteI18nOriginals = {};
-    element.__siteI18nOriginals[attribute] ||= orig;
+    const existing = originalsForElement[attribute];
+    const current = normalized(value);
+    const original = dictionary.has(current) ? current
+      : existing?.rendered === current ? existing.source : null;
+    if(!original || !dictionary.has(original)) {
+      delete originalsForElement[attribute];
+      continue;
+    }
+    const target = dictionary.get(original)[activeLanguage];
+    if(!target) continue;
+    originalsForElement[attribute] = {source:original,rendered:normalized(target)};
+    if(target !== value) element.setAttribute(attribute,target);
   }
+  attributeOriginals.set(element,originalsForElement);
 }
 function applyElement(root) {
   if(!root || (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE)) return;
