@@ -25,6 +25,7 @@ class OnlinePage(QWidget):
     account_changed = Signal()
     check_update_requested = Signal()
     install_update_requested = Signal()
+    rollback_update_requested = Signal()
     auto_check_changed = Signal(bool)
     account_new_notice = Signal(str, str)
 
