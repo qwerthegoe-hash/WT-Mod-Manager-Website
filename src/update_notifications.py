@@ -108,3 +108,25 @@ def ignore_version(version):
     state = load_notifications()
     state["ignored_version"] = str(version)[:50] if version else None
     _save(state)
+
+
+def consume_install_status():
+    """Import one helper-written update status into the local inbox on restart."""
+    status = DATA_DIR / "updates" / "last-update-status.txt"
+    try:
+        message = status.read_text(encoding="utf-8").strip()[:MAX_MESSAGE]
+        status.unlink(missing_ok=True)
+    except OSError:
+        return None
+    if not message:
+        return None
+    success = message.startswith("Обновление установлено.")
+    kind = "update_installed" if success else "update_failed"
+    record_event(
+        kind,
+        "Обновление приложения завершено" if success else "Ошибка обновления",
+        message,
+        event_id="helper:" + __import__("hashlib").sha256(message.encode()).hexdigest()[:20] +
+                 ":" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+    )
+    return message
