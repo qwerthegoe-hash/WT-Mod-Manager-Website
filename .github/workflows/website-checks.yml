@@ -63,3 +63,5 @@ jobs:
         run: deno check --config docs/supabase/functions/community-media/deno.json docs/supabase/functions/community-media/index.ts
       - name: Type-check authenticated contact gateway
         run: deno check docs/supabase/functions/contact-message/index.ts
+      - name: Type-check desktop bridge
+        run: deno check docs/supabase/functions/wtmm-desktop-bridge/index.ts
