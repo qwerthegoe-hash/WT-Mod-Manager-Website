@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
 
-VERSION = "1.3.0-beta.1"
+VERSION = "1.3.0-beta.2"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
