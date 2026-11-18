@@ -1,5 +1,6 @@
 """Automated regression tests for desktop account sync and safe file imports."""
 import io
+import json
 import sys
 import tempfile
 import unittest
@@ -23,7 +24,45 @@ def archive(entries):
     return stream.getvalue()
 
 
+from src.profile_paths import (
+    set_active_online_account, online_visible_files,
+    load_mod_profiles, save_mod_profile, set_active_mod_profile, delete_mod_profile
+)
+
 class DesktopSyncTests(unittest.TestCase):
+    def test_online_named_profiles_filter_only_linked_account(self):
+        user = str(uuid.uuid4())
+        first = str(uuid.uuid4())
+        second = str(uuid.uuid4())
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            sight_dir = base / "accounts" / user / "mods" / "sights"
+            sight_dir.mkdir(parents=True)
+            a = first[:8] + "-01-sight.png"
+            b = second[:8] + "-01-another.png"
+            (sight_dir / a).write_bytes(b"first")
+            (sight_dir / b).write_bytes(b"second")
+            (base / "accounts" / user / "imported-mods.json").write_text(
+                json.dumps({
+                    first: {"category":"sights","files":[a]},
+                    second: {"category":"sights","files":[b]}
+                }), encoding="utf-8"
+            )
+            with patch("src.profile_paths.DATA_DIR",base):
+                set_active_online_account(user)
+                try:
+                    self.assertEqual(len(online_visible_files("sights")),2)
+                    self.assertEqual(save_mod_profile(user,"Only first",[first]),1)
+                    set_active_mod_profile(user,"Only first")
+                    names = [path.name for path in online_visible_files("sights")]
+                    self.assertEqual(names,[a])
+                    self.assertEqual(load_mod_profiles(user)["active"],"Only first")
+                    self.assertTrue(delete_mod_profile(user,"Only first"))
+                    self.assertEqual(len(online_visible_files("sights")),2)
+                    self.assertFalse(delete_mod_profile(user,"Only first"))
+                finally:
+                    set_active_online_account(None)
+
     def test_reject_traversal(self):
         with self.assertRaises(PackageError):
             _safe_entries(archive([("../outside.png", b"bad")]), "sights")
