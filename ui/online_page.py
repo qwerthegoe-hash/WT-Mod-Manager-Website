@@ -7,10 +7,10 @@ from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QMessageBox, QApplication
+    QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit
 )
 
-from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError
+from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.profile_paths import DATA_DIR, set_active_online_account
 
 
@@ -56,20 +56,55 @@ class OnlinePage(QWidget):
             controls.addWidget(button)
         layout.addLayout(controls)
 
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs, 1)
+        offline_tab = QWidget()
+        offline_layout = QVBoxLayout(offline_tab)
         self.list_title = QLabel("Импортированные моды этого аккаунта")
-        layout.addWidget(self.list_title)
+        offline_layout.addWidget(self.list_title)
         self.library = QListWidget()
-        layout.addWidget(self.library, 1)
+        offline_layout.addWidget(self.library, 1)
         self.rollback_button = QPushButton("Восстановить предыдущую версию")
         self.rollback_button.setEnabled(False)
         self.rollback_button.clicked.connect(self.restore_selected_version)
         self.library.itemSelectionChanged.connect(self.update_rollback_control)
-        layout.addWidget(self.rollback_button)
+        offline_layout.addWidget(self.rollback_button)
+        self.tabs.addTab(offline_tab, "Мои загрузки")
+
+        catalog_tab = QWidget()
+        catalog_layout = QVBoxLayout(catalog_tab)
+        self.catalog_note = QLabel(
+            "Каталог сайта отображает только одобренные моды. Для загрузки "
+            "и передачи открой мод на сайте — автоматической установки нет."
+        )
+        self.catalog_note.setWordWrap(True)
+        catalog_layout.addWidget(self.catalog_note)
+        self.catalog_search = QLineEdit()
+        self.catalog_search.setPlaceholderText("Поиск по названию или категории")
+        self.catalog_search.textChanged.connect(self.render_catalog)
+        catalog_layout.addWidget(self.catalog_search)
+        self.catalog_list = QListWidget()
+        self.catalog_list.itemDoubleClicked.connect(self.open_selected_mod)
+        catalog_layout.addWidget(self.catalog_list, 1)
+        catalog_controls = QHBoxLayout()
+        self.catalog_refresh = QPushButton("Обновить каталог")
+        self.catalog_refresh.clicked.connect(self.refresh_remote_catalog)
+        catalog_controls.addWidget(self.catalog_refresh)
+        self.catalog_open = QPushButton("Подробнее на сайте")
+        self.catalog_open.clicked.connect(self.open_selected_mod)
+        catalog_controls.addWidget(self.catalog_open)
+        self.community_open = QPushButton("Сообщество")
+        self.community_open.clicked.connect(self.open_community)
+        catalog_controls.addWidget(self.community_open)
+        catalog_layout.addLayout(catalog_controls)
+        self.tabs.addTab(catalog_tab, "Каталог сайта")
+        self.catalog_rows = []
 
         self.bridge = DesktopSync(self)
         self.bridge.status_changed.connect(self.status.setText)
         self.bridge.account_changed.connect(self.on_account)
         self.bridge.files_changed.connect(self.on_import)
+        self.bridge.catalog_changed.connect(self.on_catalog)
         app = QApplication.instance()
         if app:
             app.aboutToQuit.connect(self.bridge.stop)
@@ -80,10 +115,13 @@ class OnlinePage(QWidget):
 
     def check_now(self):
         self.bridge.sync_now()
+        self.bridge.refresh_catalog()
         self.refresh_library()
 
     def on_account(self, account_id):
         set_active_online_account(account_id or None)
+        self.catalog_rows = []
+        self.render_catalog()
         self.account_changed.emit()
         self.refresh_library()
 
@@ -91,6 +129,57 @@ class OnlinePage(QWidget):
         self.refresh_library()
         self.assets_changed.emit(category)
         self.status.setText("Новые файлы добавлены без перезапуска WT Mod Manager.")
+
+    def refresh_remote_catalog(self):
+        if not self.bridge.user_id:
+            self.status.setText("Привяжи аккаунт сайта, чтобы открыть онлайн-каталог.")
+            return
+        self.bridge.refresh_catalog()
+
+    def on_catalog(self, rows):
+        self.catalog_rows = [row for row in rows if isinstance(row, dict)]
+        self.render_catalog()
+
+    def render_catalog(self, *_):
+        query = self.catalog_search.text().strip().casefold()
+        self.catalog_list.clear()
+        labels = {
+            "sights": "Прицелы", "camouflage": "Камуфляжи",
+            "sounds": "Звуки", "visuals": "Графика",
+            "interface": "Интерфейс", "other": "Другое"
+        }
+        for row in self.catalog_rows:
+            title = str(row.get("title", ""))[:90]
+            category = labels.get(row.get("category"), "Мод")
+            version = str(row.get("version", ""))[:32]
+            if query and query not in (title + " " + category).casefold():
+                continue
+            ident = str(row.get("id", ""))
+            if not UUID.fullmatch(ident):
+                continue
+            item = QListWidgetItem(category + " • " + title + " • v" + version)
+            item.setData(Qt.ItemDataRole.UserRole, ident)
+            self.catalog_list.addItem(item)
+        if not self.catalog_list.count():
+            self.catalog_list.addItem(
+                "Нет опубликованных модов" if not self.catalog_rows else
+                "Поиск не дал результатов"
+            )
+
+    def open_selected_mod(self, *_):
+        item = self.catalog_list.currentItem()
+        ident = item.data(Qt.ItemDataRole.UserRole) if item else None
+        if not ident or not UUID.fullmatch(str(ident)):
+            return
+        url = ("https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/"
+               "mods/mods.html?mod=" + str(ident))
+        QDesktopServices.openUrl(QUrl(url))
+
+    def open_community(self):
+        QDesktopServices.openUrl(QUrl(
+            "https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/"
+            "community/community.html"
+        ))
 
     def refresh_library(self):
         entries = imported_library(self.bridge.user_id)
