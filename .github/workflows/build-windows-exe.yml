@@ -92,7 +92,7 @@ jobs:
         run: |
           $target = Join-Path $env:RUNNER_TEMP "WTMM-Installer-Smoke"
           $setup = (Resolve-Path "dist\WTModManager-Setup.exe").Path
-          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $target + '" /TASKS="!desktopicon"'
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $target + '"'
           $p = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Silent installation failed" }
           if (-not (Test-Path "$target\WTModManager.exe")) { throw "Installed EXE missing" }
