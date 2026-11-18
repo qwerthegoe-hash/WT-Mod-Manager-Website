@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import shutil
+from src.profile_paths import MODS_DIR
 
 from PySide6.QtCore import (
     Qt,
@@ -51,7 +52,7 @@ from src.settings_store import (
 # ==========================================
 
 ROOT = Path(__file__).resolve().parent.parent
-SOUNDS_DIR = ROOT / "mods" / "sounds"
+SOUNDS_DIR = MODS_DIR / "sounds"
 
 EXTENSIONS = {
     ".wav",
