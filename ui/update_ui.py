@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
 from src.update_checker import find_update, download_verified, repository, _sha256
-from src.portable_updater import launch_verified_update
+from src.portable_updater import launch_verified_update, launch_verified_rollback, previous_exe_available
 from src.update_notifications import (
     load_notifications, record_event, set_auto_check, ignore_version
 )
@@ -89,6 +89,38 @@ class UpdateController(QObject):
             return
         self._manual_check = True
         self._start(None)
+
+    def request_rollback(self):
+        if self.thread is not None:
+            QMessageBox.information(
+                self.parent_window, "Откат версии",
+                "Во время проверки или скачивания обновления откат недоступен."
+            )
+            return
+        if not previous_exe_available():
+            QMessageBox.information(
+                self.parent_window, "Откат версии",
+                "Нет сохранённой предыдущей версии с подтверждённой SHA-256. "
+                "Резервная копия создаётся при следующем обновлении через новый механизм."
+            )
+            return
+        choice = QMessageBox.question(
+            self.parent_window, "Вернуть предыдущую версию",
+            "Вернуть предыдущий проверенный EXE WT Mod Manager?\n"
+            "Текущая версия будет сохранена отдельно, а приложение перезапустится. "
+            "Моды и настройки останутся на месте.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            launch_verified_rollback()
+        except (ValueError, OSError, RuntimeError) as error:
+            QMessageBox.warning(self.parent_window, "Ошибка отката", str(error))
+            return
+        if callable(self.on_install_ready):
+            QTimer.singleShot(0, self.on_install_ready)
 
     def request_install(self):
         """An explicit user action. No forced app close on a mere notification."""

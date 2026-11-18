@@ -361,6 +361,9 @@ class DesktopSync(QObject):
     account_changed = Signal(str)
     files_changed = Signal(str)
     catalog_changed = Signal(object)
+    notifications_changed = Signal(object)
+    assistant_response = Signal(str)
+    assistant_error = Signal(str)
     _completed = Signal(object)
 
     def __init__(self, parent=None):
@@ -375,13 +378,16 @@ class DesktopSync(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.sync_now)
         self._timer.start(2500)
+        self._notices_timer = QTimer(self)
+        self._notices_timer.timeout.connect(self.refresh_notifications)
+        self._notices_timer.start(25000)
         self.sync_now()
 
-    def _start(self, action: str, token: str) -> bool:
+    def _start(self, action: str, token: str, **options) -> bool:
         if self._busy:
             return False
         self._busy = True
-        task = self._pool.submit(self._work, action, token)
+        task = self._pool.submit(self._work, action, token, **options)
         def complete(future):
             try:
                 self._completed.emit((action, token, True, future.result()))
@@ -410,6 +416,29 @@ class DesktopSync(QObject):
         if token:
             self._start("catalog", token)
 
+    def refresh_notifications(self) -> None:
+        token = self._token
+        if token and self.user_id:
+            self._start("notifications", token)
+
+    def mark_notifications_read(self) -> None:
+        token = self._token
+        if token and self.user_id:
+            self._start("notifications_read", token)
+
+    def ask_assistant(self, question: str) -> bool:
+        token = self._token
+        if not token or not self.user_id:
+            self.assistant_error.emit("Сначала привяжи аккаунт сайта в разделе загрузок.")
+            return False
+        if not isinstance(question, str) or not 3 <= len(question.strip()) <= 1200:
+            self.assistant_error.emit("Вопрос должен содержать от 3 до 1200 символов.")
+            return False
+        if not self._start("assistant", token, message=question.strip()):
+            self.assistant_error.emit("Выполняется другое действие. Повтори вопрос.")
+            return False
+        return True
+
     def unlink_account(self) -> None:
         token = self._token or self._pairing_token
         self._token = None
@@ -417,6 +446,7 @@ class DesktopSync(QObject):
         self.user_id = None
         SECRET_FILE.unlink(missing_ok=True)
         self.account_changed.emit("")
+        self.notifications_changed.emit([])
         self.status_changed.emit("Аккаунт отключён. Локальные файлы сохранены.")
         if token:
             # A poll may still be running. Revoke after it, rather than
@@ -424,7 +454,7 @@ class DesktopSync(QObject):
             self._pool.submit(self._work, "revoke", token)
 
     @staticmethod
-    def _work(action: str, token: str) -> dict:
+    def _work(action: str, token: str, **options) -> dict:
         if action == "register":
             return _call("register", token)
         if action == "revoke":
@@ -435,6 +465,17 @@ class DesktopSync(QObject):
         user_id = str(state.get("user_id", ""))
         if not UUID.fullmatch(user_id):
             raise RuntimeError("Account verification failed.")
+        if action == "notifications":
+            notices = _call("notifications", token)
+            return {"paired": True, "user_id": user_id,
+                    "notices": notices.get("items", [])}
+        if action == "notifications_read":
+            _call("notifications_read", token)
+            return {"paired": True, "user_id": user_id, "read_notices": True}
+        if action == "assistant":
+            result = _call("assistant", token, message=str(options.get("message", ""))[:1200])
+            return {"paired": True, "user_id": user_id,
+                    "answer": str(result.get("answer", ""))[:3500]}
         if action == "catalog":
             catalog = _call("catalog", token)
             return {"paired": True, "user_id": user_id,
@@ -470,7 +511,9 @@ class DesktopSync(QObject):
         if completed_token != (self._pairing_token or self._token):
             return
         if not ok:
-            if action != "poll":
+            if action == "assistant":
+                self.assistant_error.emit(str(result))
+            elif action not in ("poll", "notifications"):
                 self.status_changed.emit("Ошибка соединения: " + str(result))
             return
         if action == "register":
@@ -500,6 +543,17 @@ class DesktopSync(QObject):
             self.account_changed.emit(user_id)
             self.status_changed.emit("Аккаунт сайта подключён. Ожидаю команды из «Скачанных модов».")
             QTimer.singleShot(150, self.refresh_catalog)
+            QTimer.singleShot(350, self.refresh_notifications)
+        if action == "notifications":
+            items = result.get("notices", [])
+            self.notifications_changed.emit(items if isinstance(items, list) else [])
+            return
+        if action == "notifications_read":
+            QTimer.singleShot(100, self.refresh_notifications)
+            return
+        if action == "assistant":
+            self.assistant_response.emit(str(result.get("answer") or "Нет ответа сервера."))
+            return
         if action == "catalog":
             items = result.get("catalog_items", [])
             self.catalog_changed.emit(items if isinstance(items, list) else [])
@@ -513,4 +567,5 @@ class DesktopSync(QObject):
 
     def stop(self) -> None:
         self._timer.stop()
+        self._notices_timer.stop()
         self._pool.shutdown(wait=False, cancel_futures=True)

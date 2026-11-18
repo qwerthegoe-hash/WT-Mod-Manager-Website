@@ -374,6 +374,8 @@ class WTManagerApp:
 
             self.manager = ManagerWindow()
             self.manager.check_update_requested.connect(self.updater.check_manual)
+            self.manager.rollback_update_requested.connect(self.updater.request_rollback)
+            self.manager.online_page.account_new_notice.connect(self.show_tray_message)
             self.manager.online_page.install_update_requested.connect(
                 self.updater.request_install
             )
@@ -467,4 +469,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--apply-update":
         from src.portable_updater import apply_verified_update
         sys.exit(apply_verified_update(sys.argv[2:]))
+    if len(sys.argv) > 1 and sys.argv[1] == "--apply-rollback":
+        from src.portable_updater import apply_verified_rollback
+        sys.exit(apply_verified_rollback(sys.argv[2:]))
     main()

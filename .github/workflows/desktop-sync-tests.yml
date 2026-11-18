@@ -54,6 +54,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python -m unittest discover -s tests -p test_update_notifications.py -v
 
+      - name: Test offline diagnostics and EXE rollback safety
+        run: python -m unittest discover -s tests -p test_diagnostics_and_rollback.py -v
+
       - name: Smoke test all Qt desktop panels
         env:
           QT_QPA_PLATFORM: offscreen
@@ -63,3 +66,5 @@ jobs:
         run: |
           node --check docs/mods/mods.js
           node --check docs/js/desktop-link.mjs
+          node --check docs/js/updates-center.mjs
+          node --check docs/js/assistant.mjs
