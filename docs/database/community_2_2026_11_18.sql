@@ -246,7 +246,7 @@ begin
  if new.status in ('in_review','resolved','closed') and new.status is distinct from old.status then
   insert into public.wtmm_notifications(user_id,kind,title,body,url,source_id)
   values(new.user_id,'support_status','Статус обращения изменён',left(new.title,350),
-   '../profile/profile.html#supportHistory',new.id)
+   '../profile/profile.html#supportHistory',null)
   on conflict do nothing;
  end if;
  new.updated_at:=now();
@@ -255,6 +255,18 @@ end; $$;
 revoke all on function wtmm_security.notify_ticket_status() from public,anon,authenticated;
 create trigger wtmm_ticket_status_changed before update on public.wtmm_support_tickets
 for each row execute function wtmm_security.notify_ticket_status();
+
+-- Aggregate approved-mod popularity without exposing other users' favorite rows.
+-- This private definer function returns only a count for an approved mod.
+create or replace function wtmm_security.approved_favorite_count(p_mod_id uuid)
+returns bigint language sql stable security definer set search_path='' as $
+select case when exists(
+ select 1 from public.wtmm_mods m where m.id=p_mod_id and m.status='approved'
+) then (select count(*) from public.wtmm_mod_favorites f where f.mod_id=p_mod_id)
+else 0 end;
+$;
+revoke all on function wtmm_security.approved_favorite_count(uuid) from public,anon;
+grant execute on function wtmm_security.approved_favorite_count(uuid) to authenticated;
 
 -- Server-side discovery with favorites count and optional author/favorite filters.
 -- SECURITY INVOKER and table RLS ensure unpublished files cannot leak.
@@ -274,7 +286,7 @@ as $$
 select m.id,m.owner_id,m.title,m.description,m.category,m.version,m.status,
        m.file_path,m.cover_path,m.before_image_path,m.after_image_path,
        m.created_at,
-       (select count(*) from public.wtmm_mod_favorites fav where fav.mod_id=m.id) as favorites_count,
+       wtmm_security.approved_favorite_count(m.id) as favorites_count,
        exists(select 1 from public.wtmm_mod_favorites fav where fav.mod_id=m.id
          and fav.user_id=(select auth.uid())) as is_favorite
 from public.wtmm_mods m
@@ -290,7 +302,7 @@ where m.status='approved'
    m.description ilike '%'||left(btrim(p_text),90)||'%' or
    p.nickname ilike '%'||left(btrim(p_text),90)||'%')
 order by
-  case when p_sort='popular' then (select count(*) from public.wtmm_mod_favorites fav where fav.mod_id=m.id) end desc nulls last,
+  case when p_sort='popular' then wtmm_security.approved_favorite_count(m.id) end desc nulls last,
   case when p_sort='name' then lower(m.title) end asc nulls last,
   case when p_sort='old' then m.created_at end asc nulls last,
   case when p_sort='relevance' and btrim(coalesce(p_text,''))<>'' then
