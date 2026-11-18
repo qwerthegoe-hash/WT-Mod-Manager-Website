@@ -215,6 +215,9 @@ export function readSiteLanguage() {
   return LANGUAGES.has(browser) ? browser : "en";
 }
 export function siteLanguage() { return activeLanguage; }
+export function siteLocale() {
+  return ({ru:"ru-RU",uk:"uk-UA",en:"en-US",pl:"pl-PL",de:"de-DE"})[activeLanguage] || "en-US";
+}
 export function uiText(raw, language = activeLanguage) {
   return dictionary.get(normalized(raw))?.[language] || String(raw);
 }
