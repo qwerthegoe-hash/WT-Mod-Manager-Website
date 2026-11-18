@@ -72,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'v1.3.0-beta.3'
+          $tag = 'v1.3.0-beta.4'
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
             Write-Output "Release $tag already exists; no overwrite."
@@ -81,6 +81,10 @@ jobs:
 
           @'
           WT Mod Manager 1.3 - Test Beta (Windows x64)
+
+          This test beta removes the unused GPT/AI assistant from the website,
+          desktop GUI and server API. No OpenAI API is needed. All local
+          diagnostics, updates and account notifications remain available.
 
           Portable one-file Windows build with optional account-linked
           online downloads, per-account mod sets, improved audio preview,
