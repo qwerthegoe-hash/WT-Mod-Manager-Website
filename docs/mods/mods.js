@@ -7,6 +7,7 @@ import { validateModZip } from "../js/mod-zip-validator.mjs";
 import { modReviewReady } from "../js/mod-review-policy.mjs";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { mapWithConcurrency } from "../js/async-pool.mjs";
+import { createModCommunity } from "../js/community2-mods.mjs";
 
 const $ = id => document.getElementById(id);
 const FILE_BUCKET = "wtmm-mod-packages";
@@ -26,6 +27,7 @@ let db, user, isAdmin = false, records = [], profiles = new Map();
 let currentView = new URLSearchParams(location.search).get("mine") === "1" ? "mine" : "catalog";
 let moderationStatus = "pending"; // Admin can filter existing statuses; default stays pending.
 let currentModId = null, sending = false;
+let community2 = null;
 const coverCache = new Map();
 
 function say(message, error = false, target = "modsNotice") {
@@ -98,7 +100,9 @@ function getModQuery() {
         p_status: moderationStatus,
         p_category: $("modsCategory").value,
         p_text: $("modsSearch").value.trim().slice(0, 90),
-        p_sort: $("modsSort").value
+        p_sort: $("modsSort").value,
+        p_author: $("modsAuthorFilter").value || null,
+        p_favorites_only: $("modsFavoritesOnly").checked
     };
 }
 
@@ -107,8 +111,20 @@ function getModQuery() {
 async function fetchModPage(offset, query = getModQuery()) {
     // Global search/filter/order is evaluated by PostgreSQL with caller RLS.
     // A legacy project without this optional RPC retains its original listing.
+    if(query.p_view==="catalog") {
+        const {data,error}=await db.rpc("wtmm_discover_mods",{
+            p_text:query.p_text,p_category:query.p_category,p_sort:query.p_sort,
+            p_author:query.p_author,p_favorites_only:query.p_favorites_only,
+            p_offset:offset,p_limit:MOD_PAGE_SIZE
+        });
+        if(!error)return data||[];
+        // A pre-migration deployment still has the previous global search RPC.
+        if(error.code!=="PGRST202" && error.code!=="42883")throw error;
+    }
     const { data, error } = await db.rpc("wtmm_search_mods", {
-        ...query, p_offset: offset, p_limit: MOD_PAGE_SIZE
+        p_view: query.p_view,p_status:query.p_status,
+        p_category:query.p_category,p_text:query.p_text,p_sort:query.p_sort,
+        p_offset: offset, p_limit: MOD_PAGE_SIZE
     });
     if (!error) return data || [];
     if (error.code !== "PGRST202" && error.code !== "42883") throw error;
@@ -120,6 +136,37 @@ async function fetchModPage(offset, query = getModQuery()) {
         .range(offset, offset + MOD_PAGE_SIZE - 1);
     if (fallback.error) throw fallback.error;
     return fallback.data || [];
+}
+async function enrichComparisonPaths(rows) {
+    if(!rows.length)return;
+    const {data,error}=await db.from("wtmm_mods")
+      .select("id,before_image_path,after_image_path")
+      .in("id",rows.map(r=>r.id));
+    if(error) {
+      console.warn("Before/after images unavailable:",error.message);
+      return;
+    }
+    const map=new Map((data||[]).map(r=>[r.id,r]));
+    for(const row of rows)Object.assign(row,map.get(row.id)||{});
+}
+function updateAuthorFilter() {
+    const select=$("modsAuthorFilter");
+    const selected=select.value;
+    const authors=new Map();
+    for(const row of records) {
+      const profile=profiles.get(row.owner_id);
+      if(profile?.is_public!==false && profile?.nickname)
+        authors.set(row.owner_id,profile.nickname);
+    }
+    const options=[new Option(uiText("Все авторы"),"")];
+    for(const [id,name] of [...authors].sort((a,b)=>a[1].localeCompare(b[1],siteLocale()))) {
+      options.push(new Option(name,id));
+    }
+    // Preserve a selected author while a filtered search updates results.
+    if(selected && !authors.has(selected))
+      options.push(new Option(uiText("Выбранный автор"),selected));
+    select.replaceChildren(...options);
+    select.value=selected;
 }
 
 async function extendAuthorProfiles(rows) {
@@ -166,10 +213,12 @@ async function queryAll() {
     const data = await fetchModPage(0, query);
     if (generation !== queryGeneration) return false;
     records = data;
+    if(currentView!=="catalog")await enrichComparisonPaths(records);
     profiles = new Map();
     hasMoreMods = data.length === MOD_PAGE_SIZE;
     await extendAuthorProfiles(data);
     if (generation !== queryGeneration) return false;
+    updateAuthorFilter();
     updateLoadMoreControl();
     return true;
 }
@@ -185,8 +234,10 @@ async function loadMoreMods() {
         if (generation !== queryGeneration) return;
         const known = new Set(records.map(row => row.id));
         records.push(...next.filter(row => !known.has(row.id)));
+        if(currentView!=="catalog")await enrichComparisonPaths(next);
         hasMoreMods = next.length === MOD_PAGE_SIZE;
         await extendAuthorProfiles(next);
+        updateAuthorFilter();
         await render();
         say("");
     } catch (error) {
@@ -206,6 +257,10 @@ function visibleRecords() {
         if (view === "mine" && row.owner_id !== user.id) return false;
         if (view === "moderation" && row.status !== moderationStatus) return false;
         if (category !== "all" && row.category !== category) return false;
+        if(view==="catalog" && $("modsFavoritesOnly").checked &&
+           !community2?.favorites.has(row.id))return false;
+        if(view==="catalog" && $("modsAuthorFilter").value &&
+           row.owner_id!==$("modsAuthorFilter").value)return false;
         if (q && !(row.title + " " + row.description + " " + authorName(row))
             .toLocaleLowerCase().includes(q)) return false;
         return true;
@@ -241,8 +296,10 @@ async function makeCard(row) {
     const status = node("span", "mod-status " + row.status,
         row.status === "approved" ? "Одобрено" :
         row.status === "pending" ? "Проверка" : "Отклонено");
-    if (currentView === "catalog") end.append(details);
-    else end.append(details, status);
+    if (currentView === "catalog") {
+        end.append(details);
+        community2?.addFavoriteButton(row,end);
+    } else end.append(details,status);
     content.append(end);
     card.append(cover, content);
     return card;
@@ -475,6 +532,11 @@ async function showModDetails(id) {
         remove.addEventListener("click", () => deleteSubmission(row));
         actions.append(remove);
     }
+    if(row.status==="approved" && community2) {
+        community2.addFavoriteButton(row,actions);
+        await community2.addCollectionPicker(row,content);
+        await community2.addComparison(row,content,coverUrl);
+    }
     content.append(actions);
     detail.replaceChildren(content);
     if (!dialog.open) dialog.showModal();
@@ -607,7 +669,8 @@ function bind() {
             catch (error) { say("Ошибка загрузки раздела: " + error.message, true); }
         });
     });
-    for (const id of ["modsSearch", "modsCategory", "modsSort"]) {
+    for (const id of ["modsSearch", "modsCategory", "modsSort",
+          "modsFavoritesOnly", "modsAuthorFilter"]) {
         $(id).addEventListener(id === "modsSearch" ? "input" : "change", () => {
             // Debounced server-side search includes mods beyond loaded pages.
             if (pendingSearchRender) clearTimeout(pendingSearchRender);
@@ -634,13 +697,26 @@ async function init() {
     try {
         db = createClient(config.supabaseUrl, config.supabasePublishableKey);
         user = await ensureSession();
+        community2 = await createModCommunity(db,user,
+            (message,error=false)=>say(message,error));
         isAdmin = await getAdminStatus();
         $("moderationTab").hidden = !isAdmin;
         await refresh();
         const selectedMod = new URLSearchParams(location.search).get("mod");
         if (selectedMod && /^[0-9a-f-]{36}$/i.test(selectedMod)) {
-            const item = records.find(mod => mod.id === selectedMod && mod.status === "approved");
-            if (item) await showModDetails(item.id);
+            let item=records.find(mod=>mod.id===selectedMod && mod.status==="approved");
+            if(!item) {
+                // Deep links from profiles and notifications must work beyond page one.
+                const {data,error}=await db.from("wtmm_mods")
+                  .select("id,owner_id,title,description,category,version,status,file_path,cover_path,before_image_path,after_image_path,created_at")
+                  .eq("id",selectedMod).eq("status","approved").maybeSingle();
+                if(!error && data) {
+                    item=data;
+                    records.push(data);
+                    await extendAuthorProfiles([data]);
+                }
+            }
+            if(item)await showModDetails(item.id);
         }
     } catch (error) {
         console.error("Mod library initialization:", error);
