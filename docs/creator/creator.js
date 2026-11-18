@@ -1,4 +1,6 @@
 "use strict";
+import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
@@ -49,11 +51,11 @@ async function renderMod(db, item) {
     const content = textNode("div", "", "mod-card-content");
     content.append(
         textNode("h3", item.title),
-        textNode("div", (CATEGORIES[item.category] || "Другое") + " · v" + item.version, "mod-card-meta"),
+        textNode("div", uiText(CATEGORIES[item.category] || "Другое") + " · v" + item.version, "mod-card-meta"),
         textNode("p", item.description.slice(0, 135), "mod-card-copy")
     );
     const end = textNode("div", "", "mod-card-end");
-    const link = textNode("a", "Подробнее", "mod-card-button");
+    const link = textNode("a", uiText("Подробнее"), "mod-card-button");
     link.href = "../mods/mods.html?mod=" + encodeURIComponent(item.id);
     end.append(link);
     content.append(end);
