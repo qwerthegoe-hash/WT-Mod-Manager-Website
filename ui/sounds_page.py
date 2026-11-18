@@ -1072,7 +1072,7 @@ class SoundsPage(QWidget):
         self.player.play()
 
     # ======================================
-    # PLAY / PAUSE TOGGLE
+    # PLAY / RESUME
     # ======================================
 
     def toggle_playback(self):
