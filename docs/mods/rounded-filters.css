@@ -75,14 +75,19 @@
 .mods-select-root.is-open .mods-select-chevron {
   transform: rotate(225deg) translate(-1px, -1px);
 }
+/* A visible gutter between neighboring options prevents hover and selected
+   highlights from touching or merging into one large block. */
 .mods-select-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   position: absolute;
   z-index: 51;
   top: calc(100% + 7px);
   left: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 6px;
+  padding: 8px;
   border: 1px solid #5685ae;
   border-radius: 15px;
   background: linear-gradient(155deg, #1b354f, #112338 80%);
@@ -96,13 +101,14 @@
 .mods-select-menu[hidden] { display: none !important; }
 .mods-select-option {
   display: block;
+  flex: 0 0 auto;
   box-sizing: border-box;
   width: 100%;
-  min-height: 39px;
+  min-height: 40px;
   margin: 0;
   padding: 10px 12px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: #e9f4ff;
   font: inherit;
