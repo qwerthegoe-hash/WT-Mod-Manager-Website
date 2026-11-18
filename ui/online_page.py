@@ -8,7 +8,8 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit,
-    QComboBox, QInputDialog, QAbstractItemView, QCheckBox
+    QComboBox, QInputDialog, QAbstractItemView, QCheckBox,
+    QPlainTextEdit
 )
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
@@ -25,6 +26,7 @@ class OnlinePage(QWidget):
     check_update_requested = Signal()
     install_update_requested = Signal()
     auto_check_changed = Signal(bool)
+    account_new_notice = Signal(str, str)
 
     def __init__(self):
         super().__init__()
@@ -147,11 +149,55 @@ class OnlinePage(QWidget):
         self.tabs.addTab(catalog_tab, "Каталог сайта")
         self.catalog_rows = []
 
+        notifications_tab = QWidget()
+        notices_layout = QVBoxLayout(notifications_tab)
+        notices_layout.addWidget(QLabel("Уведомления сайта и приложения"))
+        self.remote_notifications = QListWidget()
+        self.remote_notifications.setToolTip(
+            "Уведомления вашего аккаунта: обновления модов, модерация и сообщество."
+        )
+        notices_layout.addWidget(self.remote_notifications)
+        notices_controls = QHBoxLayout()
+        self.notices_refresh = QPushButton("Проверить уведомления")
+        self.notices_refresh.clicked.connect(self.check_account_notifications)
+        self.notices_mark_read = QPushButton("Отметить прочитанными")
+        self.notices_mark_read.clicked.connect(self.mark_account_notifications_read)
+        notices_controls.addWidget(self.notices_refresh)
+        notices_controls.addWidget(self.notices_mark_read)
+        notices_layout.addLayout(notices_controls)
+        self.tabs.addTab(notifications_tab, "Уведомления")
+        self._seen_account_notices = None
+
+        ai_tab = QWidget()
+        ai_layout = QVBoxLayout(ai_tab)
+        self.ai_info = QLabel(
+            "GPT-помощник отвечает на вопросы по WT Mod Manager и ошибкам модов. "
+            "Отправленный текст передаётся серверному ИИ. Не вводи пароли, токены "
+            "и личные данные. Требуется привязанный зарегистрированный аккаунт."
+        )
+        self.ai_info.setWordWrap(True)
+        ai_layout.addWidget(self.ai_info)
+        self.ai_chat = QPlainTextEdit()
+        self.ai_chat.setReadOnly(True)
+        self.ai_chat.setPlainText("GPT-помощник WT Mod Manager. Задайте вопрос о программе.")
+        ai_layout.addWidget(self.ai_chat, 1)
+        self.ai_question = QPlainTextEdit()
+        self.ai_question.setPlaceholderText("Например: почему мод не появился в игре?")
+        self.ai_question.setMaximumHeight(80)
+        ai_layout.addWidget(self.ai_question)
+        self.ai_send = QPushButton("Отправить вопрос GPT")
+        self.ai_send.clicked.connect(self.send_ai_question)
+        ai_layout.addWidget(self.ai_send)
+        self.tabs.addTab(ai_tab, "GPT-помощник")
+
         self.bridge = DesktopSync(self)
         self.bridge.status_changed.connect(self.status.setText)
         self.bridge.account_changed.connect(self.on_account)
         self.bridge.files_changed.connect(self.on_import)
         self.bridge.catalog_changed.connect(self.on_catalog)
+        self.bridge.notifications_changed.connect(self.on_account_notifications)
+        self.bridge.assistant_response.connect(self.on_ai_answer)
+        self.bridge.assistant_error.connect(self.on_ai_error)
         app = QApplication.instance()
         if app:
             app.aboutToQuit.connect(self.bridge.stop)
@@ -162,6 +208,59 @@ class OnlinePage(QWidget):
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def check_account_notifications(self):
+        self.bridge.refresh_notifications()
+
+    def mark_account_notifications_read(self):
+        self.bridge.mark_notifications_read()
+
+    def on_account_notifications(self, rows):
+        notices = [x for x in rows if isinstance(x, dict)][:60]
+        ids = {str(x.get("id", "")) for x in notices}
+        if self._seen_account_notices is not None:
+            new = [x for x in notices
+                   if str(x.get("id", "")) not in self._seen_account_notices
+                   and x.get("read_at") is None]
+            if new:
+                latest = new[0]
+                self.account_new_notice.emit(
+                    str(latest.get("title", "Уведомление"))[:100],
+                    str(latest.get("body", ""))[:200]
+                )
+        self._seen_account_notices = ids
+        self.remote_notifications.clear()
+        for item in notices:
+            mark = "● " if item.get("read_at") is None else "  "
+            self.remote_notifications.addItem(
+                mark + str(item.get("title") or "Сообщение")[:100] +
+                " — " + str(item.get("body") or "")[:280]
+            )
+        if not notices:
+            self.remote_notifications.addItem(
+                "Нет уведомлений для этого аккаунта."
+            )
+
+    def send_ai_question(self):
+        question = self.ai_question.toPlainText().strip()
+        if not question:
+            return
+        if len(question) > 1200:
+            self.on_ai_error("Максимум 1200 символов на вопрос.")
+            return
+        if self.bridge.ask_assistant(question):
+            self.ai_send.setEnabled(False)
+            self.ai_chat.appendPlainText("\nВы: " + question)
+            self.ai_chat.appendPlainText("GPT: ожидается ответ сервера...")
+            self.ai_question.clear()
+
+    def on_ai_answer(self, response):
+        self.ai_send.setEnabled(True)
+        self.ai_chat.appendPlainText("\nGPT: " + str(response)[:3500])
+
+    def on_ai_error(self, error):
+        self.ai_send.setEnabled(True)
+        self.ai_chat.appendPlainText("\nОшибка GPT: " + str(error)[:200])
 
     def set_available_update(self, info):
         if not isinstance(info, dict):
@@ -200,6 +299,8 @@ class OnlinePage(QWidget):
 
     def on_account(self, account_id):
         set_active_online_account(account_id or None)
+        self._seen_account_notices = None
+        self.remote_notifications.clear()
         self.catalog_rows = []
         self.render_catalog()
         self.account_changed.emit()
