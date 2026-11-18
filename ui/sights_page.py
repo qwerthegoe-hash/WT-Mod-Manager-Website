@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 
 ROOT = Path(__file__).resolve().parent.parent
-SIGHTS_DIR = ROOT / "mods" / "sights"
+SIGHTS_DIR = MODS_DIR / "sights"
 
 IMAGE_EXTENSIONS = {
     ".png",
