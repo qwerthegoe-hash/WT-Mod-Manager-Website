@@ -51,6 +51,7 @@
     <div class="mods-toolbar" role="group" aria-label="Разделы модификаций">
       <button class="mods-tab active" type="button" data-view="catalog" aria-pressed="true">Каталог</button>
       <button class="mods-tab" type="button" data-view="mine" aria-pressed="false">Мои моды</button>
+      <button class="mods-tab" type="button" data-view="downloads" aria-pressed="false">Скачанные моды</button>
       <button id="moderationTab" class="mods-tab" type="button" data-view="moderation" aria-pressed="false" hidden>На проверке</button>
       <span id="modsCounter" class="mods-count">Загрузка...</span>
     </div>
@@ -65,6 +66,7 @@
           <option value="all">Все категории</option>
           <option value="visuals">Графика и эффекты</option>
           <option value="camouflage">Камуфляжи</option>
+          <option value="sights">Прицелы</option>
           <option value="sounds">Звуки</option>
           <option value="interface">Интерфейс</option>
           <option value="other">Другое</option>
@@ -97,6 +99,7 @@
         <span class="community2-muted">Умный поиск по названию, описанию и авторам.</span>
     </div>
     <p id="modsNotice" role="status" aria-live="polite"></p>
+    <p class="mods-hint">Архивы остаются в личном разделе «Скачанные моды». Передача в Windows-приложение происходит только после нажатия «Добавить в приложение».</p>
     <p id="modsLoading" class="mods-loading" role="status" aria-live="polite" hidden>
       <span class="mods-loading-spinner" aria-hidden="true"></span>
       <span>Загружаются ресурсы...</span>
@@ -123,6 +126,7 @@
             <option value="interface">Интерфейс</option>
             <option value="visuals">Графика и эффекты</option>
             <option value="camouflage">Камуфляжи</option>
+            <option value="sights">Прицелы</option>
             <option value="sounds">Звуки</option>
             <option value="other">Другое</option>
           </select>
