@@ -116,6 +116,7 @@ DEFAULT_SETTINGS = {
     # --------------------------------------
 
     "preview_volume": 70,
+    "audio_repeat": False,
 
     # --------------------------------------
     # CUSTOMIZATION
@@ -163,6 +164,7 @@ _BOOLEAN_KEYS = (
     "animations_enabled",
     "accent_enabled",
     "appearance_enabled",
+    "audio_repeat",
 )
 
 
@@ -174,7 +176,7 @@ _INTEGER_RANGES = {
 
     "last_tab": (
         0,
-        4,
+        5,  # Downloads is the sixth tab.
     ),
 
     "preview_volume": (
