@@ -374,6 +374,8 @@ class WTManagerApp:
 
             self.manager = ManagerWindow()
             self.manager.check_update_requested.connect(self.updater.check_manual)
+            self.manager.rollback_update_requested.connect(self.updater.request_rollback)
+            self.manager.online_page.account_new_notice.connect(self.show_tray_message)
             self.manager.online_page.install_update_requested.connect(
                 self.updater.request_install
             )
