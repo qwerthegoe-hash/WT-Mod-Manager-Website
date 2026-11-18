@@ -36,7 +36,7 @@ import { createClient } from
 import { COMMUNITY_CONFIG as config } from
     "../js/community-config.js";
 import { createSessionDrafts } from "../js/session-drafts.mjs";
-import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
 setupSiteLanguage();
 
 
@@ -704,7 +704,7 @@ async function openMediaStatus() {
 
             info.textContent =
                 `${mediaStatusText(job.status)} · ` +
-                new Date(job.created_at).toLocaleString("ru-RU");
+                new Date(job.created_at).toLocaleString(siteLocale());
 
             row.append(filename, info);
 
@@ -986,7 +986,7 @@ async function openMediaReview() {
 
             label.textContent =
                 `${job.pending_path} · ` +
-                new Date(job.created_at).toLocaleString("ru-RU");
+                new Date(job.created_at).toLocaleString(siteLocale());
 
             const actions = document.createElement("div");
 
@@ -2568,7 +2568,7 @@ function guardianRejectionMessage(result) {
     if (result?.muted_until) {
         const until = new Date(result.muted_until);
         if (Number.isFinite(until.getTime())) {
-            message += ` Ограничение до ${until.toLocaleString("ru-RU")}.`;
+            message += ` Ограничение до ${until.toLocaleString(siteLocale())}.`;
         }
     }
 
@@ -2652,7 +2652,7 @@ async function refreshGuardianNotices() {
             body.style.margin = "7px 0";
             body.style.whiteSpace = "pre-wrap";
             const date = guardianNode(
-                "small", new Date(item.created_at).toLocaleString("ru-RU")
+                "small", new Date(item.created_at).toLocaleString(siteLocale())
             );
             box.append(heading, body, date);
             fragment.append(box);
@@ -2679,7 +2679,7 @@ async function refreshGuardianOwnState() {
         if (data?.muted_until) {
             const until = new Date(data.muted_until);
             if (until.getTime() > Date.now()) {
-                label += ` · ограничение до ${until.toLocaleString("ru-RU")}`;
+                label += ` · ограничение до ${until.toLocaleString(siteLocale())}`;
             }
         }
         guardianStateElement.textContent = label;
@@ -2870,7 +2870,7 @@ async function guardianOpenAdminPanel() {
                     `ID: ${item.user_id}\nПричина: ${item.details}\nПредупреждений: ${item.warning_count}`
                 );
                 const date = guardianNode("small",
-                    new Date(item.created_at).toLocaleString("ru-RU")
+                    new Date(item.created_at).toLocaleString(siteLocale())
                 );
                 row.append(title, body, date);
                 fragment.append(row);
