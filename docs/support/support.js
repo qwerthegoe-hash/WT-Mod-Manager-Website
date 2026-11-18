@@ -1049,6 +1049,11 @@ async function initSupport() {
     setupSubmission();
 
     applyLanguage(detectLanguage());
+    // Other tabs and browser history follow the language saved by the homepage.
+    window.addEventListener("storage", event => {
+        if (event.key === "wtmm-language") applyLanguage(detectLanguage());
+    });
+    window.addEventListener("pageshow", () => applyLanguage(detectLanguage()));
     setupDiagnosticsExport();
 
     const params = new URLSearchParams(
