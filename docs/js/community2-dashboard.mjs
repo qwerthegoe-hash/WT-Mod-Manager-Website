@@ -103,6 +103,35 @@ async function renderCollections(api,db) {
   }
   root.replaceChildren(fragment);
 }
+async function renderFollowing(api,db) {
+  const root=$("community2Following");
+  const follows=await api.follows();
+  if(!follows.length) {
+    root.replaceChildren(el("p","Ты пока ни на кого не подписан.","community2-muted"));
+    return;
+  }
+  const {data,error}=await db.from("community_user_profiles")
+    .select("user_id,nickname,is_public").in("user_id",follows.map(f=>f.author_id))
+    .eq("is_public",true).limit(300);
+  if(error)throw error;
+  const block=el("div","","community2-list");
+  for(const author of data||[]) {
+    const item=el("div","","community2-list-item");
+    const a=el("a",author.nickname,"community2-item-link");
+    a.href="../creator/creator.html?id="+encodeURIComponent(author.user_id);
+    const unfollow=el("button","Отписаться","community2-small");
+    unfollow.type="button";
+    unfollow.addEventListener("click",async()=>{
+      unfollow.disabled=true;
+      try {
+        await api.toggleFollow(author.user_id,true);
+        await Promise.all([renderFollowing(api,db),renderStats(api)]);
+      }catch(e){status($("community2Notice"),"Не удалось отписаться: "+e.message,true);unfollow.disabled=false;}
+    });
+    item.append(a,unfollow);block.append(item);
+  }
+  root.replaceChildren(block);
+}
 async function renderNotifications(api) {
   const root=$("community2Notifications");
   const notifications=await api.notifications();
