@@ -55,7 +55,7 @@ class Element {
     this.classes=new Set(className.split(/\s+/).filter(Boolean));
     this.children=[];this.parentElement=null;this.attributes={};this.dataset={};
   }
-  append(child){child.parentElement=this;this.children.push(child);return this;}
+  append(child){child.parentElement=this;this.children.push(child);return child;}
   closest(selectors) {
     for(let current=this;current;current=current.parentElement){
       for(const selector of selectors.split(",")){
