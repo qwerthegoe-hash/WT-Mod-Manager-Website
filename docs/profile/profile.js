@@ -1,4 +1,6 @@
 "use strict";
+import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
@@ -78,7 +80,7 @@ function restoreProfileDraft() {
 function report(text, error = false, id = "profileNotice") {
     const el = $(id);
     if (!el) return;
-    el.textContent = text;
+    el.textContent = uiText(text);
     el.classList.toggle("error", error);
 }
 function accentValue() {
