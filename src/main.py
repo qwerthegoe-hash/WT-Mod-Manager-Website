@@ -199,7 +199,7 @@ class WTManagerApp:
         self.check_game()
 
         # Non-blocking optional update check; no network use until repo is configured.
-        self.updater = UpdateController(None)
+        self.updater = UpdateController(None, on_install_ready=self.exit_app)
         QTimer.singleShot(3000, self.updater.check)
 
     # ======================================
@@ -425,4 +425,7 @@ def main():
 # ==========================================
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--apply-update":
+        from src.portable_updater import apply_verified_update
+        sys.exit(apply_verified_update(sys.argv[2:]))
     main()
