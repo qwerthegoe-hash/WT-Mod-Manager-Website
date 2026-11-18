@@ -74,12 +74,19 @@ def _wait_for_old_process(pid: int, seconds: int = 90) -> None:
     if pid <= 0:
         raise ValueError("Missing parent process.")
     import psutil
-    original = psutil.Process(pid) if psutil.pid_exists(pid) else None
-    if original is None:
+    try:
+        original = psutil.Process(pid)
+        original_created = original.create_time()
+    except psutil.NoSuchProcess:
         return
     start = time.monotonic()
     while time.monotonic() - start < seconds:
-        if not original.is_running() or original.status() == psutil.STATUS_ZOMBIE:
+        try:
+            if (not original.is_running()
+                    or original.create_time() != original_created
+                    or original.status() == psutil.STATUS_ZOMBIE):
+                return
+        except psutil.NoSuchProcess:
             return
         time.sleep(0.3)
     raise TimeoutError("Old WT Mod Manager did not close within the update window.")
