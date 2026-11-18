@@ -23,6 +23,30 @@ DATA_DIR = user_data_dir()
 SETTINGS_FILE = DATA_DIR / "settings.json"
 MODS_DIR = DATA_DIR / "mods"
 
+# Synced mods are kept separate for each authenticated website account.
+# Local files added from the PC remain in MODS_DIR and are never moved.
+_active_online_account = None
+
+
+def set_active_online_account(account_id):
+    global _active_online_account
+    import re
+    value = str(account_id or "")
+    _active_online_account = (
+        value if re.fullmatch(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+            value, flags=re.IGNORECASE
+        ) else None
+    )
+
+
+def online_mod_folder(category):
+    categories = {"sights", "sounds", "camouflages"}
+    if _active_online_account is None or category not in categories:
+        return None
+    return DATA_DIR / "accounts" / _active_online_account / "mods" / category
+
+
 
 def migrate_legacy_data():
     """Copy old data once; keep originals and never overwrite user files.
