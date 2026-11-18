@@ -519,11 +519,20 @@ async function showModDetails(id) {
                 if (error) throw error;
                 const a = link(data.signedUrl, "Скачать ZIP (ссылка действует 90 секунд)");
                 a.target = "_blank"; a.rel = "noopener noreferrer";
-                // Treat obtaining the download link as opting into the
-                // account's downloadable library, not automatic installation.
-                await rememberDownloadedMod(row.id);
+                // Only an actual click on "Download ZIP" adds the mod to
+                // this user's personal list. Merely generating a temporary
+                // URL does not download or transfer anything.
+                a.addEventListener("click", () => {
+                    void rememberDownloadedMod(row.id).then(() => {
+                        addExplicitTransferButton(row, actions);
+                    }).catch(error => {
+                        downloadBox.append(node(
+                            "p", "mods-review-note",
+                            "Файл открыт, но не удалось сохранить в личные загрузки: " + error.message
+                        ));
+                    });
+                });
                 downloadBox.replaceChildren(a);
-                addExplicitTransferButton(row, actions);
             } catch (error) {
                 downloadBox.textContent = "Ошибка скачивания: " + error.message;
             } finally { button.disabled = false; }
