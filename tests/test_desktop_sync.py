@@ -61,6 +61,26 @@ class DesktopSyncTests(unittest.TestCase):
                 self.assertEqual(len(imported_library(user_one)), 1)
                 self.assertEqual(len(imported_library(user_two)), 1)
 
+    def test_catalog_reads_metadata_for_linked_account(self):
+        user = str(uuid.uuid4())
+        mod = str(uuid.uuid4())
+        events = []
+        def fake_call(action, token, **kwargs):
+            events.append(action)
+            if action == "status":
+                return {"paired": True, "user_id": user}
+            if action == "catalog":
+                return {"items": [{
+                    "id": mod, "title": "Sample", "category": "sounds",
+                    "version": "1.0", "description": "Test"
+                }]}
+            raise AssertionError("Unexpected call")
+        with patch("src.desktop_sync._call", side_effect=fake_call):
+            result = DesktopSync._work("catalog", "temporary-test-device-token")
+        self.assertEqual(events, ["status", "catalog"])
+        self.assertEqual(result["user_id"], user)
+        self.assertEqual(result["catalog_items"][0]["id"], mod)
+
     def test_restore_previous_online_mod_version(self):
         with tempfile.TemporaryDirectory() as root:
             user = str(uuid.uuid4())
