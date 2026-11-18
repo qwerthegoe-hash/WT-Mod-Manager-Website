@@ -33,10 +33,20 @@ class UpdateController(QObject):
         self.thread = None
         self.worker = None
         self._queued_download = None
+        self._manual_check = False
 
     def check(self):
         if repository() is None or self.thread is not None:
             return
+        self._start(None)
+
+    def check_manual(self):
+        if self.thread is not None:
+            return
+        if repository() is None:
+            QMessageBox.warning(self.parent_window, "Обновления", "Проверка обновлений пока не настроена.")
+            return
+        self._manual_check = True
         self._start(None)
 
     def _start(self, info):
@@ -66,11 +76,15 @@ class UpdateController(QObject):
             QTimer.singleShot(0, lambda: self._start(next_download))
 
     def _finished(self, result, error, downloaded):
+        manual = self._manual_check
+        self._manual_check = False
         if error:
-            if downloaded:
+            if downloaded or manual:
                 QMessageBox.warning(self.parent_window, "Ошибка обновления", error)
             return
         if result is None:
+            if manual and not downloaded:
+                QMessageBox.information(self.parent_window, "Обновления", "Новых версий пока нет.")
             return
         if not downloaded:
             answer = QMessageBox.question(
