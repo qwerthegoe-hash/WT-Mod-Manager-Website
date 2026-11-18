@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="profile.css">
     <link rel="stylesheet" href="profile-security.css">
+    <link rel="stylesheet" href="../community2.css">
     <link rel="preconnect" href="https://esm.sh" crossorigin>
     <script type="module" src="profile.js"></script>
     <script src="profile-watchdog.js" defer></script>
@@ -131,6 +132,43 @@
                 <button type="submit" id="saveProfile" class="profile-primary" disabled>Сохранить профиль</button>
                 <p id="profileNotice" role="status" aria-live="polite"></p>
             </form>
+        </section>
+        <section id="communityDashboard" class="community2-dashboard" aria-labelledby="community2Heading" hidden>
+            <div class="community2-head">
+                <div>
+                    <span class="mods-kicker">WTMM / COMMUNITY 2.0</span>
+                    <h2 id="community2Heading">Личный кабинет игрока 2.0</h2>
+                    <p>Твои публикации, избранные моды, подписки и уведомления в одном месте.</p>
+                </div>
+                <button id="community2Refresh" type="button" class="community2-button">Обновить данные</button>
+            </div>
+            <div class="community2-grid" aria-label="Статистика аккаунта">
+                <a href="../mods/mods.html?mine=1" class="community2-stat"><strong id="community2ModStat">0</strong><span>Опубликованные моды</span></a>
+                <a href="#community2FavoritesSection" class="community2-stat"><strong id="community2FavStat">0</strong><span>Избранные моды</span></a>
+                <a href="#community2NotificationsSection" class="community2-stat"><strong id="community2UnreadStat">0</strong><span>Непрочитанные уведомления</span></a>
+                <a href="#community2CollectionsSection" class="community2-stat"><strong id="community2CollectionStat">0</strong><span>Коллекции</span></a>
+                <a href="../mods/mods.html" class="community2-stat"><strong id="community2FollowStat">0</strong><span>Подписки на авторов</span></a>
+            </div>
+            <p id="community2Notice" role="status" aria-live="polite"></p>
+            <div class="community2-panels">
+                <section class="community2-card" id="community2NotificationsSection" aria-labelledby="community2NotificationsHeading">
+                    <div class="community2-heading"><h2 id="community2NotificationsHeading">Центр уведомлений <span id="community2NotifyBadge" class="community2-pill" hidden>0</span></h2></div>
+                    <div id="community2Notifications" class="community2-list" aria-live="polite"></div>
+                </section>
+                <section class="community2-card" id="community2FavoritesSection" aria-labelledby="community2FavHeading">
+                    <div class="community2-heading"><h2 id="community2FavHeading">Избранные моды</h2><a class="community2-small" href="../mods/mods.html">К каталогу</a></div>
+                    <div id="community2Favorites" class="community2-list"></div>
+                </section>
+                <section class="community2-card" id="community2CollectionsSection" aria-labelledby="community2CollectionHeading">
+                    <div class="community2-heading"><h2 id="community2CollectionHeading">Мои коллекции</h2><button id="community2NewCollection" type="button" class="community2-small">Создать коллекцию</button></div>
+                    <div id="community2Collections" class="community2-list"></div>
+                </section>
+                <section class="community2-card" id="supportHistory" aria-labelledby="community2TicketsHeading">
+                    <div class="community2-heading"><h2 id="community2TicketsHeading">История обращений</h2><a href="../support/support.html" class="community2-small">Новая заявка</a></div>
+                    <p class="community2-muted">Здесь хранятся обращения, отправленные из твоего аккаунта, и их текущий статус.</p>
+                    <div id="community2Tickets" class="community2-list"></div>
+                </section>
+            </div>
         </section>
         <section class="user-profile-card profile-recovery" aria-labelledby="profileRecoveryTitle">
             <h2 id="profileRecoveryTitle">Доступ к аккаунту</h2>
