@@ -2,6 +2,7 @@
 from pathlib import Path
 import shutil
 from src.profile_paths import MODS_DIR, online_visible_files
+from ui.game_install_ui import install_sound_dialog, restore_last_game_install
 
 from PySide6.QtCore import (
     Qt,
@@ -592,6 +593,13 @@ class SoundsPage(QWidget):
         )
 
         left_layout.addLayout(buttons)
+        game_sound_button = QPushButton("Установить FMOD-мод в War Thunder")
+        game_sound_button.clicked.connect(lambda: install_sound_dialog(self))
+        game_sound_button.setToolTip("Для игры нужны .bank, для предпросмотра остаются WAV/MP3.")
+        game_restore_button = QPushButton("Откатить установку в игре")
+        game_restore_button.clicked.connect(lambda: restore_last_game_install(self))
+        left_layout.addWidget(game_sound_button)
+        left_layout.addWidget(game_restore_button)
 
         # ==================================
         # RIGHT CARD
