@@ -176,28 +176,6 @@ class OnlinePage(QWidget):
         self.tabs.addTab(notifications_tab, "Уведомления")
         self._seen_account_notices = None
 
-        ai_tab = QWidget()
-        ai_layout = QVBoxLayout(ai_tab)
-        self.ai_info = QLabel(
-            "GPT-помощник отвечает на вопросы по WT Mod Manager и ошибкам модов. "
-            "Отправленный текст передаётся серверному ИИ. Не вводи пароли, токены "
-            "и личные данные. Требуется привязанный зарегистрированный аккаунт."
-        )
-        self.ai_info.setWordWrap(True)
-        ai_layout.addWidget(self.ai_info)
-        self.ai_chat = QPlainTextEdit()
-        self.ai_chat.setReadOnly(True)
-        self.ai_chat.setPlainText("GPT-помощник WT Mod Manager. Задайте вопрос о программе.")
-        ai_layout.addWidget(self.ai_chat, 1)
-        self.ai_question = QPlainTextEdit()
-        self.ai_question.setPlaceholderText("Например: почему мод не появился в игре?")
-        self.ai_question.setMaximumHeight(80)
-        ai_layout.addWidget(self.ai_question)
-        self.ai_send = QPushButton("Отправить вопрос GPT")
-        self.ai_send.clicked.connect(self.send_ai_question)
-        ai_layout.addWidget(self.ai_send)
-        self.tabs.addTab(ai_tab, "GPT-помощник")
-
         diagnostics_tab = QWidget()
         diagnostic_layout = QVBoxLayout(diagnostics_tab)
         diagnostic_layout.addWidget(QLabel("Кодовая диагностика WT Mod Manager"))
@@ -227,8 +205,6 @@ class OnlinePage(QWidget):
         self.bridge.files_changed.connect(self.on_import)
         self.bridge.catalog_changed.connect(self.on_catalog)
         self.bridge.notifications_changed.connect(self.on_account_notifications)
-        self.bridge.assistant_response.connect(self.on_ai_answer)
-        self.bridge.assistant_error.connect(self.on_ai_error)
         app = QApplication.instance()
         if app:
             app.aboutToQuit.connect(self.bridge.stop)
@@ -271,27 +247,6 @@ class OnlinePage(QWidget):
             self.remote_notifications.addItem(
                 "Нет уведомлений для этого аккаунта."
             )
-
-    def send_ai_question(self):
-        question = self.ai_question.toPlainText().strip()
-        if not question:
-            return
-        if len(question) > 1200:
-            self.on_ai_error("Максимум 1200 символов на вопрос.")
-            return
-        if self.bridge.ask_assistant(question):
-            self.ai_send.setEnabled(False)
-            self.ai_chat.appendPlainText("\nВы: " + question)
-            self.ai_chat.appendPlainText("GPT: ожидается ответ сервера...")
-            self.ai_question.clear()
-
-    def on_ai_answer(self, response):
-        self.ai_send.setEnabled(True)
-        self.ai_chat.appendPlainText("\nGPT: " + str(response)[:3500])
-
-    def on_ai_error(self, error):
-        self.ai_send.setEnabled(True)
-        self.ai_chat.appendPlainText("\nОшибка GPT: " + str(error)[:200])
 
     def run_diagnostics(self):
         try:
