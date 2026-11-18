@@ -129,7 +129,17 @@ def apply_verified_update(args: list[str]) -> int:
         pending = target.parent / ".wtmm-update-pending.exe"
         if pending.exists() or pending.is_symlink():
             raise ValueError("An existing update operation must be cleared.")
-        shutil.copy2(target, backup)
+        # Store the old executable and its checksum as a verifiable rollback
+        # snapshot. Future rollbacks require both files.
+        old_copy = UPDATES / "WTModManager.previous.pending"
+        old_copy.unlink(missing_ok=True)
+        shutil.copy2(target, old_copy)
+        old_digest = _file_sha256(old_copy)
+        os.replace(old_copy, backup)
+        checksum = UPDATES / "WTModManager.previous.sha256"
+        checksum_tmp = UPDATES / "WTModManager.previous.sha256.tmp"
+        checksum_tmp.write_text(old_digest, encoding="ascii")
+        os.replace(checksum_tmp, checksum)
         try:
             shutil.copy2(helper, pending)
             if pending.stat().st_size < 1024 * 1024:
@@ -162,6 +172,116 @@ def apply_verified_update(args: list[str]) -> int:
     except Exception as error:
         try:
             _save_status("Не удалось обновить приложение: " + str(error))
+        except OSError:
+            pass
+        return 1
+
+
+def previous_exe_available() -> bool:
+    """Return True only for a backed-up older version with matching manifest."""
+    backup = UPDATES / "WTModManager.previous.exe"
+    digest_file = UPDATES / "WTModManager.previous.sha256"
+    if not backup.is_file() or backup.is_symlink() or not digest_file.is_file():
+        return False
+    try:
+        digest = digest_file.read_text(encoding="ascii").strip()
+        if not re.fullmatch(r"[a-f0-9]{64}", digest):
+            return False
+        if backup.stat().st_size < 1024 * 1024:
+            return False
+        with backup.open("rb") as fh:
+            if fh.read(2) != b"MZ":
+                return False
+        return _file_sha256(backup) == digest
+    except OSError:
+        return False
+
+
+def launch_verified_rollback() -> None:
+    """Explicit UI-only rollback; the live EXE is never overwritten in-process."""
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+        raise RuntimeError("Rollback requires the packaged Windows EXE.")
+    if not previous_exe_available():
+        raise ValueError("No verified previous version is available.")
+    target = _validate_target(Path(sys.executable))
+    backup = UPDATES / "WTModManager.previous.exe"
+    if _file_sha256(target) == _file_sha256(backup):
+        raise ValueError("The previous version is already running.")
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent,
+                                         prefix=".wtmm-test-", delete=True):
+            pass
+    except OSError as error:
+        raise PermissionError("The application directory is not writable.") from error
+    helper = UPDATES / "WTModManager.rollback-helper.exe"
+    temp_helper = UPDATES / "WTModManager.rollback-helper.tmp"
+    try:
+        shutil.copy2(target, temp_helper)
+        os.replace(temp_helper, helper)
+    finally:
+        temp_helper.unlink(missing_ok=True)
+    digest = _file_sha256(helper)
+    wanted = (UPDATES / "WTModManager.previous.sha256").read_text("ascii").strip()
+    subprocess.Popen(
+        [str(helper), "--apply-rollback", str(target), str(os.getpid()), wanted, digest],
+        cwd=str(UPDATES), env=_reset_env(), close_fds=True,
+        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
+    )
+
+
+def apply_verified_rollback(args: list[str]) -> int:
+    """Detached current-version helper restores the verified previous EXE."""
+    if sys.platform != "win32" or not getattr(sys, "frozen", False) or len(args) != 4:
+        return 2
+    try:
+        helper = Path(sys.executable).absolute()
+        if helper != UPDATES / "WTModManager.rollback-helper.exe" or helper.is_symlink():
+            raise ValueError("Unexpected rollback helper path.")
+        target = _validate_target(Path(args[0]))
+        expected_backup, expected_helper = args[2], args[3]
+        if (not re.fullmatch(r"[a-f0-9]{64}", expected_backup)
+                or not re.fullmatch(r"[a-f0-9]{64}", expected_helper)
+                or _file_sha256(helper) != expected_helper):
+            raise ValueError("Rollback helper checksum rejected.")
+        if not previous_exe_available():
+            raise ValueError("Backup verification failed.")
+        backup = UPDATES / "WTModManager.previous.exe"
+        if _file_sha256(backup) != expected_backup:
+            raise ValueError("The selected previous version was changed.")
+        _wait_for_old_process(int(args[1]))
+        target = _validate_target(target)
+        staged = target.parent / ".wtmm-rollback-pending.exe"
+        if staged.exists() or staged.is_symlink():
+            raise ValueError("Existing rollback process detected.")
+        keep_current = UPDATES / "WTModManager.pre-rollback.exe"
+        shutil.copy2(target, keep_current)
+        try:
+            shutil.copy2(backup, staged)
+            if _file_sha256(staged) != expected_backup:
+                raise ValueError("Rollback copy failed checksum validation.")
+            os.replace(staged, target)
+        finally:
+            staged.unlink(missing_ok=True)
+        try:
+            subprocess.Popen(
+                [str(target)], cwd=str(target.parent), env=_reset_env(),
+                close_fds=True,
+                creationflags=getattr(subprocess, "DETACHED_PROCESS", 0)
+            )
+        except OSError:
+            # Restore the new version if the previous version cannot even launch.
+            recovery = target.parent / ".wtmm-rollback-recovery.exe"
+            try:
+                shutil.copy2(keep_current, recovery)
+                os.replace(recovery, target)
+            finally:
+                recovery.unlink(missing_ok=True)
+            raise
+        _save_status("Предыдущая версия восстановлена. Текущая копия сохранена в updates.")
+        return 0
+    except Exception as error:
+        try:
+            _save_status("Не удалось восстановить предыдущую версию: " + str(error))
         except OSError:
             pass
         return 1
