@@ -1,5 +1,5 @@
 "use strict";
-import { setupSiteLanguage, uiText } from "../js/site-language.mjs";
+import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
 setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
@@ -155,7 +155,7 @@ function updateLoadMoreControl() {
     }
     button.hidden = !hasMoreMods;
     button.disabled = loadingMoreMods;
-    button.textContent = loadingMoreMods ? "Загрузка..." : "Загрузить ещё моды";
+    button.textContent = loadingMoreMods ? uiText("Загрузка...") : uiText("Загрузить ещё моды");
     // Inline display should not override the native hidden attribute.
     button.style.display = hasMoreMods ? "block" : "none";
 }
@@ -211,7 +211,7 @@ function visibleRecords() {
         return true;
     });
     const sort = $("modsSort").value;
-    if (sort === "name") rows.sort((a, b) => a.title.localeCompare(b.title, "ru"));
+    if (sort === "name") rows.sort((a, b) => a.title.localeCompare(b.title, siteLocale()));
     else if (sort === "old") rows.reverse();
     return rows;
 }
@@ -365,7 +365,7 @@ async function showModDetails(id) {
                 const title = node("h3", "", "Опубликованные версии");
                 const entries = node("ul");
                 for (const record of previous) {
-                    const formatted = new Date(record.created_at).toLocaleDateString("ru-RU");
+                    const formatted = new Date(record.created_at).toLocaleDateString(siteLocale());
                     entries.append(node("li", "", "v" + record.version + " · " + formatted));
                 }
                 versions.replaceChildren(title, entries);
