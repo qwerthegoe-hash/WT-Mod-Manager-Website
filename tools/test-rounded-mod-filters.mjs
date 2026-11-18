@@ -12,6 +12,11 @@ assert.ok(js.includes("    upgradeModFilterSelects();"),"Must initialize on mods
 assert.ok(css.includes(".mods-select-menu[hidden]"),"Closed menus must not show");
 assert.ok(css.includes("border-radius: 15px"),"Opened menu must have rounded corners");
 assert.ok(css.includes(".mods-select-option.is-selected"),"Selected value needs distinct style");
+const menuStyles = css.match(/\.mods-select-menu\s*\{([^}]+)\}/)?.[1] || "";
+assert.match(menuStyles,/display:\s*flex\s*;/,"Dropdown menu must lay out options in a vertical stack");
+assert.match(menuStyles,/flex-direction:\s*column\s*;/,"Dropdown options must stack vertically");
+assert.match(menuStyles,/gap:\s*[5-9]px\s*;/,"Selected and hovered options need a visible gap");
+assert.ok(css.includes("flex: 0 0 auto;"),"Items must not collapse when dropdown scrolls");
 assert.ok(!html.includes('class="mods-select-menu"'),"JS-enhanced menu must not appear without JS");
 assert.ok(html.includes('id="modsCategory" aria-labelledby="modsCategoryLabel"'));
 assert.ok(html.includes('id="modsSort" aria-labelledby="modsSortLabel"'));
