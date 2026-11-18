@@ -13,3 +13,14 @@ dist/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Do not commit local Python bytecode, runtime caches, or personal settings.
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.log
