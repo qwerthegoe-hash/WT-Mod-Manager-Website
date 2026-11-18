@@ -14,7 +14,7 @@ on:
       - ".github/workflows/build-windows-exe.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows:
@@ -59,3 +59,50 @@ jobs:
           path: dist/WTModManager.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Create checksum manifest
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 dist/WTModManager.exe).Hash.ToLowerInvariant()
+          "$hash  WTModManager.exe" | Set-Content -Path dist/SHA256SUMS.txt -Encoding ascii
+
+      - name: Publish first standalone Windows beta
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = 'v1.2.0-beta.1'
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Release $tag already exists; no overwrite."
+            exit 0
+          }
+
+          @'
+          WT Mod Manager 1.2 - Public Beta (Windows x64)
+
+          A portable standalone EXE for Windows, intended for managing
+          supported War Thunder mod customization files. Download
+          WTModManager.exe and launch it; no installer is required.
+
+          This is an early beta. The EXE was packaged and import-tested by
+          Windows GitHub Actions but still needs broader real-device testing.
+          Report issues via the WT Mod Manager website.
+
+          Your settings and personal mod files are stored separately in
+          your Windows user profile. Verify integrity using SHA256SUMS.txt.
+
+          Independent fan project; not affiliated with Gaijin Entertainment.
+          '@ | Set-Content -Path release-notes.md -Encoding utf8
+
+          gh release create $tag dist/WTModManager.exe dist/SHA256SUMS.txt `
+            --repo $env:GITHUB_REPOSITORY `
+            --target $env:GITHUB_SHA `
+            --title 'WT Mod Manager 1.2 - Windows Public Beta' `
+            --notes-file release-notes.md `
+            --prerelease `
+            --latest=false
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to publish Windows beta release.' }
+          gh release view $tag --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to verify Windows beta release.' }
