@@ -11,7 +11,8 @@ import sys
 from PySide6.QtCore import QObject, QThread, Signal, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
-from src.update_checker import find_update, download_verified, repository, _sha256
+from src.update_checker import find_update, download_verified, repository, _sha256, is_installed_app
+from src.installed_updater import launch_setup_update
 from src.portable_updater import launch_verified_update, launch_verified_rollback, previous_exe_available
 from src.update_notifications import (
     load_notifications, record_event, set_auto_check, ignore_version
@@ -91,6 +92,14 @@ class UpdateController(QObject):
         self._start(None)
 
     def request_rollback(self):
+        if is_installed_app():
+            QMessageBox.information(
+                self.parent_window, "Предыдущая версия",
+                "Установленная версия управляется Windows Installer. Для отката "
+                "скачай предыдущий WTModManager-Setup.exe из GitHub Releases "
+                "и запусти его. Настройки и моды сохраняются отдельно."
+            )
+            return
         if self.thread is not None:
             QMessageBox.information(
                 self.parent_window, "Откат версии",
@@ -133,7 +142,9 @@ class UpdateController(QObject):
         choice = QMessageBox.question(
             self.parent_window, "Скачать обновление",
             "Доступна " + str(info["version"]) +
-            ". Скачать официальный файл WTModManager.exe и проверить SHA-256?"
+            (". Скачать официальный установщик с проверкой SHA-256?"
+             if info.get("kind") == "installer" else
+             ". Скачать официальный WTModManager.exe с проверкой SHA-256?") +
             "\nПриложение продолжит работать во время скачивания.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
@@ -240,13 +251,24 @@ class UpdateController(QObject):
         )
         self.notifications_changed.emit()
 
+        if info.get("kind") == "installer":
+            prompt = (
+                "WT Mod Manager " + str(info["version"]) +
+                " скачан и проверен по SHA-256.\n"
+                "Открыть фирменный мастер обновления и закрыть текущую "
+                "программу? Выбор папки, ярлыки и удаление останутся под "
+                "управлением установщика Windows. Моды и настройки сохранятся."
+            )
+        else:
+            prompt = (
+                "WT Mod Manager " + str(info["version"]) +
+                " скачан и проверен.\nЗавершить программу, сохранить "
+                "предыдущий EXE и открыть новую версию?\n"
+                "Моды и настройки сохранятся."
+            )
         choice = QMessageBox.question(
             self.parent_window, "Установить обновление",
-            "WT Mod Manager " + str(info["version"]) +
-            " скачан и проверен.\n"
-            "Завершить работу приложения, сохранить прежний EXE в резервной "
-            "копии и автоматически открыть новую версию?\n"
-            "Текущие моды и настройки не удаляются.",
+            prompt,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -259,7 +281,10 @@ class UpdateController(QObject):
             )
             return
         try:
-            launch_verified_update(staged, info["digest"])
+            if info.get("kind") == "installer":
+                launch_setup_update(staged, info["digest"])
+            else:
+                launch_verified_update(staged, info["digest"])
         except (OSError, ValueError, RuntimeError) as problem:
             QMessageBox.warning(self.parent_window, "Ошибка обновления", str(problem))
             return

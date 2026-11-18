@@ -1,4 +1,10 @@
-"""Build a single WT Mod Manager executable on Windows (PyInstaller)."""
+"""Build both a portable EXE and an installed onedir Windows app.
+
+Portable EXE remains published for backward-compatible updates. The onedir
+payload is what the branded Inno Setup installer installs. Both are built from
+the same Python sources, icon, and embedded assets; no source code or runtime
+package is downloaded when the installer runs.
+"""
 from __future__ import annotations
 
 import sys
@@ -13,9 +19,28 @@ LOGO = ROOT / "assets" / "icons" / "Logotip" / "LogotipProject.png"
 ICON = ROOT / "build" / "WTModManager.ico"
 
 
+def build(mode: str) -> None:
+    args = [
+        "--noconfirm",
+        "--clean",
+        "--onefile" if mode == "portable" else "--onedir",
+        "--windowed",
+        "--name=WTModManager",
+        "--paths=" + str(ROOT),
+        "--icon=" + str(ICON),
+        "--add-data=" + str(ROOT / "assets") + ":assets",
+        "--add-data=" + str(ROOT / "config") + ":config",
+        "--distpath=" + str(ROOT / "dist"),
+        "--workpath=" + str(ROOT / "build" / ("pyinstaller-" + mode)),
+        "--specpath=" + str(ROOT / "build" / ("spec-" + mode)),
+        str(ROOT / "src" / "main.py"),
+    ]
+    PyInstaller.__main__.run(args)
+
+
 def main() -> None:
     if sys.platform != "win32":
-        raise SystemExit("Windows executable must be built on Windows.")
+        raise SystemExit("WT Mod Manager packages must be built on Windows.")
 
     required = [ROOT / "src" / "main.py", ROOT / "assets", ROOT / "config", LOGO]
     missing = [str(path) for path in required if not path.exists()]
@@ -25,30 +50,26 @@ def main() -> None:
     ICON.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(LOGO) as logo:
         logo.convert("RGBA").save(
-            ICON, format="ICO", sizes=[(16, 16), (32, 32), (48, 48),
-                                      (64, 64), (128, 128), (256, 256)]
+            ICON, format="ICO", sizes=[
+                (16, 16), (32, 32), (48, 48),
+                (64, 64), (128, 128), (256, 256)
+            ]
         )
 
-    PyInstaller.__main__.run([
-        "--noconfirm",
-        "--clean",
-        "--onefile",
-        "--windowed",
-        "--name=WTModManager",
-        "--paths=" + str(ROOT),
-        "--icon=" + str(ICON),
-        "--add-data=" + str(ROOT / "assets") + ":assets",
-        "--add-data=" + str(ROOT / "config") + ":config",
-        "--distpath=" + str(ROOT / "dist"),
-        "--workpath=" + str(ROOT / "build" / "pyinstaller"),
-        "--specpath=" + str(ROOT / "build"),
-        str(ROOT / "src" / "main.py"),
-    ])
+    build("portable")
+    build("installed")
 
-    exe = ROOT / "dist" / "WTModManager.exe"
-    if not exe.is_file() or exe.stat().st_size == 0:
-        raise SystemExit("Build finished without a usable EXE at " + str(exe))
-    print(f"Created {exe} ({exe.stat().st_size} bytes)")
+    portable = ROOT / "dist" / "WTModManager.exe"
+    installed = ROOT / "dist" / "WTModManager" / "WTModManager.exe"
+    bundle = ROOT / "dist" / "WTModManager" / "_internal"
+    if not portable.is_file() or portable.stat().st_size < 1024 * 1024:
+        raise SystemExit("Missing portable WTModManager.exe")
+    if not installed.is_file() or not bundle.is_dir():
+        raise SystemExit("Missing onedir Windows application or Qt dependencies")
+
+    print(f"Portable EXE: {portable} ({portable.stat().st_size} bytes)")
+    print(f"Installer app: {installed} ({installed.stat().st_size} bytes)")
+    print(f"Installed runtime folder: {bundle}")
 
 
 if __name__ == "__main__":

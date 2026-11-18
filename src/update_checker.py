@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
 
-VERSION = "1.3.0-beta.4"
+VERSION = "1.3.0-beta.5"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
@@ -25,6 +25,17 @@ MAX_EXE_BYTES = 350 * 1024 * 1024
 _VERSION_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)[.-]?(\d+))?$", re.I)
 _REPO_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SHA_PATTERN = re.compile(r"^sha256:([a-f0-9]{64})$", re.I)
+
+
+def is_installed_app():
+    """Inno Setup installs the app payload plus a harmless local marker.
+
+    PyInstaller onefile portable builds do not have this marker. The marker
+    is outside _internal so both layouts resolve it at the same location.
+    """
+    return (sys.platform == "win32"
+            and bool(getattr(sys, "frozen", False))
+            and (Path(sys.executable).parent / "wtmm.installed").is_file())
 
 
 def version_tuple(value):
@@ -83,6 +94,7 @@ def _release_candidate(payload, repo):
     if not re.fullmatch(r"v?[0-9A-Za-z.-]{5,40}", str(tag)):
         return None
     prefix = f"https://github.com/{repo}/releases/download/{tag}/"
+    name_required = "WTModManager-Setup.exe" if is_installed_app() else "WTModManager.exe"
     for item in payload.get("assets", []):
         if not isinstance(item, dict):
             continue
@@ -90,11 +102,12 @@ def _release_candidate(payload, repo):
         url = item.get("browser_download_url")
         digest = item.get("digest")
         size = item.get("size")
-        if (name == "WTModManager.exe" and url == prefix + "WTModManager.exe"
+        if (name == name_required and url == prefix + name_required
                 and isinstance(digest, str) and _SHA_PATTERN.fullmatch(digest)
                 and isinstance(size, int) and 1024 * 1024 <= size <= MAX_EXE_BYTES):
             return {
                 "version": tag, "url": url, "name": name,
+                "kind": "installer" if name == "WTModManager-Setup.exe" else "portable",
                 "digest": digest.split(":", 1)[1].lower(), "size": size,
                 "release_url": prefix.rsplit("/releases/download/", 1)[0] +
                                "/releases/tag/" + str(tag),
@@ -124,8 +137,11 @@ def download_verified(info):
     if not repo or not isinstance(info, dict):
         raise ValueError("Updater is not configured.")
     tag = str(info.get("version", ""))
-    url = f"https://github.com/{repo}/releases/download/{tag}/WTModManager.exe"
-    if (info.get("url") != url or version_tuple(tag) is None
+    filename = "WTModManager-Setup.exe" if is_installed_app() else "WTModManager.exe"
+    kind = "installer" if filename == "WTModManager-Setup.exe" else "portable"
+    url = f"https://github.com/{repo}/releases/download/{tag}/{filename}"
+    if (info.get("name") != filename or info.get("kind") != kind
+            or info.get("url") != url or version_tuple(tag) is None
             or not isinstance(info.get("digest"), str)
             or not re.fullmatch(r"[0-9a-f]{64}", info["digest"])
             or not isinstance(info.get("size"), int)
@@ -133,8 +149,8 @@ def download_verified(info):
         raise ValueError("Update manifest failed validation.")
     target_dir = DATA_DIR / "updates"
     target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / "WTModManager.exe"
-    temp = target_dir / "WTModManager.download"
+    target = target_dir / filename
+    temp = target_dir / filename.replace(".exe", ".download")
     if target.exists() and target.is_file() and target.stat().st_size == info["size"]:
         if _sha256(target) == info["digest"]:
             return target
