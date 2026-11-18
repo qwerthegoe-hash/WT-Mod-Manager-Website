@@ -47,9 +47,9 @@ const translations = {
 
         downloadOverline: "DOWNLOAD",
         downloadTitle: "Ready to try the beta?",
-        downloadDesc: "Installer downloads will appear here when the first public release is ready. No unfinished downloads or fake links.",
-        downloadSoon: "Public installer: coming soon.",
-        downloadReady: "The public installer is available.",
+        downloadDesc: "The Windows 1.2 beta is a portable EXE. Download and run it directly; no installer required.",
+        downloadSoon: "Windows download is temporarily unavailable.",
+        downloadReady: "Windows 1.2 beta is available (portable EXE).",
         downloadBtn: "Download for Windows",
         releases: "Release notes",
 
@@ -61,7 +61,7 @@ const translations = {
         helpRead: "Read guide",
         guideLabel: "STEP-BY-STEP GUIDE",
         helpInstallTitle: "Installing the app",
-        helpInstallDesc: "Download and install WT Mod Manager.",
+        helpInstallDesc: "Download and run WT Mod Manager for Windows.",
         helpSightsTitle: "Custom sights",
         helpSightsDesc: "Learn to manage custom sight files.",
         helpCamoTitle: "Camouflages",
@@ -92,11 +92,11 @@ const translations = {
         faqOverline: "GOOD TO KNOW",
         faqTitle: "Your questions, answered",
         q1: "Is WT Mod Manager free?",
-        a1: "Yes. WT Mod Manager is designed as a free Windows utility: no subscriptions, mandatory payments or paid access to core tools. The download button will be enabled only when the public installer is actually published. Voluntary development support is separate and does not unlock exclusive functions.",
+        a1: "Yes. WT Mod Manager is designed as a free Windows utility: no subscriptions, mandatory payments or paid access to core tools. The Windows beta is available as a portable executable; no installation is required. Voluntary development support is separate and does not unlock exclusive functions.",
         q2: "Is this an official War Thunder product?",
         a2: "This is the project website for WT Mod Manager itself, an independent fan-made tool. It is not an official War Thunder or Gaijin Entertainment product, and is not developed, sponsored or approved by them. The website describes our own software and its planned releases; War Thunder trademarks belong to their respective owners.",
         q3: "Where are downloads hosted?",
-        a3: "Public Windows installers and release notes are planned for the project's GitHub Releases page after the build is ready. Until then, the site intentionally does not show a non-working download link. Community-submitted mod archives are handled separately through the site's moderated mod library.",
+        a3: "The official portable WT Mod Manager EXE and its SHA-256 checksum are available through GitHub Releases. The downloadable desktop application is separate from community-submitted mod archives, which are moderated before publication.",
 
         previewHint: "Select Sights, Camouflages, Sounds or Settings to explore this interactive concept.",
         previewSightsTitle: "Precision where you need it",
@@ -163,9 +163,9 @@ const translations = {
 
         downloadOverline: "СКАЧАТЬ",
         downloadTitle: "Готов попробовать бета-версию?",
-        downloadDesc: "Установщик появится после первого публичного релиза. Никаких поддельных ссылок для скачивания.",
-        downloadSoon: "Публичный установщик: скоро будет доступен.",
-        downloadReady: "Публичный установщик доступен.",
+        downloadDesc: "Бета-версия 1.2 для Windows доступна одним EXE-файлом. Скачай и запусти без установки.",
+        downloadSoon: "Загрузка для Windows временно недоступна.",
+        downloadReady: "Бета-версия 1.2 для Windows доступна (EXE без установки).",
         downloadBtn: "Скачать для Windows",
         releases: "История версий",
 
@@ -177,7 +177,7 @@ const translations = {
         helpRead: "Читать инструкцию",
         guideLabel: "ПОШАГОВАЯ ИНСТРУКЦИЯ",
         helpInstallTitle: "Установка программы",
-        helpInstallDesc: "Как скачать и установить WT Mod Manager.",
+        helpInstallDesc: "Как скачать и запустить WT Mod Manager.",
         helpSightsTitle: "Пользовательские прицелы",
         helpSightsDesc: "Как работать с файлами прицелов.",
         helpCamoTitle: "Камуфляжи",
@@ -208,11 +208,11 @@ const translations = {
         faqOverline: "ПОЛЕЗНО ЗНАТЬ",
         faqTitle: "Задаваемые вопросы вами",
         q1: "WT Mod Manager — бесплатная программа?",
-        a1: "Да. WT Mod Manager — бесплатная программа для Windows: подписка, обязательные платежи и платный доступ к основным инструментам не требуются. Кнопка скачивания заработает после публикации готового установщика. Добровольная поддержка через monobank никак не влияет на доступные функции.",
+        a1: "Да. WT Mod Manager — бесплатная программа для Windows: подписка, обязательные платежи и платный доступ к основным инструментам не требуются. Бета-версия доступна как переносимый EXE без установки. Добровольная поддержка через monobank никак не влияет на доступные функции.",
         q2: "Это официальный продукт War Thunder?",
         a2: "Это официальный сайт нашего собственного проекта WT Mod Manager, но сама программа — независимая фанатская утилита, а не официальный продукт War Thunder или Gaijin Entertainment. Мы не представляем разработчиков игры, не финансируемся и не одобрены ими. Здесь публикуется информация только о нашем менеджере; права на War Thunder принадлежат правообладателям.",
         q3: "Где размещаются файлы для скачивания?",
-        a3: "Готовые установщики WT Mod Manager и заметки об обновлениях планируется размещать в GitHub Releases нашего проекта. Пока релиз не опубликован, сайт не подменяет его фальшивой ссылкой. Моды, которые загружают участники сообщества, хранятся отдельно в библиотеке сайта и проходят модерацию перед публикацией.",
+        a3: "Официальный EXE WT Mod Manager и контрольная сумма SHA-256 публикуются в GitHub Releases. Приложение скачивается отдельно от пользовательских модов, которые проходят модерацию в библиотеке сайта.",
 
         previewHint: "Нажми на прицелы, камуфляжи, звуки или настройки — демонстрационная панель переключится.",
         previewSightsTitle: "Точность в твоих руках",
@@ -279,9 +279,9 @@ const translations = {
 
         downloadOverline: "ЗАВАНТАЖЕННЯ",
         downloadTitle: "Готовий спробувати бета-версію?",
-        downloadDesc: "Інсталятор з'явиться після першого публічного релізу. Жодних вигаданих посилань.",
-        downloadSoon: "Публічний інсталятор: незабаром.",
-        downloadReady: "Публічний інсталятор доступний.",
+        downloadDesc: "Бета-версія 1.2 для Windows доступна як один EXE-файл. Завантаж і запускай без встановлення.",
+        downloadSoon: "Завантаження для Windows тимчасово недоступне.",
+        downloadReady: "Бета-версія 1.2 для Windows доступна (EXE без встановлення).",
         downloadBtn: "Завантажити для Windows",
         releases: "Історія версій",
 
@@ -293,7 +293,7 @@ const translations = {
         helpRead: "Читати інструкцію",
         guideLabel: "ПОКРОКОВА ІНСТРУКЦІЯ",
         helpInstallTitle: "Встановлення програми",
-        helpInstallDesc: "Як завантажити та встановити WT Mod Manager.",
+        helpInstallDesc: "Як завантажити й запустити WT Mod Manager.",
         helpSightsTitle: "Користувацькі приціли",
         helpSightsDesc: "Як працювати з файлами прицілів.",
         helpCamoTitle: "Камуфляжі",
@@ -324,11 +324,11 @@ const translations = {
         faqOverline: "КОРИСНО ЗНАТИ",
         faqTitle: "Запитання, які ставите ви",
         q1: "WT Mod Manager — безкоштовна програма?",
-        a1: "Так. WT Mod Manager — безкоштовна програма для Windows: підписка й обов'язкові платежі не потрібні. Кнопка завантаження запрацює після появи готового публічного інсталятора. Добровільна підтримка через monobank не відкриває окремих платних функцій.",
+        a1: "Так. WT Mod Manager — безкоштовна програма для Windows: підписка й обов'язкові платежі не потрібні. Бета-версію можна завантажити як окремий EXE без встановлення. Добровільна підтримка через monobank не відкриває окремих платних функцій.",
         q2: "Це офіційний продукт War Thunder?",
         a2: "Це офіційна сторінка нашого власного проєкту WT Mod Manager, але програма є незалежною фанатською утилітою, а не офіційним продуктом War Thunder або Gaijin Entertainment. Ми не представляємо розробників гри й не маємо їхнього схвалення. Торговельні марки War Thunder належать відповідним правовласникам.",
         q3: "Де розміщуються файли для завантаження?",
-        a3: "Готові інсталятори WT Mod Manager та нотатки про оновлення планується розміщувати в GitHub Releases нашого проєкту. До появи релізу сайт не показує несправжнє посилання. Моди учасників спільноти зберігаються окремо в бібліотеці сайту й проходять модерацію перед публікацією.",
+        a3: "Офіційний EXE WT Mod Manager і контрольна сума SHA-256 публікуються в GitHub Releases. Програма завантажується окремо від модів спільноти, що проходять модерацію.",
 
         previewHint: "Натисни на приціли, камуфляжі, звуки або налаштування — демонстраційна панель перемкнеться.",
         previewSightsTitle: "Точність у твоїх руках",
@@ -365,9 +365,9 @@ const guides = {
     en: {
         install: [
             "Open the Download section of this website.",
-            "When the public release is ready, use the official GitHub Releases download.",
-            "Check the downloaded file's source and follow the installer instructions.",
-            "Open WT Mod Manager after installation."
+            "Download WTModManager.exe using the official Windows download button.",
+            "Check the file's source and SHA-256 checksum in the release notes.",
+            "Launch WTModManager.exe directly; no installation is needed."
         ],
         sights: [
             "Open the Sights section in WT Mod Manager.",
@@ -398,9 +398,9 @@ const guides = {
     ru: {
         install: [
             "Открой раздел «Скачать» на этом сайте.",
-            "После выхода публичного релиза скачай установщик из официального GitHub Releases.",
-            "Проверь источник загруженного файла и следуй инструкциям установщика.",
-            "После установки открой WT Mod Manager."
+            "Скачай WTModManager.exe через кнопку «Скачать для Windows».",
+            "Проверь источник файла и контрольную сумму SHA-256 на странице выпуска.",
+            "Запусти WTModManager.exe — установка не требуется."
         ],
         sights: [
             "Открой раздел «Прицелы» в WT Mod Manager.",
@@ -431,9 +431,9 @@ const guides = {
     uk: {
         install: [
             "Відкрий розділ «Завантажити» на цьому сайті.",
-            "Після виходу публічного релізу завантаж інсталятор з офіційного GitHub Releases.",
-            "Перевір джерело файлу та дотримуйся інструкцій встановлення.",
-            "Після встановлення відкрий WT Mod Manager."
+            "Завантаж WTModManager.exe через кнопку завантаження для Windows.",
+            "Перевір джерело файлу та контрольну суму SHA-256 на сторінці випуску.",
+            "Запусти WTModManager.exe — встановлення не потрібне."
         ],
         sights: [
             "Відкрий розділ «Приціли» у WT Mod Manager.",
