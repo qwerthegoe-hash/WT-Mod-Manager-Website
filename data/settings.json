@@ -1,0 +1,21 @@
+{
+    "show_launch_prompt": true,
+    "auto_open_manager_on_detect": false,
+    "enable_tray_notifications": true,
+    "always_on_top": false,
+    "remember_last_tab": true,
+    "last_tab": 4,
+    "minimize_to_tray_on_close": true,
+    "preview_volume": 70,
+    "theme": "blue",
+    "accent_enabled": true,
+    "appearance_enabled": false,
+    "appearance_mode": "system",
+    "font_family": "Segoe UI",
+    "theme_intensity": 60,
+    "custom_hex": "#00E5FF",
+    "animations_enabled": true,
+    "animation_speed": 100,
+    "appearance_presets": {},
+    "language": "ru"
+}
