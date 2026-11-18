@@ -37,10 +37,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QBoxLayout,
     QSlider,
-    QSizePolicy
+    QSizePolicy,
+    QComboBox,
+    QLineEdit
 )
 
 from ui.icon_assets import apply_icon
+from ui.audio_waveform import AudioWaveform
+from src.audio_analysis import wav_peaks
 
 from src.settings_store import (
     load_settings,
@@ -437,6 +441,7 @@ class SoundsPage(QWidget):
         )
 
         self.current_file = None
+        self.repeat_enabled = False
 
         self.player = QMediaPlayer(self)
 
@@ -522,6 +527,16 @@ class SoundsPage(QWidget):
             font-size: 15px;
             font-weight: 600;
         """)
+
+        self.sound_search = QLineEdit()
+        self.sound_search.setPlaceholderText("Поиск по названию файла")
+        self.sound_search.textChanged.connect(self.filter_sounds)
+        left_layout.addWidget(self.sound_search)
+
+        self.sound_sort = QComboBox()
+        self.sound_sort.addItems(["По названию", "Сначала новые", "По размеру"])
+        self.sound_sort.currentIndexChanged.connect(lambda _: self.load_sounds())
+        left_layout.addWidget(self.sound_sort)
 
         self.sound_list = QListWidget()
 
@@ -720,6 +735,12 @@ class SoundsPage(QWidget):
                 border: none;
             """)
 
+        self.audio_waveform = AudioWaveform()
+        self.audio_waveform.seek_fraction.connect(
+            lambda value: self.player.setPosition(
+                int(self.player.duration() * value)
+            ) if self.current_file is not None else None
+        )
         timeline.addWidget(
             self.current_time
         )
@@ -785,6 +806,23 @@ class SoundsPage(QWidget):
                 Qt.CursorShape.PointingHandCursor
             )
             controls.addWidget(button)
+
+        repeat_row = QHBoxLayout()
+        self.skip_back = QPushButton("−5 сек")
+        self.skip_back.clicked.connect(
+            lambda: self.player.setPosition(max(0, self.player.position() - 5000))
+        )
+        self.skip_forward = QPushButton("+5 сек")
+        self.skip_forward.clicked.connect(
+            lambda: self.player.setPosition(
+                min(self.player.duration(), self.player.position() + 5000)
+            )
+        )
+        self.repeat_button = QPushButton("Повтор: выкл")
+        self.repeat_button.setCheckable(True)
+        self.repeat_button.toggled.connect(self.toggle_repeat)
+        for button in (self.skip_back, self.skip_forward, self.repeat_button):
+            repeat_row.addWidget(button)
 
         # ==================================
         # VOLUME
@@ -869,6 +907,7 @@ class SoundsPage(QWidget):
             1
         )
 
+        right_layout.addWidget(self.audio_waveform)
         right_layout.addLayout(
             timeline
         )
@@ -876,6 +915,7 @@ class SoundsPage(QWidget):
         right_layout.addLayout(
             controls
         )
+        right_layout.addLayout(repeat_row)
 
         right_layout.addLayout(
             volume_row
@@ -929,17 +969,14 @@ class SoundsPage(QWidget):
         self.player.errorOccurred.connect(
             self.on_player_error
         )
+        self.player.mediaStatusChanged.connect(self.on_media_status_changed)
 
     # ======================================
     # LOAD SOUND LIBRARY
     # ======================================
 
     def load_sounds(self):
-        old_name = (
-            self.current_file.name
-            if self.current_file
-            else None
-        )
+        previous_path = str(self.current_file) if self.current_file else None
 
         self.sound_list.blockSignals(True)
         self.sound_list.clear()
@@ -968,20 +1005,19 @@ class SoundsPage(QWidget):
 
             self.sound_list.addItem(item)
 
+        if self.sound_sort.currentIndex() == 1:
+            files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+        elif self.sound_sort.currentIndex() == 2:
+            files.sort(key=lambda path: path.stat().st_size, reverse=True)
+        # Sorting is applied before rebuilding the list; original file paths stay unchanged.
         self.sound_list.blockSignals(False)
+        self.filter_sounds()
 
-        if old_name:
-            for index in range(
-                self.sound_list.count()
-            ):
-                item = self.sound_list.item(
-                    index
-                )
-
-                if item.text() == old_name:
-                    self.sound_list.setCurrentItem(
-                        item
-                    )
+        if previous_path:
+            for index in range(self.sound_list.count()):
+                item = self.sound_list.item(index)
+                if item.data(Qt.ItemDataRole.UserRole) == previous_path:
+                    self.sound_list.setCurrentItem(item)
                     return
 
         self.player.stop()
@@ -991,6 +1027,8 @@ class SoundsPage(QWidget):
         )
 
         self.current_file = None
+        self.audio_waveform.set_peaks(None)
+        self.audio_waveform.set_progress(0)
 
         self.filename_label.setText(
             "Выберите файл для прослушивания"
@@ -1048,6 +1086,8 @@ class SoundsPage(QWidget):
                 str(path.resolve())
             )
         )
+        self.audio_waveform.set_peaks(wav_peaks(path))
+        self.audio_waveform.set_progress(0)
 
         self.filename_label.setText(
             path.name
@@ -1176,6 +1216,8 @@ class SoundsPage(QWidget):
         self.current_time.setText(
             format_time(position)
         )
+        duration = self.player.duration()
+        self.audio_waveform.set_progress(position / duration if duration > 0 else 0)
 
     # ======================================
     # SEEK
@@ -1193,6 +1235,23 @@ class SoundsPage(QWidget):
             self.current_time.setText(
                 format_time(position)
             )
+
+    def toggle_repeat(self, enabled):
+        self.repeat_enabled = bool(enabled)
+        self.repeat_button.setText("Повтор: вкл" if enabled else "Повтор: выкл")
+
+    def on_media_status_changed(self, status):
+        if (status == QMediaPlayer.MediaStatus.EndOfMedia
+                and self.repeat_enabled and self.current_file
+                and self.current_file.is_file()):
+            self.player.setPosition(0)
+            self.player.play()
+
+    def filter_sounds(self, *_):
+        query = self.sound_search.text().strip().casefold()
+        for idx in range(self.sound_list.count()):
+            item = self.sound_list.item(idx)
+            item.setHidden(query not in item.text().casefold())
 
     # ======================================
     # PLAYER ERROR
