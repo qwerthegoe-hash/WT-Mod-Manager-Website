@@ -993,6 +993,12 @@ class SoundsPage(QWidget):
                 path.name.lower()
         )
 
+        if self.sound_sort.currentIndex() == 1:
+            files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+        elif self.sound_sort.currentIndex() == 2:
+            files.sort(key=lambda path: path.stat().st_size, reverse=True)
+        # Sorting is applied before rebuilding the list; original file paths stay unchanged.
+
         for path in files:
             item = QListWidgetItem(
                 path.name
@@ -1005,11 +1011,6 @@ class SoundsPage(QWidget):
 
             self.sound_list.addItem(item)
 
-        if self.sound_sort.currentIndex() == 1:
-            files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
-        elif self.sound_sort.currentIndex() == 2:
-            files.sort(key=lambda path: path.stat().st_size, reverse=True)
-        # Sorting is applied before rebuilding the list; original file paths stay unchanged.
         self.sound_list.blockSignals(False)
         self.filter_sounds()
 
