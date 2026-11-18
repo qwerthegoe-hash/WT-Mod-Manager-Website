@@ -2,6 +2,7 @@
 from pathlib import Path
 import shutil
 from src.profile_paths import MODS_DIR, online_visible_files
+from ui.game_install_ui import install_camouflage_dialog, restore_last_game_install
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -151,6 +152,14 @@ class MediaPage(QWidget):
         left_layout.addWidget(list_title)
         left_layout.addWidget(self.file_list, 1)
         left_layout.addLayout(buttons)
+        if self.folder.name == "camouflages":
+            skin_install = QPushButton("Установить камуфляж в War Thunder")
+            skin_install.setToolTip("Нужен набор .blk и текстур, а также созданный в игре шаблон техники.")
+            skin_install.clicked.connect(lambda: install_camouflage_dialog(self))
+            restore_game = QPushButton("Откатить установку в игре")
+            restore_game.clicked.connect(lambda: restore_last_game_install(self))
+            left_layout.addWidget(skin_install)
+            left_layout.addWidget(restore_game)
 
         # RIGHT CARD
         right = QFrame()
