@@ -2,6 +2,16 @@ name: Build WT Mod Manager Windows EXE
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "ui/**"
+      - "assets/**"
+      - "config/**"
+      - "requirements-build.txt"
+      - "tools/build_windows_exe.py"
+      - ".github/workflows/build-windows-exe.yml"
 
 permissions:
   contents: read
