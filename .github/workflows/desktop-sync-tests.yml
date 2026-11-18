@@ -1,0 +1,46 @@
+name: Desktop synchronization safety tests
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "ui/**"
+      - "tests/test_desktop_sync.py"
+      - "docs/mods/**"
+      - "docs/js/desktop-link.mjs"
+      - "requirements-build.txt"
+      - ".github/workflows/desktop-sync-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety-checks:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Install desktop dependencies
+        run: python -m pip install -r requirements-build.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q src ui tests
+
+      - name: Unit-test account isolation, archive safety, and DPAPI
+        run: python -m unittest discover -s tests -p test_desktop_sync.py -v
+
+      - name: Check site JavaScript syntax
+        run: |
+          node --check docs/mods/mods.js
+          node --check docs/js/desktop-link.mjs

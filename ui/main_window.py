@@ -62,6 +62,7 @@ from ui.sights_page import SightsPage
 from ui.camouflages_page import CamouflagesPage
 from ui.sounds_page import SoundsPage
 from ui.settings_page import SettingsPage
+from ui.online_page import OnlinePage
 
 from src.settings_store import (
     load_settings,
@@ -1016,6 +1017,7 @@ class ManagerWindow(QMainWindow):
             "Звуки",
             "Конфигурации",
             "Настройки",
+            "Загрузки",
         ]
 
         # ==================================
@@ -1125,6 +1127,12 @@ class ManagerWindow(QMainWindow):
         self.pages.addWidget(
             self.settings_page
         )
+
+        # Online downloads are appended to preserve all existing tab indices.
+        self.online_page = OnlinePage()
+        self.pages.addWidget(self.online_page)
+        self.online_page.account_changed.connect(self.refresh_online_assets)
+        self.online_page.assets_changed.connect(self.refresh_online_assets)
 
         # ==================================
         # SETTINGS SIGNAL
@@ -1275,6 +1283,21 @@ class ManagerWindow(QMainWindow):
         self.sounds_page.player.playbackStateChanged.connect(
             self.schedule_translation
         )
+
+    def refresh_online_assets(self, category=None):
+        """Refresh only affected lists in one Qt paint transaction, with no window restart."""
+        pages = {
+            "sights": (self.sights_page, "load_sights"),
+            "sounds": (self.sounds_page, "load_sounds"),
+            "camouflage": (self.camouflages_page, "refresh_files"),
+        }
+        selected = pages if category not in pages else {category: pages[category]}
+        for widget, method_name in selected.values():
+            widget.setUpdatesEnabled(False)
+            try:
+                getattr(widget, method_name)()
+            finally:
+                widget.setUpdatesEnabled(True)
 
     # ======================================
     # APPLY PERSONALIZATION
