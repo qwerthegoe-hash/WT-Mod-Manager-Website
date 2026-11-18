@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.update_notifications import load_notifications, mark_all_read
+from src.diagnostics import inspect_local, format_report
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
     save_mod_profile, set_active_mod_profile, delete_mod_profile
@@ -197,6 +198,29 @@ class OnlinePage(QWidget):
         ai_layout.addWidget(self.ai_send)
         self.tabs.addTab(ai_tab, "GPT-помощник")
 
+        diagnostics_tab = QWidget()
+        diagnostic_layout = QVBoxLayout(diagnostics_tab)
+        diagnostic_layout.addWidget(QLabel("Кодовая диагностика WT Mod Manager"))
+        description = QLabel(
+            "Проверяет настройки, папки модов, обновления и привязку аккаунта. "
+            "Выполняется локально, без отправки личных данных или файлов."
+        )
+        description.setWordWrap(True)
+        diagnostic_layout.addWidget(description)
+        self.diagnostic_output = QPlainTextEdit()
+        self.diagnostic_output.setReadOnly(True)
+        self.diagnostic_output.setPlaceholderText("D001–D009: проверка ещё не выполнена.")
+        diagnostic_layout.addWidget(self.diagnostic_output, 1)
+        diagnostic_actions = QHBoxLayout()
+        self.diagnostic_scan = QPushButton("Запустить проверку")
+        self.diagnostic_scan.clicked.connect(self.run_diagnostics)
+        diagnostic_actions.addWidget(self.diagnostic_scan)
+        self.diagnostic_copy = QPushButton("Копировать коды и результат")
+        self.diagnostic_copy.clicked.connect(self.copy_diagnostics)
+        diagnostic_actions.addWidget(self.diagnostic_copy)
+        diagnostic_layout.addLayout(diagnostic_actions)
+        self.tabs.addTab(diagnostics_tab, "Диагностика")
+
         self.bridge = DesktopSync(self)
         self.bridge.status_changed.connect(self.status.setText)
         self.bridge.account_changed.connect(self.on_account)
@@ -268,6 +292,20 @@ class OnlinePage(QWidget):
     def on_ai_error(self, error):
         self.ai_send.setEnabled(True)
         self.ai_chat.appendPlainText("\nОшибка GPT: " + str(error)[:200])
+
+    def run_diagnostics(self):
+        try:
+            result = format_report(inspect_local())
+        except Exception:
+            result = ("D000 [ERROR]: Не удалось завершить локальную диагностику.\n"
+                      "Скопируй код D000 для технической поддержки.")
+        self.diagnostic_output.setPlainText(result)
+
+    def copy_diagnostics(self):
+        result = self.diagnostic_output.toPlainText()
+        if result:
+            QApplication.clipboard().setText(result)
+            self.status.setText("Диагностика скопирована без личных данных.")
 
     def set_available_update(self, info):
         if not isinstance(info, dict):
