@@ -84,7 +84,7 @@ class PortableUpdateTests(unittest.TestCase):
     def test_download_sha_verified_before_replacement(self):
         content = b"MZ" + b"A" * (1024*1024)
         digest = hashlib.sha256(content).hexdigest()
-        release = self.fixture(tag="v1.3.0-beta.3",size=len(content),digest=digest)
+        release = self.fixture(tag="v1.4.0-beta.1",size=len(content),digest=digest)
         data = update_checker._release_candidate(release,update_checker.repository())
         self.assertIsNotNone(data)
         with patch("src.update_checker.urllib.request.urlopen",
@@ -99,7 +99,7 @@ class PortableUpdateTests(unittest.TestCase):
         existing.parent.mkdir()
         existing.write_bytes(b"previous verified content")
         content = b"MZ" + b"B"*(1024*1024)
-        release = self.fixture(tag="v1.3.0-beta.3",size=len(content),digest="0"*64)
+        release = self.fixture(tag="v1.4.0-beta.1",size=len(content),digest="0"*64)
         data = update_checker._release_candidate(release,update_checker.repository())
         self.assertIsNotNone(data, "The tamper test must exercise a real upgrade candidate.")
         with patch("src.update_checker.urllib.request.urlopen",
