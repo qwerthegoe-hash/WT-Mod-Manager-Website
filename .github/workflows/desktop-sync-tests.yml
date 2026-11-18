@@ -43,6 +43,9 @@ jobs:
       - name: Test safe game-file installation, conflict checks and rollback
         run: python -m unittest discover -s tests -p test_game_mod_installer.py -v
 
+      - name: Test WAV waveform analyzer
+        run: python -m unittest discover -s tests -p test_audio_analysis.py -v
+
       - name: Check site JavaScript syntax
         run: |
           node --check docs/mods/mods.js
