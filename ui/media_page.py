@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import shutil
+from src.profile_paths import MODS_DIR
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
