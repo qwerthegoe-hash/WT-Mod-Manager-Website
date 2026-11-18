@@ -79,6 +79,12 @@ class OnlinePage(QWidget):
         update_controls.addWidget(self.install_update_button)
         update_controls.addWidget(self.update_auto_checkbox)
         layout.addLayout(update_controls)
+        self.rollback_exe_button = QPushButton("Вернуть предыдущую версию EXE")
+        self.rollback_exe_button.setToolTip(
+            "Работает, если новая система обновлений сохранила проверенную предыдущую версию."
+        )
+        self.rollback_exe_button.clicked.connect(self.rollback_update_requested.emit)
+        layout.addWidget(self.rollback_exe_button)
         self.update_summary = QLabel("Проверка новых выпусков работает и при свёрнутом окне.")
         self.update_summary.setWordWrap(True)
         layout.addWidget(self.update_summary)
