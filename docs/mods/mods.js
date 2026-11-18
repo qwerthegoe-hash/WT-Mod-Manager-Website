@@ -1,5 +1,6 @@
 "use strict";
 import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
+import { upgradeModFilterSelects } from "./rounded-filters.mjs";
 setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
@@ -717,6 +718,7 @@ function bind() {
 }
 async function init() {
     bind();
+    upgradeModFilterSelects();
     try {
         db = createClient(config.supabaseUrl, config.supabasePublishableKey);
         user = await ensureSession();
