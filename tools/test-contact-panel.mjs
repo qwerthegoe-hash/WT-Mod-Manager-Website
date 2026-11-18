@@ -51,7 +51,7 @@ const topics=["question","cooperation","feedback","other"].map(topic=>{const e=e
 globalThis.document={documentElement:{lang:""},getElementById:id=>controls[id]||null,
  querySelectorAll:s=>s==="[data-topic]"?topics:[],
  createTextNode:text=>({textContent:text}),createElement:()=>el()};
-globalThis.window={location:{origin:"http://localhost:5500",pathname:"/docs/contact/contact.html"}};
+globalThis.window={location:{origin:"http://localhost:5500",pathname:"/docs/contact/contact.html"},addEventListener(){}};
 Object.defineProperty(globalThis,"navigator",{configurable:true,value:{language:"ru"}});
 globalThis.localStorage={getItem:()=> "ru",setItem(){}};
 globalThis.contactLocalesExtra=contactLocalesExtra;
