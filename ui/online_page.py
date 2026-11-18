@@ -8,10 +8,11 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit,
-    QComboBox, QInputDialog, QAbstractItemView
+    QComboBox, QInputDialog, QAbstractItemView, QCheckBox
 )
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
+from src.update_notifications import load_notifications, mark_all_read
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
     save_mod_profile, set_active_mod_profile, delete_mod_profile
@@ -22,6 +23,8 @@ class OnlinePage(QWidget):
     assets_changed = Signal(str)
     account_changed = Signal()
     check_update_requested = Signal()
+    install_update_requested = Signal()
+    auto_check_changed = Signal(bool)
 
     def __init__(self):
         super().__init__()
@@ -60,9 +63,31 @@ class OnlinePage(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             controls.addWidget(button)
         layout.addLayout(controls)
-        self.update_button = QPushButton("Проверить обновления WT Mod Manager")
+        update_controls = QHBoxLayout()
+        self.update_button = QPushButton("Проверить обновления")
         self.update_button.clicked.connect(self.check_update_requested.emit)
-        layout.addWidget(self.update_button)
+        self.install_update_button = QPushButton("Скачать обновление")
+        self.install_update_button.setEnabled(False)
+        self.install_update_button.clicked.connect(self.install_update_requested.emit)
+        self.update_auto_checkbox = QCheckBox("Автопроверка каждые 10 минут")
+        self.update_auto_checkbox.setChecked(load_notifications()["auto_check"])
+        self.update_auto_checkbox.toggled.connect(self.auto_check_changed.emit)
+        update_controls.addWidget(self.update_button)
+        update_controls.addWidget(self.install_update_button)
+        update_controls.addWidget(self.update_auto_checkbox)
+        layout.addLayout(update_controls)
+        self.update_summary = QLabel("Проверка новых выпусков работает и при свёрнутом окне.")
+        self.update_summary.setWordWrap(True)
+        layout.addWidget(self.update_summary)
+
+        self.updates_inbox = QListWidget()
+        self.updates_inbox.setMaximumHeight(105)
+        self.updates_inbox.setToolTip("История уведомлений об обновлениях в этом профиле Windows")
+        layout.addWidget(self.updates_inbox)
+        self.read_notices_button = QPushButton("Отметить уведомления прочитанными")
+        self.read_notices_button.clicked.connect(self.mark_update_notices_read)
+        layout.addWidget(self.read_notices_button)
+        self.refresh_update_notices()
 
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs, 1)
@@ -137,6 +162,33 @@ class OnlinePage(QWidget):
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def set_available_update(self, info):
+        if not isinstance(info, dict):
+            return
+        version = str(info.get("version", ""))[:50]
+        self.update_summary.setText(
+            "Доступен WT Mod Manager " + version +
+            ". Обновление можно скачать и установить без удаления модов и настроек."
+        )
+        self.install_update_button.setText("Скачать и установить " + version)
+        self.install_update_button.setEnabled(True)
+        self.refresh_update_notices()
+
+    def refresh_update_notices(self):
+        state = load_notifications()
+        self.updates_inbox.clear()
+        for event in reversed(state["events"][-12:]):
+            marker = "● " if not event["read"] else "  "
+            self.updates_inbox.addItem(
+                marker + str(event["title"]) + " — " + str(event["message"])
+            )
+        if not self.updates_inbox.count():
+            self.updates_inbox.addItem("Уведомлений пока нет.")
+
+    def mark_update_notices_read(self):
+        mark_all_read()
+        self.refresh_update_notices()
 
     def connect_account(self):
         self.bridge.link_account()

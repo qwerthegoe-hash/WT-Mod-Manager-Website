@@ -7,7 +7,9 @@ Never requires administrator elevation or executes a remote script.
 """
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -35,7 +37,7 @@ def _reset_env():
     return {**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"}
 
 
-def launch_verified_update(new_exe: Path) -> None:
+def launch_verified_update(new_exe: Path, expected_digest: str) -> None:
     """Called only after SHA-256 verification and explicit user confirmation."""
     if sys.platform != "win32" or not getattr(sys, "frozen", False):
         raise RuntimeError("Automatic replacement requires the packaged Windows EXE.")
@@ -45,6 +47,10 @@ def launch_verified_update(new_exe: Path) -> None:
         raise ValueError("Staged update must be the verified user-local EXE.")
     if new.stat().st_size < 1024 * 1024:
         raise ValueError("Update executable is incomplete.")
+    if not isinstance(expected_digest, str) or not re.fullmatch(r"[a-f0-9]{64}", expected_digest):
+        raise ValueError("Invalid update checksum.")
+    if _file_sha256(new) != expected_digest:
+        raise ValueError("Staged update checksum changed before installation.")
     # Fail before closing the app if its directory is not writable.
     try:
         with tempfile.NamedTemporaryFile(dir=old.parent, prefix=".wtmm-permission-", delete=True):
@@ -55,7 +61,8 @@ def launch_verified_update(new_exe: Path) -> None:
             "Move WTModManager.exe to a writable folder and try again."
         ) from error
     subprocess.Popen(
-        [str(new), "--apply-update", str(old), str(os.getpid())],
+        [str(new), "--apply-update", str(old), str(os.getpid()),
+         expected_digest],
         cwd=str(new.parent),
         env=_reset_env(),
         close_fds=True,
@@ -92,16 +99,27 @@ def _wait_for_old_process(pid: int, seconds: int = 90) -> None:
     raise TimeoutError("Old WT Mod Manager did not close within the update window.")
 
 
+def _file_sha256(path: Path) -> str:
+    sha = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for data in iter(lambda: stream.read(256 * 1024), b""):
+            sha.update(data)
+    return sha.hexdigest()
+
+
 def apply_verified_update(args: list[str]) -> int:
     """Entry point activated only via --apply-update from the signed-off UI."""
     if sys.platform != "win32" or not getattr(sys, "frozen", False):
         return 2
-    if len(args) != 2:
+    if len(args) != 3:
         return 2
     try:
         helper = Path(sys.executable).absolute()
         if helper != UPDATES / TARGET_NAME or helper.is_symlink():
             raise ValueError("Update helper must run from the user's updates directory.")
+        digest = args[2]
+        if not re.fullmatch(r"[a-f0-9]{64}", digest) or _file_sha256(helper) != digest:
+            raise ValueError("Update helper checksum failed verification.")
         target = _validate_target(Path(args[0]))
         pid = int(args[1])
         _wait_for_old_process(pid)
@@ -122,7 +140,7 @@ def apply_verified_update(args: list[str]) -> int:
         _save_status("Обновление установлено. Предыдущая версия сохранена в updates.")
         try:
             subprocess.Popen(
-                [str(target)],
+                [str(target), "--updated"],
                 cwd=str(target.parent),
                 env=_reset_env(),
                 close_fds=True,

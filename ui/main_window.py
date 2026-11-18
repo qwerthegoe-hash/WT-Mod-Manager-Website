@@ -948,7 +948,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION BETA 1.3"
+            "VERSION BETA 1.3.2"
         )
 
         self.version.setObjectName(

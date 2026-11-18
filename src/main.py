@@ -21,6 +21,7 @@ from ui.main_window import LaunchPrompt, ManagerWindow
 from src.settings_store import load_settings
 from ui.i18n import translate_ui
 from ui.update_ui import UpdateController
+from src.update_notifications import consume_install_status
 
 
 # ==========================================
@@ -184,6 +185,7 @@ class WTManagerApp:
         self.tray.activated.connect(
             self.on_tray_activated
         )
+        self.tray.messageClicked.connect(self.open_manager)
 
         # ==================================
         # SHOW SYSTEM TRAY
@@ -198,9 +200,29 @@ class WTManagerApp:
 
         self.check_game()
 
-        # Non-blocking optional update check; no network use until repo is configured.
+        # Periodic checks continue even if the application is in the tray.
+        # Detection never closes the program: only a confirmed installation
+        # restarts it after downloading and verifying the new EXE.
         self.updater = UpdateController(None, on_install_ready=self.exit_app)
+        self.updater.update_available.connect(self.notify_update_available)
+        self.updater.notifications_changed.connect(self.refresh_update_notices)
+        self.updater.tray_notification.connect(self.show_tray_message)
         QTimer.singleShot(3000, self.updater.check)
+        QTimer.singleShot(800, self.show_last_update_result)
+
+    def notify_update_available(self, info):
+        if self.manager is not None:
+            self.manager.online_page.set_available_update(info)
+
+    def refresh_update_notices(self):
+        if self.manager is not None:
+            self.manager.online_page.refresh_update_notices()
+
+    def show_last_update_result(self):
+        status = consume_install_status()
+        if status:
+            self.show_tray_message("WT Mod Manager — обновление", status)
+            self.refresh_update_notices()
 
     # ======================================
     # TRAY TRANSLATIONS
@@ -352,6 +374,17 @@ class WTManagerApp:
 
             self.manager = ManagerWindow()
             self.manager.check_update_requested.connect(self.updater.check_manual)
+            self.manager.online_page.install_update_requested.connect(
+                self.updater.request_install
+            )
+            self.manager.online_page.auto_check_changed.connect(
+                self.updater.set_automatic_checks_enabled
+            )
+            if self.updater.current_update is not None:
+                self.manager.online_page.set_available_update(
+                    self.updater.current_update
+                )
+            self.manager.online_page.refresh_update_notices()
 
             # Apply custom application logo
             self.manager.setWindowIcon(
@@ -407,6 +440,11 @@ def main():
 
     # Start the application controller
     controller = WTManagerApp(app)
+
+    # After a verified update, reopen the manager rather than remaining
+    # hidden in the tray. The startup status is added to the inbox.
+    if "--updated" in sys.argv:
+        QTimer.singleShot(250, controller.open_manager)
 
     # Demonstration mode
     if "--demo" in sys.argv:
