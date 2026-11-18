@@ -5,44 +5,33 @@ import { COMMUNITY_CONFIG as config } from "./community-config.js";
 const status = document.getElementById("result");
 const button = document.getElementById("connectApp");
 const params = new URLSearchParams(location.search);
-const rawPort = params.get("port") || "";
-const challenge = params.get("challenge") || "";
-const port = Number(rawPort);
-const valid = /^\d{4,5}$/.test(rawPort) && Number.isSafeInteger(port) &&
-    port >= 1024 && port <= 65535 && /^[a-f0-9]{48}$/.test(challenge);
+const pairId = params.get("pair_id") || "";
+const pairCode = params.get("code") || "";
+const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pairId) &&
+    /^[a-f0-9]{36}$/.test(pairCode);
 const db = createClient(config.supabaseUrl, config.supabasePublishableKey);
-
 if (!valid) {
     button.disabled = true;
-    status.textContent = "Неверная или устаревшая ссылка. Открой привязку ещё раз из Windows-приложения.";
+    status.textContent = "Неверная или устаревшая ссылка. Начни привязку из Windows-приложения заново.";
 }
 button.addEventListener("click", async () => {
     if (!valid) return;
     button.disabled = true;
     status.textContent = "Проверяю аккаунт...";
     try {
-        const {data: sessionData,error: sessionError} = await db.auth.getSession();
-        if (sessionError) throw sessionError;
-        const session = sessionData?.session;
-        if (!session?.access_token || !session?.refresh_token)
+        // The website never sends its session tokens to the desktop.
+        // The Edge Function verifies this browser's user JWT server-side.
+        const {data: userResult,error: userError} = await db.auth.getUser();
+        if (userError || !userResult?.user?.id)
             throw new Error("Сначала войди на сайт в этом браузере.");
-        const {data: identity,error: userError} = await db.auth.getUser();
-        if (userError || !identity?.user?.id)
-            throw new Error("Не удалось проверить сеанс сайта.");
-        const response = await fetch("http://127.0.0.1:" + port + "/link", {
-            method: "POST",
-            cache: "no-store",
-            headers: {"Content-Type":"application/json","X-WTMM-Pair":challenge},
-            body: JSON.stringify({
-                access_token:session.access_token,
-                refresh_token:session.refresh_token
-            })
+        const {data,error} = await db.functions.invoke("wtmm-desktop-bridge",{
+            body:{action:"claim",pair_id:pairId,pair_code:pairCode}
         });
-        if (!response.ok) throw new Error("Приложение отклонило привязку. Проверь, что оно открыто.");
-        status.textContent = "Аккаунт связан. Теперь можно нажимать «Добавить в приложение» у скачанных модов.";
+        if (error || !data?.paired) throw error || new Error(data?.error || "Привязка не подтверждена");
+        status.textContent = "Готово! Windows-приложение привязано к аккаунту. Теперь открой «Скачанные моды» и нажми «Добавить в приложение».";
     } catch (error) {
         status.textContent = "Не получилось связать: " + (error?.message || "ошибка сети") +
-            ". Проверь, что страница открыта в том же браузере и Windows-приложение запущено.";
+            ". Проверь аккаунт сайта и попробуй создать новую ссылку в приложении.";
         button.disabled = false;
     }
 });
