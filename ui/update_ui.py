@@ -227,7 +227,7 @@ class UpdateController(QObject):
             )
             return
         try:
-            launch_verified_update(staged)
+            launch_verified_update(staged, info["digest"])
         except (OSError, ValueError, RuntimeError) as problem:
             QMessageBox.warning(self.parent_window, "Ошибка обновления", str(problem))
             return
