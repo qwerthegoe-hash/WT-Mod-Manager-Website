@@ -278,6 +278,11 @@ function detectLanguage() {
 function init() {
   $("contactYear").textContent = String(new Date().getFullYear());
   applyLanguage(detectLanguage());
+  // Only homepage selects language; contact responds to that saved preference.
+  window.addEventListener("storage", event => {
+    if (event.key === "wtmm-language") applyLanguage(detectLanguage());
+  });
+  window.addEventListener("pageshow", () => applyLanguage(detectLanguage()));
   selectTopic("question");
   topicButtons.forEach(button => button.addEventListener("click", () => selectTopic(button.dataset.topic)));
   $("contactReply").addEventListener("change", syncReplySetting);
