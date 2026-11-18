@@ -1137,6 +1137,7 @@ class ManagerWindow(QMainWindow):
         self.online_page.account_changed.connect(self.refresh_online_assets)
         self.online_page.assets_changed.connect(self.refresh_online_assets)
         self.online_page.check_update_requested.connect(self.check_update_requested)
+        self.online_page.rollback_update_requested.connect(self.rollback_update_requested)
 
         # ==================================
         # SETTINGS SIGNAL
