@@ -441,6 +441,11 @@ def main():
     # Start the application controller
     controller = WTManagerApp(app)
 
+    # After a verified update, reopen the manager rather than remaining
+    # hidden in the tray. The startup status is added to the inbox.
+    if "--updated" in sys.argv:
+        QTimer.singleShot(250, controller.open_manager)
+
     # Demonstration mode
     if "--demo" in sys.argv:
 
