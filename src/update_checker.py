@@ -158,7 +158,9 @@ def download_verified(info):
                 file.write(block)
         if downloaded != info["size"] or sha.hexdigest() != info["digest"]:
             raise ValueError("Update SHA-256 or file size mismatch.")
-        if temp.read_bytes()[:2] != b"MZ":
+        with temp.open("rb") as downloaded_file:
+            signature = downloaded_file.read(2)
+        if signature != b"MZ":
             raise ValueError("Download is not a Windows executable.")
         temp.replace(target)
         return target
