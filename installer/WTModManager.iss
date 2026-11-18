@@ -58,9 +58,6 @@ WizardKeepAspectRatio=yes
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-Name: "desktopicon"; Description: "Создать ярлык WT Mod Manager на рабочем столе"; GroupDescription: "Дополнительные параметры"; Flags: checkedonce
-
 [Files]
 Source: "..\dist\WTModManager\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "wtmm.installed"; DestDir: "{app}"; Flags: ignoreversion
@@ -70,20 +67,69 @@ Source: "..\README.md"; DestDir: "{app}"; DestName: "README.txt"; Flags: ignorev
 [Icons]
 Name: "{group}\WT Mod Manager"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExe}"
 Name: "{group}\Удалить WT Mod Manager"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\WT Mod Manager"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExe}"; Tasks: desktopicon
+
+[UninstallDelete]
+Type: files; Name: "{autodesktop}\WT Mod Manager.lnk"
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "Запустить WT Mod Manager"; Flags: postinstall nowait skipifsilent
 Filename: "{sys}\notepad.exe"; Parameters: """{app}\Pin-to-taskbar.txt"""; Description: "Показать, как закрепить WT Mod Manager на панели задач"; Flags: postinstall nowait skipifsilent unchecked
 
 [Code]
-// Give the installer its own concise brand message, while keeping the
-// native accessibility, keyboard navigation, and Windows setup behavior.
+var
+  FinishDesktopShortcut: TNewCheckBox;
+  FinishOptionsLaidOut: Boolean;
+
+// Custom finishing checkbox, next to the standard launch and taskbar-help
+// checkboxes. No scripts are run and no taskbar icons are forcibly pinned.
 procedure InitializeWizard();
 begin
   WizardForm.WelcomeLabel1.Caption := 'WT MOD MANAGER';
   WizardForm.WelcomeLabel2.Caption :=
     'Мастер установки WT Mod Manager.' + #13#10 + #13#10 +
-    'Выберите папку установки, затем настройте ярлык.' + #13#10 +
-    'Пользовательские моды и настройки не будут удалены при обновлении.';
+    'Выберите папку установки, затем настройте ярлыки.' + #13#10 +
+    'Пользовательские моды и настройки сохраняются при обновлении.';
+
+  FinishDesktopShortcut := TNewCheckBox.Create(WizardForm);
+  FinishDesktopShortcut.Parent := WizardForm.FinishedPage;
+  FinishDesktopShortcut.Caption := 'Создать ярлык WT Mod Manager на рабочем столе';
+  FinishDesktopShortcut.Checked := True;
+  FinishDesktopShortcut.Height := ScaleY(23);
+  FinishDesktopShortcut.Anchors := [akLeft, akTop, akRight];
+  FinishOptionsLaidOut := False;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpFinished) and (not FinishOptionsLaidOut) then
+  begin
+    FinishDesktopShortcut.Left := WizardForm.RunList.Left;
+    FinishDesktopShortcut.Top := WizardForm.RunList.Top;
+    FinishDesktopShortcut.Width := WizardForm.RunList.Width;
+    WizardForm.RunList.Top := WizardForm.RunList.Top + ScaleY(27);
+    WizardForm.RunList.Height := WizardForm.RunList.Height - ScaleY(27);
+    FinishOptionsLaidOut := True;
+  end;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if (CurPageID = wpFinished) and (not WizardSilent()) and
+     FinishDesktopShortcut.Checked then
+  begin
+    try
+      CreateShellLink(
+        ExpandConstant('{autodesktop}\WT Mod Manager.lnk'),
+        'WT Mod Manager',
+        ExpandConstant('{app}\WTModManager.exe'),
+        '',
+        ExpandConstant('{app}'),
+        ExpandConstant('{app}\WTModManager.exe'),
+        0, SW_SHOWNORMAL);
+    except
+      MsgBox('Не удалось создать ярлык. Приложение доступно через меню Пуск.',
+        mbInformation, MB_OK);
+    end;
+  end;
 end;
