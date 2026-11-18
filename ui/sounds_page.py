@@ -1,7 +1,7 @@
 
 from pathlib import Path
 import shutil
-from src.profile_paths import MODS_DIR
+from src.profile_paths import MODS_DIR, online_mod_folder
 
 from PySide6.QtCore import (
     Qt,
@@ -936,10 +936,16 @@ class SoundsPage(QWidget):
         self.sound_list.blockSignals(True)
         self.sound_list.clear()
 
+        folders = [SOUNDS_DIR]
+        account_folder = online_mod_folder("sounds")
+        if account_folder is not None and account_folder.is_dir():
+            folders.append(account_folder)
+
         files = sorted(
             (
                 path
-                for path in SOUNDS_DIR.iterdir()
+                for folder in folders
+                for path in folder.iterdir()
                 if path.is_file()
                 and path.suffix.lower()
                 in EXTENSIONS
