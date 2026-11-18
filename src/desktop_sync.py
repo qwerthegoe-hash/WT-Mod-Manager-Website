@@ -264,9 +264,9 @@ class DesktopSync(QObject):
         task = self._pool.submit(self._work, action, token)
         def complete(future):
             try:
-                self._completed.emit((action, True, future.result()))
+                self._completed.emit((action, token, True, future.result()))
             except Exception as error:
-                self._completed.emit((action, False, str(error)[:200]))
+                self._completed.emit((action, token, False, str(error)[:200]))
         task.add_done_callback(complete)
         return True
 
@@ -294,7 +294,9 @@ class DesktopSync(QObject):
         self.account_changed.emit("")
         self.status_changed.emit("Аккаунт отключён. Локальные файлы сохранены.")
         if token:
-            self._start("revoke", token)
+            # A poll may still be running. Revoke after it, rather than
+            # silently dropping the revoke request because _busy is true.
+            self._pool.submit(self._work, "revoke", token)
 
     @staticmethod
     def _work(action: str, token: str) -> dict:
@@ -330,8 +332,14 @@ class DesktopSync(QObject):
         return {"paired": True, "user_id": user_id, "changed": list(set(changes))}
 
     def _on_completed(self, response) -> None:
-        action, ok, result = response
+        action, completed_token, ok, result = response
         self._busy = False
+        if action == "revoke":
+            return
+        # Disconnect/relink can occur while a background poll is in flight.
+        # Never let an old account's result reactivate its interface.
+        if completed_token != (self._pairing_token or self._token):
+            return
         if not ok:
             if action != "poll":
                 self.status_changed.emit("Ошибка соединения: " + str(result))
