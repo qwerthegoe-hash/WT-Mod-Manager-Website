@@ -16,7 +16,7 @@ assert.ok(!support.includes('id="developerContact"') && !support.includes('<span
 assert.ok(!html.includes('id="contactEmailFallback"'));
 assert.ok(script.includes('getContactBridge') && script.includes('bridge.send('));
 assert.ok(!script.includes('https://formspree.io/f/'));
-assert.ok(html.includes('value="pl"') && html.includes('value="de"'));
+assert.ok(!html.includes('id="contactLanguage"') && !html.includes('value="pl"')); // Uses homepage preference
 assert.equal(normalizeContactTopic("cooperation"),"cooperation");
 assert.equal(normalizeContactTopic("bad"),"question");
 const valid = {title:"Developer question",message:"Here is my original question for the developer.",
