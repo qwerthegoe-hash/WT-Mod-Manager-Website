@@ -29,6 +29,11 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertTrue(hasattr(window.online_page, "catalog_list"))
             self.assertTrue(hasattr(window.online_page, "profile_picker"))
             self.assertTrue(hasattr(window.online_page, "update_button"))
+            self.assertTrue(hasattr(window.online_page, "rollback_exe_button"))
+            self.assertTrue(hasattr(window.online_page, "remote_notifications"))
+            self.assertTrue(hasattr(window.online_page, "ai_send"))
+            self.assertTrue(hasattr(window.online_page, "diagnostic_scan"))
+            self.assertEqual(window.online_page.tabs.count(), 5)
         finally:
             window.online_page.bridge.stop()
             window.force_close()
