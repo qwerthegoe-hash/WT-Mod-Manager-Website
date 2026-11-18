@@ -733,7 +733,7 @@ class SoundsPage(QWidget):
         controls.setSpacing(8)
 
         self.play_button = QPushButton(
-            "▶ Играть"
+            "Играть"
         )
 
         self.play_button.setObjectName(
@@ -745,7 +745,7 @@ class SoundsPage(QWidget):
         )
 
         self.pause_button = QPushButton(
-            "Ⅱ Пауза"
+            "Пауза"
         )
 
         self.pause_button.setObjectName(
@@ -757,7 +757,7 @@ class SoundsPage(QWidget):
         )
 
         self.stop_button = QPushButton(
-            "■ Стоп"
+            "Стоп"
         )
 
         self.stop_button.setObjectName(
@@ -1072,7 +1072,7 @@ class SoundsPage(QWidget):
         self.player.play()
 
     # ======================================
-    # PLAY / PAUSE TOGGLE
+    # PLAY / RESUME
     # ======================================
 
     def toggle_playback(self):
@@ -1084,15 +1084,8 @@ class SoundsPage(QWidget):
             )
             return
 
-        state = self.player.playbackState()
-
-        if (
-            state
-            == QMediaPlayer.PlaybackState.PlayingState
-        ):
-            self.player.pause()
-        else:
-            self.play_audio()
+        # Dedicated Pause button handles pausing. Play only starts or resumes.
+        self.play_audio()
 
     # ======================================
     # AUDIO TRANSPORT ICONS
@@ -1101,22 +1094,13 @@ class SoundsPage(QWidget):
     def apply_transport_icons(self, settings=None):
         """Use PNGs from assets/icons/White or Black, based on UI mode.
 
-        The Play button doubles as Pause while audio is playing.
-        Keep labels, keyboard behavior, tooltips, and signals unchanged.
+        Each transport button has its own fixed action and PNG icon.
+        Avoid duplicate pause symbols or icons in adjacent buttons.
         """
         if settings is None:
             settings = load_settings()
 
-        playing = (
-            self.player.playbackState()
-            == QMediaPlayer.PlaybackState.PlayingState
-        )
-        apply_icon(
-            self.play_button,
-            "pause" if playing else "play",
-            settings,
-            19,
-        )
+        apply_icon(self.play_button, "play", settings, 19)
         apply_icon(self.pause_button, "pause", settings, 19)
         apply_icon(self.stop_button, "stop", settings, 19)
 
@@ -1125,7 +1109,7 @@ class SoundsPage(QWidget):
     # ======================================
 
     def on_state_changed(self, state):
-        # Keep the transport icon synchronized with Play/Pause state.
+        # Refresh the three fixed icons after a playback state change.
         self.apply_transport_icons()
         if (
             state
@@ -1133,10 +1117,6 @@ class SoundsPage(QWidget):
         ):
             self.playback_status.setText(
                 "Воспроизводится"
-            )
-
-            self.play_button.setText(
-                "Ⅱ Пауза"
             )
 
         elif (
@@ -1147,15 +1127,7 @@ class SoundsPage(QWidget):
                 "Пауза"
             )
 
-            self.play_button.setText(
-                "▶ Продолжить"
-            )
-
         else:
-            self.play_button.setText(
-                "▶ Играть"
-            )
-
             if self.current_file:
                 self.playback_status.setText(
                     "Воспроизведение остановлено"
