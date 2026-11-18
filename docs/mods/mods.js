@@ -36,7 +36,7 @@ function say(message, error = false, target = "modsNotice") {
 function node(tag, className = "", text = "") {
     const element = document.createElement(tag);
     if (className) element.className = className;
-    if (text) element.textContent = uiText(text);
+    if (text) element.textContent = text; // User-supplied mod titles/descriptions must remain unchanged.
     return element;
 }
 function link(href, text, className = "") {
@@ -64,7 +64,7 @@ function profile(row) {
     return profiles.get(row.owner_id) || null;
 }
 function authorName(row) {
-    return profile(row)?.nickname || (row.owner_id === user?.id ? "Я" : "Автор");
+    return profile(row)?.nickname || uiText(row.owner_id === user?.id ? "Я" : "Автор");
 }
 function authorLink(row) {
     const publicProfile = profile(row);
