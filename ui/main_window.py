@@ -752,6 +752,7 @@ class LaunchPrompt(QDialog):
 
 class ManagerWindow(QMainWindow):
     check_update_requested = Signal()
+    rollback_update_requested = Signal()
     """
     Главное окно WT Mod Manager.
 
