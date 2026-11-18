@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://esm.sh; connect-src https://ovvubbwzxikqcnuvvtjb.supabase.co https://esm.sh http://127.0.0.1:*; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Связать Windows-приложение — WT Mod Manager</title>
+  <link rel="icon" href="assets/LogotipProject.png" type="image/png">
+  <style>
+    body{background:#121a28;color:#eef3ff;font:16px Segoe UI,Arial,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center}
+    main{width:min(560px,calc(100% - 40px));padding:30px;border:1px solid #40516d;border-radius:16px;background:#202d42;box-sizing:border-box}
+    h1{font-size:25px;margin:0 0 12px}
+    p{line-height:1.6;color:#c5d3e9}
+    button{background:#3b6eac;color:white;border:0;border-radius:10px;padding:13px 20px;font:inherit;cursor:pointer}
+    button:disabled{opacity:.55;cursor:default}
+    #result{min-height:26px}
+    a{color:#9bc8ff}
+  </style>
+  <script type="module" src="js/desktop-link.mjs"></script>
+</head>
+<body><main>
+  <h1>Подключить WT Mod Manager</h1>
+  <p>Открой эту страницу в браузере, где ты вошёл в свой аккаунт на официальном сайте. Нажми кнопку только если сам запустил привязку в Windows-приложении.</p>
+  <p>Твои моды останутся привязанными только к этому аккаунту. Скачивание ZIP на сайте само по себе ничего не устанавливает в приложении.</p>
+  <button type="button" id="connectApp">Связать аккаунт с приложением</button>
+  <p id="result" role="status" aria-live="polite"></p>
+  <p><a href="mods/mods.html">Открыть библиотеку модов</a></p>
+</main></body>
+</html>
