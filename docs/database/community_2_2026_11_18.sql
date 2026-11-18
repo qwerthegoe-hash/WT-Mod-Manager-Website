@@ -259,12 +259,12 @@ for each row execute function wtmm_security.notify_ticket_status();
 -- Aggregate approved-mod popularity without exposing other users' favorite rows.
 -- This private definer function returns only a count for an approved mod.
 create or replace function wtmm_security.approved_favorite_count(p_mod_id uuid)
-returns bigint language sql stable security definer set search_path='' as $
+returns bigint language sql stable security definer set search_path='' as $$
 select case when exists(
  select 1 from public.wtmm_mods m where m.id=p_mod_id and m.status='approved'
 ) then (select count(*) from public.wtmm_mod_favorites f where f.mod_id=p_mod_id)
 else 0 end;
-$;
+$$;
 revoke all on function wtmm_security.approved_favorite_count(uuid) from public,anon;
 grant execute on function wtmm_security.approved_favorite_count(uuid) to authenticated;
 
