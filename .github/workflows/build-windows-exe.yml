@@ -1,7 +1,18 @@
-name: Build WT Mod Manager Windows EXE
+name: Build WT Mod Manager Windows Installer
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "ui/**"
+      - "assets/**"
+      - "config/**"
+      - "installer/**"
+      - "tools/build_windows_exe.py"
+      - "tools/build_installer_assets.py"
+      - "requirements-build.txt"
+      - ".github/workflows/build-windows-exe.yml"
   push:
     branches: [main]
     paths:
@@ -9,8 +20,10 @@ on:
       - "ui/**"
       - "assets/**"
       - "config/**"
-      - "requirements-build.txt"
+      - "installer/**"
       - "tools/build_windows_exe.py"
+      - "tools/build_installer_assets.py"
+      - "requirements-build.txt"
       - ".github/workflows/build-windows-exe.yml"
 
 permissions:
@@ -18,9 +31,11 @@ permissions:
 
 jobs:
   windows:
-    name: One-file Windows executable
+    name: Installer + portable Windows x64
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
+    env:
+      WTMM_VERSION: 1.3.0-beta.5
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -40,74 +55,111 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-build.txt
 
-      - name: Check Python source
+      - name: Check Python source and Qt imports
         run: |
-          python -m compileall -q src ui
+          python -m compileall -q src ui tools tests
           python -c "import src.main; import ui.main_window; print('Python and Qt imports OK')"
 
-      - name: Build EXE
+      - name: Build portable and installed application
         run: python tools/build_windows_exe.py
 
-      - name: SHA256 of executable
-        shell: pwsh
-        run: Get-FileHash -Algorithm SHA256 dist/WTModManager.exe | Format-List
+      - name: Generate branded wizard art from official logo
+        run: python tools/build_installer_assets.py
 
-      - name: Upload standalone EXE
+      - name: Install Inno Setup 6.7.1
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --version=6.7.1 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup install failed" }
+          }
+          if (-not (Test-Path $compiler)) { throw "Missing Inno Setup compiler" }
+
+      - name: Compile custom dark installer
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $compiler "/DMyAppVersion=$env:WTMM_VERSION" "installer\WTModManager.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed" }
+          if (-not (Test-Path "dist\WTModManager-Setup.exe")) { throw "Setup EXE missing" }
+          if ((Get-Item "dist\WTModManager-Setup.exe").Length -lt 1048576) { throw "Installer unexpectedly small" }
+
+      - name: Windows smoke test install, run and uninstall
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP "WTMM-Installer-Smoke"
+          $setup = (Resolve-Path "dist\WTModManager-Setup.exe").Path
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $target + '" /TASKS="!desktopicon"'
+          $p = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent installation failed" }
+          if (-not (Test-Path "$target\WTModManager.exe")) { throw "Installed EXE missing" }
+          if (-not (Test-Path "$target\_internal")) { throw "Qt runtime folder missing" }
+          if (-not (Test-Path "$target\wtmm.installed")) { throw "Installed marker missing" }
+          $uninstaller = (Get-ChildItem "$target\unins*.exe" | Select-Object -First 1).FullName
+          if (-not $uninstaller) { throw "Windows uninstaller missing" }
+          $app = Start-Process -FilePath "$target\WTModManager.exe" -ArgumentList "--updated" -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $app.Refresh()
+            if ($app.HasExited) { throw "Installed GUI closed unexpectedly" }
+          }
+          finally {
+            taskkill.exe /PID $app.Id /T /F 2>$null | Out-Null
+          }
+          $u = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "Uninstaller failed" }
+          if (Test-Path "$target\WTModManager.exe") { throw "Program not removed after uninstall" }
+          Write-Output "Installed app, launched GUI and uninstalled successfully"
+
+      - name: SHA256 manifest for installer and compatible portable copy
+        shell: pwsh
+        run: |
+          $portable = (Get-FileHash -Algorithm SHA256 dist\WTModManager.exe).Hash.ToLowerInvariant()
+          $installer = (Get-FileHash -Algorithm SHA256 dist\WTModManager-Setup.exe).Hash.ToLowerInvariant()
+          @("$portable  WTModManager.exe", "$installer  WTModManager-Setup.exe") | Set-Content dist\SHA256SUMS.txt -Encoding ascii
+          Write-Output "Portable SHA256: $portable"
+          Write-Output "Setup SHA256: $installer"
+
+      - name: Upload Windows setup and portable compatibility copy
         uses: actions/upload-artifact@v4
         with:
           name: WTModManager-Windows-${{ github.run_number }}
-          path: dist/WTModManager.exe
+          path: |
+            dist/WTModManager-Setup.exe
+            dist/WTModManager.exe
+            dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
 
-      - name: Create checksum manifest
-        shell: pwsh
-        run: |
-          $hash = (Get-FileHash -Algorithm SHA256 dist/WTModManager.exe).Hash.ToLowerInvariant()
-          "$hash  WTModManager.exe" | Set-Content -Path dist/SHA256SUMS.txt -Encoding ascii
-
-      - name: Publish Windows 1.3 test beta after successful build
+      - name: Publish installer prerelease from main
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'v1.3.0-beta.4'
+          $tag = "v$env:WTMM_VERSION"
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Output "Release $tag already exists; no overwrite."
+            Write-Output "Release $tag already exists; no overwrite"
             exit 0
           }
-
           @'
-          WT Mod Manager 1.3 - Test Beta (Windows x64)
-
-          This test beta removes the unused GPT/AI assistant from the website,
-          desktop GUI and server API. No OpenAI API is needed. All local
-          diagnostics, updates and account notifications remain available.
-
-          Portable one-file Windows build with optional account-linked
-          online downloads, per-account mod sets, improved audio preview,
-          backup/restore controls and opt-in verified EXE updating.
-
-          TEST BETA: automated source/unit/UI checks are required, but account
-          transfer, game integration and the Windows self-replacement process
-          have not been verified on a real user's system. Keep backups and
-          test this build before making it the official website download.
-
-          Your settings and personal mod files remain in your Windows user
-          profile. Verify file integrity using SHA256SUMS.txt.
-
-          Independent fan project; not affiliated with Gaijin Entertainment.
-          '@ | Set-Content -Path release-notes.md -Encoding utf8
-
-          gh release create $tag dist/WTModManager.exe dist/SHA256SUMS.txt `
-            --repo $env:GITHUB_REPOSITORY `
-            --target $env:GITHUB_SHA `
-            --title 'WT Mod Manager 1.3 - Windows Test Beta' `
-            --notes-file release-notes.md `
-            --prerelease `
-            --latest=false
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to publish Windows beta release.' }
+          WT Mod Manager Windows Installer (Test Beta)
+          Recommended: download WTModManager-Setup.exe.
+          Own project logo, dark setup wizard, install-folder selection,
+          Start menu shortcut, optional desktop shortcut and taskbar pin
+          instructions, run-on-finish option and full uninstaller.
+          The installer includes all Qt dependencies in its onedir payload.
+          Personal settings and mods remain in %LOCALAPPDATA%\WTModManager.
+          Legacy users may still download portable WTModManager.exe.
+          Installed users get verified setup updates in later versions.
+          This is a TEST BETA; verify it before replacing the public download.
+          Independent fan project, not affiliated with Gaijin Entertainment.
+          '@ | Set-Content release-notes.md -Encoding utf8
+          gh release create $tag dist/WTModManager-Setup.exe dist/WTModManager.exe dist/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "WT Mod Manager $env:WTMM_VERSION - Branded Installer Beta" --notes-file release-notes.md --prerelease --latest=false
+          if ($LASTEXITCODE -ne 0) { throw "Release publish failed" }
           gh release view $tag --repo $env:GITHUB_REPOSITORY
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to verify Windows beta release.' }
+          if ($LASTEXITCODE -ne 0) { throw "Release verification failed" }
