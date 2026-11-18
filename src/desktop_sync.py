@@ -13,7 +13,10 @@ import json
 import os
 import re
 import secrets
+import shutil
 import sys
+import threading
+from functools import wraps
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
@@ -171,6 +174,90 @@ def _safe_entries(data: bytes, category: str):
         return unpacked
 
 
+
+# Qt GUI events and background network workers may both mutate the same
+# account manifest. Serialize all account-level changes within this process.
+_MANIFEST_LOCK = threading.RLock()
+
+
+def _manifest_serialized(fn):
+    @wraps(fn)
+    def run(*args, **kwargs):
+        with _MANIFEST_LOCK:
+            return fn(*args, **kwargs)
+    return run
+
+
+def _managed_name(name, mod_id, category):
+    return (
+        isinstance(name, str)
+        and name == Path(name).name
+        and name.startswith(mod_id[:8] + "-")
+        and Path(name).suffix.lower() in EXTENSIONS.get(category, set())
+        and len(name) <= 110
+        and "/" not in name and "\\" not in name
+    )
+
+
+def _write_manifest(manifest, library):
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    temporary = manifest.with_suffix(".tmp")
+    temporary.write_text(json.dumps(library, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temporary, manifest)
+
+
+@_manifest_serialized
+def restore_previous_mod(user_id: str, mod_id: str) -> tuple[int, str]:
+    """Restore last version of an online mod, never touching PC-local files."""
+    if not UUID.fullmatch(user_id) or not UUID.fullmatch(mod_id):
+        raise PackageError("Invalid account or mod identifier.")
+    account = DATA_DIR / "accounts" / user_id
+    library = imported_library(user_id)
+    current = library.get(mod_id)
+    if not isinstance(current, dict) or not isinstance(current.get("previous"), dict):
+        raise PackageError("No previous version is available.")
+    previous = current["previous"]
+    category = str(previous.get("category", ""))
+    if category != current.get("category") or category not in LOCAL_FOLDERS:
+        raise PackageError("Previous version is incompatible.")
+    files = previous.get("files")
+    backup_id = previous.get("backup_id")
+    if (not isinstance(files, list) or not files or len(files) > 70 or
+            not all(_managed_name(name, mod_id, category) for name in files) or
+            not isinstance(backup_id, str) or not re.fullmatch(r"[0-9a-f]{24}", backup_id)):
+        raise PackageError("Invalid version history.")
+    backup = account / "history" / mod_id / backup_id
+    destination = account / "mods" / LOCAL_FOLDERS[category]
+    if not all((backup / name).is_file() and not (backup / name).is_symlink() for name in files):
+        raise PackageError("Previous version backup is missing.")
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in files:
+        temp = destination / (name + ".restore")
+        try:
+            shutil.copy2(backup / name, temp)
+            os.replace(temp, destination / name)
+        finally:
+            temp.unlink(missing_ok=True)
+    # Drop only obsolete assets managed by this mod in the current account.
+    for name in current.get("files", []):
+        if name not in files and _managed_name(name, mod_id, category):
+            target = destination / name
+            if target.is_file() and not target.is_symlink():
+                target.unlink()
+    library[mod_id] = {
+        "title": str(previous.get("title", ""))[:90],
+        "version": str(previous.get("version", ""))[:32],
+        "category": category,
+        "sha256": str(previous.get("sha256", "")),
+        "files": files,
+        "imported_at": int(time.time()),
+    }
+    _write_manifest(account / "imported-mods.json", library)
+    shutil.rmtree(backup, ignore_errors=True)
+    return len(files), category
+
+
+@_manifest_serialized
 def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
     if not UUID.fullmatch(user_id):
         raise PackageError("Invalid account identifier.")
@@ -194,6 +281,30 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
         return 0  # No duplicate imports if the same mod is re-requested.
     unpacked = _safe_entries(archive_bytes, category)
     dest.mkdir(parents=True, exist_ok=True)
+    # Retain one previous version before modifying any currently installed
+    # managed assets. This backup is scoped to this account and mod only.
+    previous = None
+    history_dir = account / "history" / mod_id
+    if isinstance(old, dict) and old.get("category") == category:
+        old_names = old.get("files")
+        if (isinstance(old_names, list) and old_names
+                and len(old_names) <= 70
+                and all(_managed_name(n, mod_id, category) for n in old_names)
+                and all((dest / n).is_file() and not (dest / n).is_symlink() for n in old_names)):
+            backup_id = secrets.token_hex(12)
+            backup = history_dir / backup_id
+            backup.mkdir(parents=True, exist_ok=False)
+            for name in old_names:
+                shutil.copy2(dest / name, backup / name)
+            previous = {
+                "title": str(old.get("title", ""))[:90],
+                "version": str(old.get("version", ""))[:32],
+                "category": category,
+                "sha256": str(old.get("sha256", "")),
+                "files": list(old_names),
+                "imported_at": old.get("imported_at"),
+                "backup_id": backup_id,
+            }
     names = []
     for index, (original, ext, raw) in enumerate(unpacked):
         stem = re.sub(r"[^A-Za-z0-9_-]+", "-", Path(original).stem)[:35].strip("-") or "asset"
@@ -212,20 +323,27 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
         "category": category,
         "sha256": archive_sha,
         "files": names,
-        "imported_at": int(time.time())
+        "imported_at": int(time.time()),
+        **({"previous": previous} if previous else {}),
     }
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    temp_manifest = manifest.with_suffix(".tmp")
-    temp_manifest.write_text(json.dumps(library, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(temp_manifest, manifest)
+    _write_manifest(manifest, library)
     # Remove only older files generated for this mod and this same account.
-    if isinstance(old, dict):
+    if isinstance(old, dict) and old.get("category") == category:
         for name in old.get("files", []):
-            if name not in names and isinstance(name, str) and Path(name).name == name:
-                (dest / name).unlink(missing_ok=True)
+            if name not in names and _managed_name(name, mod_id, category):
+                target = dest / name
+                if not target.is_symlink():
+                    target.unlink(missing_ok=True)
+    # Keep the last backup; older backups are pruned after successful install.
+    if history_dir.is_dir():
+        current_backup = previous.get("backup_id") if previous else None
+        for folder in history_dir.iterdir():
+            if folder.is_dir() and folder.name != current_backup:
+                shutil.rmtree(folder, ignore_errors=True)
     return len(names)
 
 
+@_manifest_serialized
 def imported_library(user_id: str | None) -> dict:
     if not user_id or not UUID.fullmatch(user_id):
         return {}
@@ -264,9 +382,9 @@ class DesktopSync(QObject):
         task = self._pool.submit(self._work, action, token)
         def complete(future):
             try:
-                self._completed.emit((action, True, future.result()))
+                self._completed.emit((action, token, True, future.result()))
             except Exception as error:
-                self._completed.emit((action, False, str(error)[:200]))
+                self._completed.emit((action, token, False, str(error)[:200]))
         task.add_done_callback(complete)
         return True
 
@@ -294,7 +412,9 @@ class DesktopSync(QObject):
         self.account_changed.emit("")
         self.status_changed.emit("Аккаунт отключён. Локальные файлы сохранены.")
         if token:
-            self._start("revoke", token)
+            # A poll may still be running. Revoke after it, rather than
+            # silently dropping the revoke request because _busy is true.
+            self._pool.submit(self._work, "revoke", token)
 
     @staticmethod
     def _work(action: str, token: str) -> dict:
@@ -330,8 +450,14 @@ class DesktopSync(QObject):
         return {"paired": True, "user_id": user_id, "changed": list(set(changes))}
 
     def _on_completed(self, response) -> None:
-        action, ok, result = response
+        action, completed_token, ok, result = response
         self._busy = False
+        if action == "revoke":
+            return
+        # Disconnect/relink can occur while a background poll is in flight.
+        # Never let an old account's result reactivate its interface.
+        if completed_token != (self._pairing_token or self._token):
+            return
         if not ok:
             if action != "poll":
                 self.status_changed.emit("Ошибка соединения: " + str(result))

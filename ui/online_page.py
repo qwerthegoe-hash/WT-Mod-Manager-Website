@@ -7,10 +7,10 @@ from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QMessageBox, QApplication
+    QListWidget, QListWidgetItem, QMessageBox, QApplication
 )
 
-from src.desktop_sync import DesktopSync, imported_library, SITE_LINK
+from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError
 from src.profile_paths import DATA_DIR, set_active_online_account
 
 
@@ -60,6 +60,11 @@ class OnlinePage(QWidget):
         layout.addWidget(self.list_title)
         self.library = QListWidget()
         layout.addWidget(self.library, 1)
+        self.rollback_button = QPushButton("Восстановить предыдущую версию")
+        self.rollback_button.setEnabled(False)
+        self.rollback_button.clicked.connect(self.restore_selected_version)
+        self.library.itemSelectionChanged.connect(self.update_rollback_control)
+        layout.addWidget(self.rollback_button)
 
         self.bridge = DesktopSync(self)
         self.bridge.status_changed.connect(self.status.setText)
@@ -93,17 +98,63 @@ class OnlinePage(QWidget):
         category_names = {
             "sights": "Прицелы", "sounds": "Звуки", "camouflage": "Камуфляжи"
         }
-        rows = sorted(entries.values(), key=lambda x: x.get("imported_at", 0), reverse=True)
-        for item in rows:
+        for mod_id, item in sorted(
+            entries.items(),
+            key=lambda entry: entry[1].get("imported_at", 0)
+                if isinstance(entry[1], dict) else 0,
+            reverse=True
+        ):
             if not isinstance(item, dict):
                 continue
             category = category_names.get(item.get("category"), "Мод")
             name = str(item.get("title") or "Без названия")
             version = str(item.get("version") or "")
             count = len(item.get("files", []))
-            self.library.addItem(category + " • " + name + " • v" + version + " • файлов: " + str(count))
+            has_history = isinstance(item.get("previous"), dict)
+            label = (category + " • " + name + " • v" + version
+                     + " • файлов: " + str(count)
+                     + (" • предыдущая версия сохранена" if has_history else ""))
+            row = QListWidgetItem(label)
+            row.setData(Qt.ItemDataRole.UserRole, mod_id)
+            self.library.addItem(row)
         if not self.library.count():
             self.library.addItem("Пока нет переданных модов. Локальная библиотека остаётся доступной.")
+        self.update_rollback_control()
+
+    def update_rollback_control(self):
+        item = self.library.currentItem()
+        mod_id = item.data(Qt.ItemDataRole.UserRole) if item else None
+        entries = imported_library(self.bridge.user_id)
+        entry = entries.get(mod_id) if mod_id else None
+        self.rollback_button.setEnabled(
+            isinstance(entry, dict) and isinstance(entry.get("previous"), dict)
+        )
+
+    def restore_selected_version(self):
+        item = self.library.currentItem()
+        mod_id = item.data(Qt.ItemDataRole.UserRole) if item else None
+        if not mod_id or not self.bridge.user_id:
+            return
+        entry = imported_library(self.bridge.user_id).get(mod_id)
+        if not isinstance(entry, dict) or not isinstance(entry.get("previous"), dict):
+            QMessageBox.information(self, "История", "Для этого мода нет предыдущей версии.")
+            return
+        previous = entry["previous"]
+        answer = QMessageBox.question(
+            self, "Восстановление",
+            "Восстановить предыдущую версию "
+            + str(previous.get("version", "")) + " мода «"
+            + str(entry.get("title", "")) + "»? Текущая версия будет заменена."
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            count, category = restore_previous_mod(self.bridge.user_id, mod_id)
+            self.refresh_library()
+            self.assets_changed.emit(category)
+            self.status.setText("Предыдущая версия восстановлена (файлов: " + str(count) + ").")
+        except (PackageError, OSError, ValueError) as error:
+            QMessageBox.warning(self, "Ошибка восстановления", str(error))
 
     def open_folder(self):
         if not self.bridge.user_id:
