@@ -6,6 +6,7 @@ import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { createSessionDrafts } from "../js/session-drafts.mjs";
 import { setupProfileMfa } from "../js/profile-mfa.mjs";
+import { mountCommunityDashboard } from "../js/community2-dashboard.mjs";
 
 const $ = id => document.getElementById(id);
 const COLORS = new Set(["blue", "teal", "purple"]);
@@ -404,6 +405,9 @@ async function init() {
         // Identity can load even when the profile database is temporarily unavailable.
         $("userProfileTitle").textContent = user.email || "Player_" + user.id.slice(0, 6);
         await loadProfile();
+        // Dashboard is independent of profile saving and account recovery.
+        void mountCommunityDashboard(db,user).catch(error =>
+            report("Не удалось загрузить Community 2.0: "+error.message,true,"community2Notice"));
         const recoveredDraft = restoreProfileDraft();
         window.WTDiagnostics?.record?.("profile-load-ok");
         setSaving(false);
