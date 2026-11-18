@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
 from src.update_checker import find_update, download_verified, repository, _sha256
-from src.portable_updater import launch_verified_update
+from src.portable_updater import launch_verified_update, launch_verified_rollback, previous_exe_available
 from src.update_notifications import (
     load_notifications, record_event, set_auto_check, ignore_version
 )
