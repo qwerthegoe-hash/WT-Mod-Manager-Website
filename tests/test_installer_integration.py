@@ -124,7 +124,8 @@ class BrandedInstallerTests(unittest.TestCase):
             "Filename: \"{sys}\\notepad.exe\"",
         ):
             self.assertIn(requirement, script)
-        self.assertNotIn("[UninstallDelete]", script)
+        self.assertIn("Type: files; Name: \"{autodesktop}\\WT Mod Manager.lnk\"", script)
+        self.assertNotIn("Name: \"{localappdata}\\WTModManager", script)
         self.assertNotIn("forcedtaskbarpin", script.lower())
 
     def test_setup_launcher_rejects_nonwindows_execution(self):
