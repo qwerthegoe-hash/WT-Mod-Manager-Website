@@ -1,12 +1,23 @@
-"""Non-blocking, explicitly confirmed updates of the portable Windows EXE."""
+"""Live, non-blocking Windows EXE update checks and account-local notices.
+
+Checking for a new release never closes the app. After the user accepts,
+a verified EXE is downloaded in the background; only the final installation
+requires the safe short restart handled by portable_updater.py.
+"""
 from __future__ import annotations
 
 import sys
+
 from PySide6.QtCore import QObject, QThread, Signal, Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
 
-from src.update_checker import find_update, download_verified, repository
+from src.update_checker import find_update, download_verified, repository, _sha256
 from src.portable_updater import launch_verified_update
+from src.update_notifications import (
+    load_notifications, record_event, set_auto_check, ignore_version
+)
+
+CHECK_INTERVAL_MS = 10 * 60 * 1000
 
 
 class UpdateWorker(QObject):
@@ -19,13 +30,21 @@ class UpdateWorker(QObject):
     @Slot()
     def run(self):
         try:
-            value = download_verified(self.download_info) if self.download_info else find_update()
+            if self.download_info is not None:
+                path = download_verified(self.download_info)
+                value = {"path": path, "release": self.download_info}
+            else:
+                value = find_update()
             self.finished.emit(value, "")
         except Exception as error:
-            self.finished.emit(None, str(error))
+            self.finished.emit(None, str(error)[:250])
 
 
 class UpdateController(QObject):
+    update_available = Signal(object)
+    notifications_changed = Signal()
+    tray_notification = Signal(str, str)
+
     def __init__(self, parent=None, on_install_ready=None):
         super().__init__(parent if isinstance(parent, QObject) else None)
         self.parent_window = parent if hasattr(parent, "windowTitle") else None
@@ -34,24 +53,71 @@ class UpdateController(QObject):
         self.worker = None
         self._queued_download = None
         self._manual_check = False
+        self.current_update = None
+        self._timer = QTimer(self)
+        self._timer.setInterval(CHECK_INTERVAL_MS)
+        self._timer.timeout.connect(self.check)
+        self._timer.start()
+
+    def automatic_checks_enabled(self):
+        return load_notifications()["auto_check"]
+
+    def set_automatic_checks_enabled(self, enabled):
+        set_auto_check(enabled)
+        if enabled:
+            self.check()
+        self.notifications_changed.emit()
 
     def check(self):
-        if repository() is None or self.thread is not None:
+        """Periodic/startup check when running, including in the system tray."""
+        if (not self.automatic_checks_enabled() or
+                repository() is None or self.thread is not None):
             return
         self._start(None)
 
     def check_manual(self):
+        """Manual checks bypass the automatic-check preference."""
         if self.thread is not None:
+            self.tray_notification.emit(
+                "WT Mod Manager", "Проверка или скачивание обновления уже выполняется."
+            )
             return
         if repository() is None:
-            QMessageBox.warning(self.parent_window, "Обновления", "Проверка обновлений пока не настроена.")
+            QMessageBox.warning(
+                self.parent_window, "Обновления", "Источник обновлений пока не настроен."
+            )
             return
         self._manual_check = True
         self._start(None)
 
+    def request_install(self):
+        """An explicit user action. No forced app close on a mere notification."""
+        info = self.current_update
+        if info is None:
+            self.check_manual()
+            return
+        if self.thread is not None:
+            return
+        choice = QMessageBox.question(
+            self.parent_window, "Скачать обновление",
+            "Доступна " + str(info["version"]) +
+            ". Скачать официальный файл WTModManager.exe и проверить SHA-256?"
+            "\nПриложение продолжит работать во время скачивания.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if choice == QMessageBox.StandardButton.Yes:
+            self._start(info)
+
+    def ignore_current_version(self):
+        if self.current_update:
+            ignore_version(str(self.current_update["version"]))
+            self.notifications_changed.emit()
+
     def _start(self, info):
         if self.thread is not None:
-            self._queued_download = info
+            if info is not None:
+                self._queued_download = info
             return
         self.thread = QThread(self)
         self.worker = UpdateWorker(info)
@@ -71,53 +137,99 @@ class UpdateController(QObject):
         self.thread = None
         self.worker = None
         if self._queued_download is not None:
-            next_download = self._queued_download
+            queued = self._queued_download
             self._queued_download = None
-            QTimer.singleShot(0, lambda: self._start(next_download))
+            QTimer.singleShot(0, lambda: self._start(queued))
 
     def _finished(self, result, error, downloaded):
         manual = self._manual_check
         self._manual_check = False
         if error:
-            if downloaded or manual:
-                QMessageBox.warning(self.parent_window, "Ошибка обновления", error)
+            if downloaded:
+                record_event(
+                    "update_failed", "Не удалось скачать обновление",
+                    "Скачивание или проверка не прошли: " + error,
+                    event_id="failed-download-" + str(self.current_update and
+                                                     self.current_update.get("version")) +
+                                                     "-" + str(__import__("time").time_ns())
+                )
+                self.notifications_changed.emit()
+                QMessageBox.warning(self.parent_window, "Обновление", error)
+            elif manual:
+                QMessageBox.warning(self.parent_window, "Обновление", error)
+            # A temporary network outage must not close the open application.
             return
         if result is None:
             if manual and not downloaded:
-                QMessageBox.information(self.parent_window, "Обновления", "Новых версий пока нет.")
+                QMessageBox.information(
+                    self.parent_window, "Обновления", "Новых версий пока нет."
+                )
             return
         if not downloaded:
-            answer = QMessageBox.question(
-                self.parent_window, "Обновление WT Mod Manager",
-                "Доступна версия " + str(result["version"]) +
-                ". Скачать проверенный Windows EXE в фоне? После проверки "
-                "будет предложено закрыть и обновить приложение.",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+            self.current_update = result
+            newly_recorded = record_event(
+                "update_available", "Доступна новая версия WT Mod Manager",
+                "Версия " + str(result["version"]) + " готова к скачиванию.",
+                str(result["version"]), "update-available:" + str(result["version"])
             )
-            if answer == QMessageBox.StandardButton.Yes:
-                self._queued_download = result
-        else:
-            answer = QMessageBox.question(
-                self.parent_window, "Обновление готово",
-                "Новая версия загружена, её SHA-256 и размер проверены. "
-                "Сохранённые настройки и моды останутся на месте.\n"
-                "Перезапустить WT Mod Manager, заменив EXE?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
-            if answer != QMessageBox.StandardButton.Yes:
-                return
-            if sys.platform != "win32" or not getattr(sys, "frozen", False):
-                QMessageBox.information(
-                    self.parent_window, "Обновление",
-                    "Самообновление доступно только из собранного WTModManager.exe."
+            self.update_available.emit(result)
+            if newly_recorded:
+                self.notifications_changed.emit()
+            if (newly_recorded and
+                    load_notifications()["ignored_version"] != result["version"]):
+                self.tray_notification.emit(
+                    "Обновление WT Mod Manager",
+                    "Новая версия " + str(result["version"]) +
+                    " доступна. Открой приложение, чтобы установить её."
                 )
-                return
-            try:
-                launch_verified_update(result)
-            except (OSError, ValueError, RuntimeError) as error:
-                QMessageBox.warning(self.parent_window, "Ошибка самообновления", str(error))
-                return
-            if callable(self.on_install_ready):
-                QTimer.singleShot(0, self.on_install_ready)
+            if manual:
+                QMessageBox.information(
+                    self.parent_window, "Найдена новая версия",
+                    "Доступна " + str(result["version"]) +
+                    ". Открой вкладку «Загрузки», чтобы скачать и установить."
+                )
+            return
+
+        info = result["release"]
+        staged = result["path"]
+        # Re-check the staged file immediately before handing it to the
+        # installer, even though the download worker already verified it.
+        if _sha256(staged) != info["digest"]:
+            QMessageBox.warning(
+                self.parent_window, "Ошибка обновления",
+                "Загруженный файл изменился после проверки. Установка отменена."
+            )
+            return
+        record_event(
+            "update_ready", "Обновление скачано",
+            "Версия " + str(info["version"]) +
+            " проверена по SHA-256; нужна перезагрузка программы.",
+            str(info["version"]), "update-ready:" + str(info["version"])
+        )
+        self.notifications_changed.emit()
+
+        choice = QMessageBox.question(
+            self.parent_window, "Установить обновление",
+            "WT Mod Manager " + str(info["version"]) +
+            " скачан и проверен.\n"
+            "Завершить работу приложения, сохранить прежний EXE в резервной "
+            "копии и автоматически открыть новую версию?\n"
+            "Текущие моды и настройки не удаляются.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        if sys.platform != "win32" or not getattr(sys, "frozen", False):
+            QMessageBox.information(
+                self.parent_window, "Обновление",
+                "Замена приложения доступна только в готовом Windows EXE."
+            )
+            return
+        try:
+            launch_verified_update(staged)
+        except (OSError, ValueError, RuntimeError) as problem:
+            QMessageBox.warning(self.parent_window, "Ошибка обновления", str(problem))
+            return
+        if callable(self.on_install_ready):
+            QTimer.singleShot(0, self.on_install_ready)
