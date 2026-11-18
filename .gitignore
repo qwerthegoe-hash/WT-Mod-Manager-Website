@@ -24,3 +24,6 @@ __pycache__/
 .venv/
 venv/
 *.log
+
+# PyInstaller-generated intermediate files.
+build/

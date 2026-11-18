@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
     QStyle,
 )
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+        else Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(ROOT))
 
 from ui.main_window import LaunchPrompt, ManagerWindow

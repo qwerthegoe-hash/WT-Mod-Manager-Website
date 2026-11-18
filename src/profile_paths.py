@@ -5,7 +5,8 @@ import sys
 from pathlib import Path
 
 APP_NAME = "WTModManager"
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
+                else Path(__file__).resolve().parent.parent)
 LEGACY_DATA = PROJECT_ROOT / "data"
 LEGACY_MODS = PROJECT_ROOT / "mods"
 

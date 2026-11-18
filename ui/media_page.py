@@ -85,7 +85,7 @@ class MediaPage(QWidget):
     def __init__(self, title, description, folder, item_name):
         super().__init__()
 
-        self.folder = ROOT / "mods" / folder
+        self.folder = MODS_DIR / folder
         self.folder.mkdir(parents=True, exist_ok=True)
 
         self.item_name = item_name
