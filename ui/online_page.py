@@ -7,11 +7,15 @@ from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit
+    QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit,
+    QComboBox, QInputDialog, QAbstractItemView
 )
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
-from src.profile_paths import DATA_DIR, set_active_online_account
+from src.profile_paths import (
+    DATA_DIR, set_active_online_account, load_mod_profiles,
+    save_mod_profile, set_active_mod_profile, delete_mod_profile
+)
 
 
 class OnlinePage(QWidget):
@@ -63,12 +67,26 @@ class OnlinePage(QWidget):
         self.list_title = QLabel("Импортированные моды этого аккаунта")
         offline_layout.addWidget(self.list_title)
         self.library = QListWidget()
+        self.library.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         offline_layout.addWidget(self.library, 1)
         self.rollback_button = QPushButton("Восстановить предыдущую версию")
         self.rollback_button.setEnabled(False)
         self.rollback_button.clicked.connect(self.restore_selected_version)
         self.library.itemSelectionChanged.connect(self.update_rollback_control)
         offline_layout.addWidget(self.rollback_button)
+        presets = QHBoxLayout()
+        self.profile_picker = QComboBox()
+        presets.addWidget(self.profile_picker, 1)
+        self.profile_save = QPushButton("Сохранить набор")
+        self.profile_save.clicked.connect(self.save_selected_profile)
+        presets.addWidget(self.profile_save)
+        self.profile_apply = QPushButton("Применить")
+        self.profile_apply.clicked.connect(self.apply_selected_profile)
+        presets.addWidget(self.profile_apply)
+        self.profile_delete = QPushButton("Удалить")
+        self.profile_delete.clicked.connect(self.remove_selected_profile)
+        presets.addWidget(self.profile_delete)
+        offline_layout.addLayout(presets)
         self.tabs.addTab(offline_tab, "Мои загрузки")
 
         catalog_tab = QWidget()
@@ -109,6 +127,12 @@ class OnlinePage(QWidget):
         if app:
             app.aboutToQuit.connect(self.bridge.stop)
         self.refresh_library()
+        self.refresh_profile_controls()
+        self.profile_picker.currentIndexChanged.connect(
+            lambda _: self.profile_delete.setEnabled(
+                bool(self.bridge.user_id and self.profile_picker.currentData())
+            )
+        )
 
     def connect_account(self):
         self.bridge.link_account()
@@ -124,9 +148,11 @@ class OnlinePage(QWidget):
         self.render_catalog()
         self.account_changed.emit()
         self.refresh_library()
+        self.refresh_profile_controls()
 
     def on_import(self, category):
         self.refresh_library()
+        self.refresh_profile_controls()
         self.assets_changed.emit(category)
         self.status.setText("Новые файлы добавлены без перезапуска WT Mod Manager.")
 
@@ -180,6 +206,70 @@ class OnlinePage(QWidget):
             "https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/"
             "community/community.html"
         ))
+
+    def refresh_profile_controls(self):
+        self.profile_picker.blockSignals(True)
+        self.profile_picker.clear()
+        self.profile_picker.addItem("Все скачанные", None)
+        if self.bridge.user_id:
+            state = load_mod_profiles(self.bridge.user_id)
+            for name in sorted(state["profiles"], key=str.casefold):
+                self.profile_picker.addItem(name, name)
+            idx = self.profile_picker.findData(state["active"])
+            if idx >= 0:
+                self.profile_picker.setCurrentIndex(idx)
+        self.profile_picker.blockSignals(False)
+        active = bool(self.bridge.user_id)
+        self.profile_picker.setEnabled(active)
+        self.profile_save.setEnabled(active)
+        self.profile_apply.setEnabled(active)
+        self.profile_delete.setEnabled(active and self.profile_picker.currentData() is not None)
+
+    def save_selected_profile(self):
+        if not self.bridge.user_id:
+            return
+        name, ok = QInputDialog.getText(self, "Набор модов", "Название набора:")
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        if name in load_mod_profiles(self.bridge.user_id)["profiles"]:
+            if QMessageBox.question(self, "Заменить набор", "Обновить существующий набор «" + name + "»?") != QMessageBox.StandardButton.Yes:
+                return
+        ids = [str(item.data(Qt.ItemDataRole.UserRole))
+               for item in self.library.selectedItems()
+               if UUID.fullmatch(str(item.data(Qt.ItemDataRole.UserRole) or ""))]
+        try:
+            count = save_mod_profile(self.bridge.user_id, name, ids)
+            self.refresh_profile_controls()
+            index = self.profile_picker.findData(name)
+            if index >= 0:
+                self.profile_picker.setCurrentIndex(index)
+            self.status.setText("Набор «" + name + "» сохранён (модов: " + str(count) + ").")
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Ошибка набора", str(error))
+
+    def apply_selected_profile(self):
+        if not self.bridge.user_id:
+            return
+        name = self.profile_picker.currentData()
+        try:
+            set_active_mod_profile(self.bridge.user_id, name)
+            self.account_changed.emit()
+            self.status.setText("Включён набор «" + name + "»." if name else
+                                "Показаны все моды этого аккаунта.")
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Ошибка переключения", str(error))
+
+    def remove_selected_profile(self):
+        name = self.profile_picker.currentData()
+        if not self.bridge.user_id or not name:
+            return
+        if QMessageBox.question(self, "Удалить набор", "Удалить «" + name + "» без удаления файлов?") != QMessageBox.StandardButton.Yes:
+            return
+        delete_mod_profile(self.bridge.user_id, name)
+        self.refresh_profile_controls()
+        self.account_changed.emit()
+        self.status.setText("Набор удалён; файлы сохранены.")
 
     def refresh_library(self):
         entries = imported_library(self.bridge.user_id)
@@ -263,3 +353,4 @@ class OnlinePage(QWidget):
             set_active_online_account(None)
             self.account_changed.emit()
             self.refresh_library()
+            self.refresh_profile_controls()

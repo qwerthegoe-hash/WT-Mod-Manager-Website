@@ -1,7 +1,7 @@
 
 from pathlib import Path
 import shutil
-from src.profile_paths import MODS_DIR, online_mod_folder
+from src.profile_paths import MODS_DIR, online_visible_files
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -206,14 +206,10 @@ class MediaPage(QWidget):
 
         self.file_list.clear()
 
-        folders = [self.folder]
-        account_folder = online_mod_folder(self.folder.name)
-        if account_folder is not None and account_folder.is_dir():
-            folders.append(account_folder)
-
         files = sorted(
             (
-                file for folder in folders for file in folder.iterdir()
+                file for file in (list(self.folder.iterdir()) +
+                                 online_visible_files(self.folder.name))
                 if file.is_file()
                 and file.suffix.lower() in EXTENSIONS
             ),

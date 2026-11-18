@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from src.profile_paths import MODS_DIR, online_mod_folder
+from src.profile_paths import MODS_DIR, online_visible_files
 import shutil
 
 from PySide6.QtCore import Qt
@@ -253,16 +253,10 @@ class SightsPage(QWidget):
         self.sight_list.blockSignals(True)
         self.sight_list.clear()
 
-        folders = [SIGHTS_DIR]
-        account_folder = online_mod_folder("sights")
-        if account_folder is not None and account_folder.is_dir():
-            folders.append(account_folder)
-
         image_files = sorted(
             [
                 file_path
-                for folder in folders
-                for file_path in folder.iterdir()
+                for file_path in (list(SIGHTS_DIR.iterdir()) + online_visible_files("sights"))
                 if file_path.is_file()
                 and file_path.suffix.lower()
                 in IMAGE_EXTENSIONS
