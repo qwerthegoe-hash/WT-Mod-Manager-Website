@@ -227,7 +227,7 @@ export async function mountCommunityDashboard(db,user) {
       status($("community2Notice"),"Обновляю личный кабинет...");
       await Promise.all([
         renderStats(api),renderFavoriteLibrary(api,db),renderCollections(api,db),
-        renderNotifications(api),renderTickets(api)
+        renderFollowing(api,db),renderNotifications(api),renderTickets(api)
       ]);
       status($("community2Notice"),"");
     }catch(e){status($("community2Notice"),"Не удалось загрузить личный кабинет: "+e.message,true);}
