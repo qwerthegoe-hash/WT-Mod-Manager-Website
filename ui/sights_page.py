@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from src.profile_paths import MODS_DIR
 import shutil
 
 from PySide6.QtCore import Qt
