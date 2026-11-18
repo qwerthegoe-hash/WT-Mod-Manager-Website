@@ -30,14 +30,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path released -Force | Out-Null
-          gh release download v1.3.0-beta.1 --repo $env:GITHUB_REPOSITORY --pattern WTModManager.exe --dir released
+          gh release download v1.3.0-beta.2 --repo $env:GITHUB_REPOSITORY --pattern WTModManager.exe --dir released
           if ($LASTEXITCODE -ne 0) { throw 'Could not download published release' }
           if (-not (Test-Path released/WTModManager.exe)) { throw 'Release EXE is missing' }
 
       - name: Validate GitHub's published digest
         shell: pwsh
         run: |
-          $release = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/v1.3.0-beta.1" | ConvertFrom-Json
+          $release = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/v1.3.0-beta.2" | ConvertFrom-Json
           $asset = $release.assets | Where-Object { $_.name -eq 'WTModManager.exe' } | Select-Object -First 1
           if (-not $asset) { throw 'Release asset metadata missing' }
           $expected = ($asset.digest -replace '^sha256:','').ToLowerInvariant()
@@ -51,7 +51,7 @@ jobs:
         shell: pwsh
         run: |
           $path = (Resolve-Path released/WTModManager.exe).Path
-          $process = Start-Process -FilePath $path -ArgumentList '--demo' -PassThru
+          $process = Start-Process -FilePath $path -ArgumentList '--updated' -PassThru
           try {
             Start-Sleep -Seconds 10
             $process.Refresh()
