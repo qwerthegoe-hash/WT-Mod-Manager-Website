@@ -122,7 +122,8 @@ for (const test of [
   "test-identity-gateway.mjs",
   "test-localization-five.mjs",
   "test-home-only-language.mjs",
-  "test-community-2.mjs"
+  "test-community-2.mjs",
+  "test-rounded-mod-filters.mjs"
 ]) {
   const result = spawnSync(process.execPath, [
     path.join(root, "tools", test)

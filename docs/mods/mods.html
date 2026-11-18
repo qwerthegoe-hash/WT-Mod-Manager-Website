@@ -12,6 +12,7 @@
   <link rel="icon" href="../assets/LogotipProject.png" type="image/png">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="mods.css">
+  <link rel="stylesheet" href="rounded-filters.css">
   <link rel="stylesheet" href="../community2.css">
   <link rel="preconnect" href="https://esm.sh" crossorigin>
     <script type="module" src="mods.js"></script>
@@ -58,9 +59,9 @@
         <span>Поиск</span>
         <input id="modsSearch" type="search" maxlength="90" autocomplete="off" placeholder="Название или автор">
       </label>
-      <label class="mods-input-wrap">
-        <span>Категория</span>
-        <select id="modsCategory">
+      <div class="mods-input-wrap">
+        <span id="modsCategoryLabel">Категория</span>
+        <select id="modsCategory" aria-labelledby="modsCategoryLabel">
           <option value="all">Все категории</option>
           <option value="visuals">Графика и эффекты</option>
           <option value="camouflage">Камуфляжи</option>
@@ -68,17 +69,17 @@
           <option value="interface">Интерфейс</option>
           <option value="other">Другое</option>
         </select>
-      </label>
-      <label class="mods-input-wrap">
-        <span>Сортировка</span>
-        <select id="modsSort">
+      </div>
+      <div class="mods-input-wrap">
+        <span id="modsSortLabel">Сортировка</span>
+        <select id="modsSort" aria-labelledby="modsSortLabel">
           <option value="new">Сначала новые</option>
           <option value="old">Сначала старые</option>
           <option value="name">По названию</option>
           <option value="popular">По популярности</option>
           <option value="relevance">По соответствию</option>
         </select>
-      </label>
+      </div>
     </div>
 
     <div class="community2-search-extras">
