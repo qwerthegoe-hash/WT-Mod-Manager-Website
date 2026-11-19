@@ -49,6 +49,9 @@ jobs:
       - name: Check transparent rounded installer artwork
         run: python -m unittest discover -s tests -p test_installer_assets.py -v
 
+      - name: Test vehicle camouflage image and package workflow on synthetic folders
+        run: python -m unittest discover -s tests -p test_vehicle_camouflages.py -v
+
       - name: Test safe game-file installation, conflict checks and rollback
         run: python -m unittest discover -s tests -p test_game_mod_installer.py -v
 
