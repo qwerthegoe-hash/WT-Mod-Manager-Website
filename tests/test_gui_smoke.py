@@ -48,11 +48,11 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertIsNotNone(window.online_page.update_progress)
             self.assertIsNotNone(window.online_page.update_progress_note)
             window.online_page.begin_update_download()
-            self.assertTrue(window.online_page.update_progress.isVisibleTo(window.online_page))
+            self.assertFalse(window.online_page.update_progress.isHidden())
             window.online_page.set_update_download_progress(57)
             self.assertEqual(window.online_page.update_progress.value(), 57)
             window.online_page.finish_update_download(False)
-            self.assertFalse(window.online_page.update_progress.isVisibleTo(window.online_page))
+            self.assertTrue(window.online_page.update_progress.isHidden())
         finally:
             window.online_page.bridge.stop()
             window.force_close()
