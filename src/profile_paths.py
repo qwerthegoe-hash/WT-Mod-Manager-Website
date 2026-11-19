@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 APP_NAME = "WTModManager"
@@ -178,12 +179,70 @@ def online_visible_files(category):
     return list(dict.fromkeys(results))
 
 
-def migrate_legacy_data():
-    """Copy old data once; keep originals and never overwrite user files.
+def _copy_legacy_if_missing(source, destination):
+    """Stage legacy content in the destination directory before publication.
 
-    Migration can be retried if interrupted. The marker is written only after
-    every copy succeeds. On failure, raise an error rather than silently
-    replacing an existing profile with defaults.
+    A failed or interrupted copy must not leave a partially copied final
+    settings/mod file that a subsequent migration would mistake as complete.
+    """
+    if destination.exists() or destination.is_symlink() or source.is_symlink():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with source.open("rb") as incoming, tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=".wtmm-migrate-",
+            suffix=".tmp",
+            dir=destination.parent,
+            delete=False,
+        ) as outgoing:
+            temporary_path = Path(outgoing.name)
+            shutil.copyfileobj(incoming, outgoing)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+
+        # Do not replace a file created independently while the copy ran.
+        if not destination.exists() and not destination.is_symlink():
+            os.replace(temporary_path, destination)
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _write_migration_marker(marker):
+    """Publish completion only after all migrated files are fully committed."""
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=".wtmm-migration-",
+            suffix=".tmp",
+            dir=DATA_DIR,
+            delete=False,
+        ) as file:
+            temporary_path = Path(file.name)
+            file.write("Migration completed; legacy files retained.\n")
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary_path, marker)
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def migrate_legacy_data():
+    """Safely copy pre-profile files once, preserving legacy and user data.
+
+    On an interrupted copy there is no published partial target; the next
+    startup retries. Existing destination files are not intentionally replaced.
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     marker = DATA_DIR / ".migration-v1-complete"
@@ -191,20 +250,18 @@ def migrate_legacy_data():
         return
 
     legacy_settings = LEGACY_DATA / "settings.json"
-    if legacy_settings.is_file() and not SETTINGS_FILE.exists():
-        shutil.copy2(legacy_settings, SETTINGS_FILE)
+    if legacy_settings.is_file() and not legacy_settings.is_symlink():
+        _copy_legacy_if_missing(legacy_settings, SETTINGS_FILE)
 
-    if LEGACY_MODS.is_dir():
+    if LEGACY_MODS.is_dir() and not LEGACY_MODS.is_symlink():
         for category in ("sights", "camouflages", "sounds", "configurations"):
             old = LEGACY_MODS / category
-            if not old.is_dir():
+            if not old.is_dir() or old.is_symlink():
                 continue
             destination = MODS_DIR / category
             destination.mkdir(parents=True, exist_ok=True)
             for item in old.iterdir():
-                # Only copy regular files, never overwrite existing files.
                 if item.is_file() and not item.is_symlink():
-                    target = destination / item.name
-                    if not target.exists():
-                        shutil.copy2(item, target)
-    marker.write_text("Migration completed; legacy files retained.\n", encoding="utf-8")
+                    _copy_legacy_if_missing(item, destination / item.name)
+
+    _write_migration_marker(marker)

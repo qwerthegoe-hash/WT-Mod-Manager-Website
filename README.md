@@ -18,7 +18,7 @@
 - Сайт GitHub Pages: `docs/index.html`; центр доверия: `docs/trust.html`.
 - Серверная проверка модов: `supabase/functions/wtmm-mod-scan/index.ts` и `zip.ts`.
 - Windows-сборка и релизы: `.github/workflows/build-windows-exe.yml`.
-- Последний проверенный релиз на дату досье: [v1.3.0-beta.12](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12).
+- Последний проверенный релиз: [v1.3.0-beta.13](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13) (19 ноября 2026).
 
 Досье описывает снимок состояния проекта на 19 ноября 2026 года. Секреты и private API keys не должны попадать в клиентскую сборку или публичный репозиторий.
 

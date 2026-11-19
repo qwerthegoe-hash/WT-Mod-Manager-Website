@@ -366,78 +366,70 @@ def _validated_settings(raw):
 
 
 # ==========================================
+# ATOMIC SETTINGS STORAGE AND RECOVERY
+# ==========================================
+
+# A backup contains the previous valid JSON object, not the just-written
+# version. Keep it in the same per-user directory and never sync it to cloud.
+SETTINGS_BACKUP_FILE = SETTINGS_FILE.with_name("settings.json.bak")
+
+
+def _read_settings_json(path):
+    """Read a complete JSON object; reject partial files and invalid roots."""
+    with path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+    if not isinstance(data, dict):
+        raise ValueError("Settings JSON root must be an object")
+    return data
+
+
+def _atomic_write_settings(path, data):
+    """Durably prepare a sibling file before replacing its destination."""
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=".tmp",
+            prefix="settings_",
+            dir=path.parent,
+            delete=False,
+        ) as file:
+            temporary_path = Path(file.name)
+            json.dump(data, file, ensure_ascii=False, indent=4)
+            file.write("\n")
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+# ==========================================
 # LOAD SETTINGS
 # ==========================================
 
 def load_settings():
+    """Load primary settings or recover from the last valid local backup.
+
+    Recovery is read-only: a damaged primary file remains untouched until
+    the user explicitly saves new settings. Missing or invalid copies fall
+    back to defaults without aborting application startup.
     """
-    Загружает настройки из settings.json.
-
-    Если файл отсутствует или повреждён,
-    приложение использует стандартные
-    настройки и продолжает работу.
-
-    Возвращает словарь настроек.
-    """
-
-    # Migrate legacy project/data/settings.json on first use.
-    # This never deletes original settings or overwrites an existing profile.
     migrate_legacy_data()
 
-    # ======================================
-    # READ JSON FILE
-    # ======================================
-
     try:
-
-        with SETTINGS_FILE.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-
-            stored = json.load(file)
-
-    # ======================================
-    # SETTINGS FILE NOT FOUND
-    # ======================================
-
-    except FileNotFoundError:
-
-        stored = {}
-
-    # ======================================
-    # INVALID OR UNREADABLE FILE
-    # ======================================
-
-    except (
-        OSError,
-        ValueError,
-        UnicodeError,
-    ) as error:
-
-        print(
-            "[SETTINGS] Cannot read settings: "
-            f"{error}"
-        )
-
-        stored = {}
-
-    # ======================================
-    # CHECK JSON ROOT
-    # ======================================
-
-    if not isinstance(stored, dict):
-
-        print(
-            "[SETTINGS] Invalid JSON root; "
-            "using defaults."
-        )
-
-        stored = {}
-
-    # ======================================
-    # VALIDATE AND RETURN
-    # ======================================
+        stored = _read_settings_json(SETTINGS_FILE)
+    except (OSError, ValueError, UnicodeError):
+        try:
+            stored = _read_settings_json(SETTINGS_BACKUP_FILE)
+            print("[SETTINGS] Recovered settings from local backup.")
+        except (OSError, ValueError, UnicodeError):
+            stored = {}
 
     return _validated_settings(stored)
 
@@ -447,137 +439,30 @@ def load_settings():
 # ==========================================
 
 def save_settings(changes):
+    """Validate and atomically save changes, retaining the last good JSON.
+
+    Before replacing an existing valid settings file, commit its content to
+    settings.json.bak using another atomic replacement. If the original is
+    corrupt, never overwrite a potentially useful backup with its contents.
+    A failed backup write aborts the primary write to avoid data loss.
     """
-    Сохраняет пользовательские настройки.
-
-    Принимает словарь изменений.
-
-    Пример:
-
-        save_settings({
-            "theme": "purple",
-            "language": "en",
-        })
-
-    Существующие настройки сохраняются.
-
-    Сначала данные записываются во
-    временный файл, после чего временный
-    файл заменяет settings.json.
-
-    Возвращает словарь сохранённых
-    и проверенных параметров.
-    """
-
-    # ======================================
-    # CHECK INPUT TYPE
-    # ======================================
-
     if not isinstance(changes, dict):
-
-        raise TypeError(
-            "save_settings(changes) "
-            "expects a dictionary"
-        )
-
-    # ======================================
-    # LOAD CURRENT SETTINGS
-    # ======================================
+        raise TypeError("save_settings(changes) expects a dictionary")
 
     settings = load_settings()
-
-    # ======================================
-    # APPLY NEW VALUES
-    # ======================================
-
     settings.update(changes)
-
-    # ======================================
-    # VALIDATE UPDATED VALUES
-    # ======================================
-
-    settings = _validated_settings(
-        settings
-    )
-
-    # ======================================
-    # CREATE DATA DIRECTORY
-    # ======================================
-
-    DATA_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # ======================================
-    # PREPARE TEMPORARY FILE
-    # ======================================
-
-    temporary_path = None
+    settings = _validated_settings(settings)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
+        previous = _read_settings_json(SETTINGS_FILE)
+    except (OSError, ValueError, UnicodeError):
+        previous = None
 
-        # ==================================
-        # WRITE JSON
-        # ==================================
+    if previous is not None:
+        _atomic_write_settings(SETTINGS_BACKUP_FILE, previous)
 
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            suffix=".tmp",
-            prefix="settings_",
-            dir=DATA_DIR,
-            delete=False,
-        ) as file:
-
-            temporary_path = Path(
-                file.name
-            )
-
-            json.dump(
-                settings,
-                file,
-                ensure_ascii=False,
-                indent=4,
-            )
-
-            file.write("\n")
-
-            # Сбрасываем буфер Python
-            file.flush()
-
-            # Просим ОС записать данные
-            os.fsync(
-                file.fileno()
-            )
-
-        # ==================================
-        # REPLACE SETTINGS FILE
-        # ==================================
-
-        os.replace(
-            temporary_path,
-            SETTINGS_FILE,
-        )
-
-    finally:
-
-        # ==================================
-        # REMOVE UNUSED TEMPORARY FILE
-        # ==================================
-
-        if temporary_path is not None:
-
-            try:
-
-                temporary_path.unlink(
-                    missing_ok=True
-                )
-
-            except OSError:
-
-                pass
-
+    _atomic_write_settings(SETTINGS_FILE, settings)
     return settings
 
 

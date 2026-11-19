@@ -3,10 +3,10 @@ WT MOD MANAGER — ПОЛНОЕ ТЕХНИЧЕСКОЕ ДОСЬЕ И ПЕРЕД�
 Срез состояния: 19 ноября 2026 (Europe/Kyiv).
 Основной проект: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website
 Основная ветка: main
-Проверенный релиз: v1.3.0-beta.12
-Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12
-Commit выпущенной версии: 95a38e292b4e1e70c37bdef9a7dd16c28a58b486
-GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
+Проверенный релиз: v1.3.0-beta.13
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13
+Commit выпущенной версии: a122abf4f6649e4598c5fa865861aaa53a4c1cc5
+GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44543556869
 Сайт: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/
 Trust Center: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/trust.html
 GitHub Pages: исходники лежат в docs/, не путать с Python desktop.
@@ -15,11 +15,11 @@ GitHub Pages: исходники лежат в docs/, не путать с Pytho
 ВНИМАНИЕ: это документ-«снимок», а не автоматический синхронизатор будущих изменений. Перед любыми новыми изменениями проверить актуальную ветку и последнюю версию. Здесь различаются ПОДТВЕРЖДЕНО, РЕАЛИЗОВАНО, ОПЦИОНАЛЬНО/НЕ НАСТРОЕНО и ТРЕБУЕТ ПРОВЕРКИ. Не приписывать проекту то, чего CI или живой сервер не доказывают.
 
 ================================================================================
-BETA 13 — WT MOD SUITE 2.0 (в работе в PR #55, на момент подготовки документа НЕ опубликована)
+BETA 13 — WT MOD SUITE 2.0 (PR #55 MERGED, релиз v1.3.0-beta.13 опубликован)
 --------------------------------------------------------------------------------
-Версия исходников: 1.3.0-beta.13. Последним ПОДТВЕРЖДЁННЫМ опубликованным выпуском до успешного merge/release остаётся v1.3.0-beta.12.
+Версия исходников: 1.3.0-beta.13. PR #55 объединён 2026-11-19 14:25 UTC; релиз v1.3.0-beta.13 опубликован 14:29 UTC из commit a122abf4f6649e4598c5fa865861aaa53a4c1cc5.
 PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
-ВНИМАНИЕ: не выдавать функции Beta 13 за опубликованный EXE, пока CI на main и GitHub Releases не подтвердят выход.
+ПОДТВЕРЖДЕНО: Windows CI и GitHub Pages на main успешны, опубликованы setup, portable, SHA256SUMS.txt, build-info.json, sbom.cdx.json. Это не доказывает ручную проверку UI и настройку Supabase migrations.
 
 12 дополнительных направлений:
 1) Conflict Resolver: ui/game_install_ui.py вызывает src/mod_suite.py preview_install/resolve_conflicts, показывает реальные замены, позволяет оставить старые файлы / сделать backup-замену / отменить. Существующие транзакционные backup и rollback в src/game_mod_installer.py сохранены.
@@ -44,7 +44,7 @@ PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
 
 Главное пожелание: перед каждым изменением читать АКТУАЛЬНЫЕ файлы проекта; менять точечно, не сокращать UI и не удалять функции; работать через новую ветку + PR + CI; проверять безопасность секретов; выпускать версию только после успешной Windows-сборки. Все релизные номера согласовывать между src/update_checker.py, installer/WTModManager.iss, installer/release-notes.txt и .github/workflows/build-windows-exe.yml, а также тестами.
 
-Последнее проверенное: Beta 12 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. В последующем документальном улучшении удалены только кэш-файлы *.pyc из Git (исходники сохранены). Это НЕ новый desktop релиз: версия остаётся beta.12.
+Последнее проверенное: Beta 13 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows build/install/run/uninstall и GitHub Pages на commit a122abf4f6649e4598c5fa865861aaa53a4c1cc5 — зелёные. Исторические Beta 12 и очистка кэш-файлов *.pyc по-прежнему задокументированы; Beta 13 является отдельным новым релизом.
 
 КРИТИЧНО: текущий публичный релиз помечен UNSIGNED. Sigstore attestation != Authenticode, SHA-256 != цифровая подпись, код проекта не может легально «заставить» Windows доверять новой программе. Нет гарантии убрать SmartScreen без настоящего доверенного сертификата и репутации издателя.
 
@@ -162,8 +162,18 @@ E4. Windows desktop связка: Supabase Edge desktop bridge + токен па
 E5. Личные пользовательские данные и моды сохраняются вне установленного EXE. Нельзя публиковать серверные секреты в docs/js/community-config.js; там может быть только publishable key.
 
 ================================================================================
-03. ТЕКУЩИЙ ПРОВЕРЕННЫЙ РЕЛИЗ И КАК ПРОВЕРИТЬ
+03. ПРОВЕРЕННЫЙ РЕЛИЗ / ИСТОРИЯ И КАК ПРОВЕРИТЬ
 ================================================================================
+ТЕКУЩИЙ ОПУБЛИКОВАННЫЙ: v1.3.0-beta.13 (2026-11-19 14:29 UTC).
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13
+Исходный commit и tag: a122abf4f6649e4598c5fa865861aaa53a4c1cc5
+Windows CI: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44543556869
+Есть пять ассетов: setup, portable, SHA256SUMS.txt, build-info.json, sbom.cdx.json.
+Актуальные хеши Beta 13 брать ТОЛЬКО из её SHA256SUMS.txt, не из
+исторических значений Beta 12 ниже. Наличие отчёта о происхождении
+не является заменой Authenticode и ручного Windows/AV теста.
+
+АРХИВНЫЙ ПРОВЕРЕННЫЙ РЕЛИЗ Beta 12 (хеши ТОЛЬКО для этого тега):
 Tag: v1.3.0-beta.12
 Released: 2026-11-19
 CI успешен: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
@@ -185,14 +195,14 @@ PowerShell на Windows:
 GitHub CLI:
   gh attestation verify .\WTModManager-Setup.exe --repo qwerthegoe-hash/WT-Mod-Manager-Website
 
-IMPORTANT: GitHub Release сообщает оба EXE UNSIGNED, пока нет настоящего сертификата издателя. SmartScreen может предупреждать. Не внедрять обходы, исключения Defender, подмену подписи, чужие сертификаты или скрытое закрепление на панели задач.
+IMPORTANT: Исторический GitHub Release Beta 12 сообщает оба EXE UNSIGNED, пока нет настоящего сертификата издателя. SmartScreen может предупреждать. Не внедрять обходы, исключения Defender, подмену подписи, чужие сертификаты или скрытое закрепление на панели задач.
 
 Публикация следующей Beta: повысить VERSION в src/update_checker.py, MyAppVersion и VersionInfoVersion в installer/WTModManager.iss, WTMM_VERSION в обоих jobs workflow, release-notes.txt и тест test_release_integrity.py. Создать PR, проверить Windows install/smoke и website tests. Публикация через CI main после успешного PR/merge; не перезаписывать прошлый tag/файлы.
 
 ================================================================================
 04. СТАТУСЫ: ЧТО ПОДТВЕРЖДЕНО, ЧТО НЕ ОБЕЩАТЬ
 ================================================================================
-ПОДТВЕРЖДЕНО НА 2026-11-19:
+ИСТОРИЧЕСКИЙ СРЕЗ BETA 12 НА 2026-11-19 (см. обновление Beta 13 выше):
   [+] GitHub Release Beta 12 доступен с 5 ассетами и проверяемым commit.
   [+] CI Windows build/install/run/uninstall зелёный для Beta 12.
   [+] CI Python trust/recovery/UI/installer/release integrity/sbom тесты зелёные.
@@ -300,7 +310,7 @@ P0. Аудит приватных ключей и журналов: ранее �
 P1. Улучшить установленную Inno Setup recovery: осмысленный Repair, локальная резервная копия установленной версии, safe rollback с согласия и проверкой доступности backup; не ломать uninstall metadata.
 P1. Проверить UI на 125/150/200% DPI и узких экранах; скроллинг без наложений; сделать screenshot-based regression по доступной инфраструктуре.
 P1. Провести живой тест POST Edge ZIP scanner с различными допустимыми test fixtures (не на production пользовательских файлах), проверить cache hit/miss, переинициализацию по SCANNER_VERSION.
-P1. Проверить резервное копирование пользовательских настроек перед миграциями, восстановление после частичной записи.
+P1. Резервное копирование пользовательских настроек и восстановление после частичной записи: ПОПРАВКА В ОТДЕЛЬНОЙ ВЕТКЕ fix/settings-backup-atomic-migration-20261119, НЕ main и НЕ релиз; см. приложение ниже. Требуется CI и PR review.
 P1. Экран подробной истории обновлений/последнего rollback в приложении без слежки и логирования PII.
 P2. Подключить более глубокую проверку зависимостей: Python SBOM сейчас отражает Python distributions, не все native DLL; при необходимости расширить без ложных claims.
 P2. Обновить историческую документацию в docs/WTMM_MOD_SCANNER.md и docs/md/FINAL_RELEASE_CHECKLIST.md после сверки сервера.
@@ -957,11 +967,11 @@ FILE: src/portable_updater.py
   GIT_BYTES: 12203
 
 FILE: src/profile_paths.py
-  PURPOSE: единый %LOCALAPPDATA%/WTModManager для данных каждого пользователя Windows, миграция и пути аккаунтов/модов
+  PURPOSE: единый %LOCALAPPDATA%/WTModManager для данных каждого пользователя Windows, миграция через atomic stage и пути аккаунтов/модов
   GIT_BYTES: 7792
 
 FILE: src/settings_store.py
-  PURPOSE: валидация, атомарная запись settings.json, темы, языки, пресеты и сброс
+  PURPOSE: валидация, атомарная запись settings.json, предыдущий валидный settings.json.bak, восстановление из backup, темы, языки, пресеты и сброс
   GIT_BYTES: 17105
 
 FILE: src/taskbar_pin.py
@@ -973,7 +983,7 @@ FILE: src/trust_center.py
   GIT_BYTES: 4886
 
 FILE: src/update_checker.py
-  PURPOSE: версия 1.3.0-beta.12, GitHub Releases API, сравнение версий, каналы Stable/Beta, проверка SHA-256 и размера скачанного EXE
+  PURPOSE: версия 1.3.0-beta.13, GitHub Releases API, сравнение версий, каналы Stable/Beta, проверка SHA-256 и размера скачанного EXE
   GIT_BYTES: 9533
 
 FILE: src/update_notifications.py
@@ -1047,6 +1057,10 @@ FILE: tests/test_recovery_and_trust.py
 FILE: tests/test_release_integrity.py
   PURPOSE: Python unittest по модулю release integrity; проверять при изменениях функциональности
   GIT_BYTES: 3390
+
+FILE: tests/test_settings_recovery.py
+  PURPOSE: non-network regression для settings.json.bak, восстановления при повреждении JSON и atomic legacy migration
+  GIT_BYTES: новый файл, точный размер уточняется при merge
 
 FILE: tests/test_update_notifications.py
   PURPOSE: Python unittest по модулю update notifications; проверять при изменениях функциональности
@@ -1303,6 +1317,38 @@ FILE: tests/test_mod_suite.py
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
   GIT_BYTES: generated
+
+================================================================================
+08A. ПРОДОЛЖЕНИЕ ПОСЛЕ BETA 13 — НАДЁЖНОСТЬ НАСТРОЕК (PR, НЕ РЕЛИЗ)
+================================================================================
+Исходная основа: main a122abf4f6649e4598c5fa865861aaa53a4c1cc5 / v1.3.0-beta.13.
+Рабочая ветка: fix/settings-backup-atomic-migration-20261119.
+Pull Request: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/56
+Статус: код предложен на ревью; НЕ установлен в опубликованные EXE Beta 13.
+CI: новые settings recovery тесты завершились успешно в Windows job PR #56
+(первая проверка), Website security/handoff тоже успешно; полный Windows
+installer CI/повторные запуски проверять по текущему HEAD перед merge.
+Изменения:
+- src/settings_store.py: перед заменой валидного settings.json создаётся атомарная
+  резервная копия settings.json.bak с предыдущими значениями. При сбое чтения
+  primary используется backup; повреждённый primary не перезаписывается при чтении.
+  При ошибке backup сохранение основного файла отменяется.
+- src/profile_paths.py: копирование legacy settings/mods выполняется через
+  временный файл в той же папке, затем os.replace; маркер миграции также
+  публикуется атомарно. Прерванное копирование можно повторить без частичного
+  опубликованного файла; старые исходники и существующие пользовательские
+  назначения не удаляются.
+- tests/test_settings_recovery.py: случаи корректной резервной копии,
+  повреждённого primary, отсутствующего primary, сбоя при замене,
+  частичной миграции настроек/модов, повторной миграции без потерь.
+- .github/workflows/build-windows-exe.yml: Windows CI исполняет новые тесты
+  до упаковки EXE; никаких версий/тегов на этой ветке не меняли.
+Ограничения: backup — локальная копия прошлого валидного JSON, не гарантия
+восстановления всех исторических версий. Не заменяет облачный backup,
+ручные Windows UX/DPI тесты и настоящий publisher Authenticode.
+После PR/CI сюда добавить ссылку, SHA, статус проверок и итог merge.
+Тестирование на момент записи: автоматические проверки запрошены, их
+успешность нельзя утверждать до фактического результата GitHub Actions.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ
