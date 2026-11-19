@@ -45,7 +45,7 @@ jobs:
     name: Installer + portable Windows x64
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
       attestations: write
       artifact-metadata: write
@@ -264,6 +264,48 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+
+  publish:
+    name: Publish verified immutable GitHub prerelease
+    needs: [windows]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      attestations: read
+    env:
+      WTMM_VERSION: 1.3.0-beta.11
+    steps:
+      - name: Checkout exact tested commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use Python 3.12 for release verification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Obtain Windows binaries from successful tested build
+        uses: actions/download-artifact@v4
+        with:
+          name: WTModManager-Windows-${{ github.run_number }}
+          path: dist
+
+      - name: Reverify public provenance before publishing
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/release_integrity.py verify --expected-version "$env:WTMM_VERSION"
+          if ($LASTEXITCODE -ne 0) { throw "Downloaded release artifacts are invalid" }
+          gh attestation verify dist/WTModManager.exe --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw "Missing portable provenance attestation" }
+          gh attestation verify dist/WTModManager-Setup.exe --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw "Missing installer provenance attestation" }
+
       - name: Publish immutable prerelease from main after all checks
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         shell: pwsh
@@ -281,6 +323,7 @@ jobs:
           }
 
           $info = Get-Content "dist\build-info.json" -Encoding utf8 -Raw | ConvertFrom-Json
+          if ($info.commit -ne $env:GITHUB_SHA) { throw "Release artifact source commit mismatch" }
           $notes = Get-Content "installer\release-notes.txt" -Encoding utf8 -Raw
           $status = if ($info.authenticode.signed) {
             "Authenticode signed by " + $info.authenticode.publisher
