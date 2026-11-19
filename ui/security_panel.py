@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Qt, Signal
 from PySide6.QtWidgets import (
-    QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QApplication, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 )
 
@@ -54,6 +54,9 @@ class SecurityPanel(QWidget):
         self._digest = ""
         self._worker = None
         self._vt_worker = None
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._stop_workers)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 8, 2, 4)
@@ -149,6 +152,7 @@ class SecurityPanel(QWidget):
         if not self._path or self._worker is not None:
             return
         self.scan_button.setEnabled(False)
+        self.choose_button.setEnabled(False)
         self.result.setPlainText("Проверяем файл, не распаковывая его на диск…")
         worker = LocalInspection(self._path, self)
         self._worker = worker
@@ -159,7 +163,8 @@ class SecurityPanel(QWidget):
 
     def _on_worker_finished(self):
         self._worker = None
-        self.scan_button.setEnabled(bool(self._path))
+        self.choose_button.setEnabled(self._vt_worker is None)
+        self.scan_button.setEnabled(bool(self._path) and self._vt_worker is None)
 
     def _on_scan_complete(self, report, error):
         if error or not report:
@@ -198,6 +203,8 @@ class SecurityPanel(QWidget):
             return
         digest = self._digest
         self.lookup_button.setEnabled(False)
+        self.choose_button.setEnabled(False)
+        self.scan_button.setEnabled(False)
         self.vt_result.setText("Запрос отчёта VirusTotal по SHA-256…")
         worker = VirusTotalLookup(digest, self)
         self._vt_worker = worker
@@ -208,6 +215,8 @@ class SecurityPanel(QWidget):
 
     def _on_vt_finished(self):
         self._vt_worker = None
+        self.choose_button.setEnabled(self._worker is None)
+        self.scan_button.setEnabled(bool(self._path) and self._worker is None)
         self._refresh_key_status()
 
     def _on_vt_result(self, report, error):
@@ -231,3 +240,10 @@ class SecurityPanel(QWidget):
                 + str(suspicious) + " подозрительных из "
                 + str(total) + " результатов.\n" + summary
             )
+
+    def _stop_workers(self):
+        # The native QThread objects are owned by this widget. Do not destroy
+        # them while a bounded local check or network lookup is still running.
+        for worker in (self._worker, self._vt_worker):
+            if worker is not None and worker.isRunning():
+                worker.wait(20000)
