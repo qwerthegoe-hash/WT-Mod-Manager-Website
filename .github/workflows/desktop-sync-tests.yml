@@ -6,6 +6,9 @@ on:
       - "src/**"
       - "ui/**"
       - "tests/**"
+      - "installer/**"
+      - "tools/**"
+      - "assets/**"
       - "docs/mods/**"
       - "docs/js/desktop-link.mjs"
       - "requirements-build.txt"
@@ -42,6 +45,9 @@ jobs:
 
       - name: Test setup selection, SHA256 and custom branded installer safety
         run: python -m unittest discover -s tests -p test_installer_integration.py -v
+
+      - name: Check transparent rounded installer artwork
+        run: python -m unittest discover -s tests -p test_installer_assets.py -v
 
       - name: Test safe game-file installation, conflict checks and rollback
         run: python -m unittest discover -s tests -p test_game_mod_installer.py -v
