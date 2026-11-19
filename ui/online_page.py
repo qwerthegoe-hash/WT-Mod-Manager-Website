@@ -122,6 +122,10 @@ class OnlinePage(QWidget):
 
         updates_card, updates = card("ОБНОВЛЕНИЯ")
         top.addWidget(updates_card, 0, 1)
+        self._header_grid = top
+        self._account_card = account_card
+        self._updates_card = updates_card
+        self._compact_header = False
         self.update_summary = QLabel(
             "Текущая версия: " + VERSION + ". Новые версии проверяются в фоне."
         )
@@ -340,6 +344,21 @@ class OnlinePage(QWidget):
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "_header_grid"):
+            compact = self.width() < 810
+            if compact != self._compact_header:
+                self._compact_header = compact
+                self._header_grid.removeWidget(self._account_card)
+                self._header_grid.removeWidget(self._updates_card)
+                self._header_grid.addWidget(self._account_card, 0, 0)
+                self._header_grid.addWidget(
+                    self._updates_card, 1 if compact else 0,
+                    0 if compact else 1
+                )
+                self._header_grid.setColumnStretch(1, 0 if compact else 1)
 
     def set_offline_mode(self, checked):
         try:
