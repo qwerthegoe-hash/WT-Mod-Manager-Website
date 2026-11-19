@@ -66,8 +66,8 @@ def local_executable_trust(path: Path | None = None) -> dict:
         "$ErrorActionPreference='Stop';"
         "$r=Get-AuthenticodeSignature -LiteralPath $env:WTMM_TRUST_CHECK_PATH;"
         "[pscustomobject]@{Status=$r.Status.ToString();"
-        "Publisher=if($r.SignerCertificate){$r.SignerCertificate.Subject}"
-        "else{''}} | ConvertTo-Json -Compress"
+        "Publisher=$(if($r.SignerCertificate){$r.SignerCertificate.Subject}"
+        "else{''})} | ConvertTo-Json -Compress"
     )
     try:
         process = subprocess.run(
