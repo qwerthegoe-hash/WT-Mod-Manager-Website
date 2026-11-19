@@ -21,6 +21,7 @@ from ui.security_panel import SecurityPanel
 from ui.trust_panel import TrustPanel
 from ui.mod_tools_panel import ModToolsPanel
 from src.offline_mode import is_offline, set_offline
+from src.release_rollout import early_access, set_early_access
 from src.crash_recovery import latest_report_summary
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
@@ -150,6 +151,14 @@ class OnlinePage(QWidget):
         channel_row.addWidget(self.channel_picker, 1)
         updates.addLayout(channel_row)
         self.channel_picker.currentIndexChanged.connect(self._save_channel)
+        self.early_beta_checkbox = QCheckBox("Участвовать в раннем тестировании Beta")
+        self.early_beta_checkbox.setChecked(early_access())
+        self.early_beta_checkbox.setToolTip(
+            "Необязательный ранний доступ к тестовым версиям. "
+            "Процент допуска управляется прозрачной политикой GitHub."
+        )
+        self.early_beta_checkbox.toggled.connect(self._save_early_beta)
+        updates.addWidget(self.early_beta_checkbox)
         self.rollback_exe_button = QPushButton("Вернуть предыдущую версию приложения")
         self.rollback_exe_button.clicked.connect(self.rollback_update_requested.emit)
         self.rollback_exe_button.setToolTip(
@@ -352,6 +361,15 @@ class OnlinePage(QWidget):
                 "WT Offline Mode активен. Локальная библиотека и настройки "
                 "доступны, сетевые действия приостановлены."
             )
+
+    def _save_early_beta(self, enabled):
+        try:
+            set_early_access(bool(enabled))
+        except (ValueError, OSError):
+            self.early_beta_checkbox.blockSignals(True)
+            self.early_beta_checkbox.setChecked(early_access())
+            self.early_beta_checkbox.blockSignals(False)
+            QMessageBox.warning(self, "Beta", "Не удалось сохранить ранний доступ.")
 
     def _save_channel(self, _index):
         selected = self.channel_picker.currentData()
