@@ -18,6 +18,8 @@ from src.diagnostics import inspect_local, format_report
 from src.update_checker import VERSION, is_installed_app
 from src.portable_updater import previous_exe_available
 from ui.security_panel import SecurityPanel
+from ui.trust_panel import TrustPanel
+from src.crash_recovery import latest_report_summary
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
     save_mod_profile, set_active_mod_profile, delete_mod_profile
@@ -276,6 +278,8 @@ class OnlinePage(QWidget):
         self.diagnostic_copy.clicked.connect(self.copy_diagnostics)
         diagnostic_actions.addWidget(self.diagnostic_copy)
         diagnostic_layout.addLayout(diagnostic_actions)
+        self.trust_panel = TrustPanel()
+        diagnostic_layout.addWidget(self.trust_panel)
         self.security_panel = SecurityPanel()
         diagnostic_layout.addWidget(self.security_panel)
         diagnostic_layout.addStretch(1)
@@ -354,7 +358,8 @@ class OnlinePage(QWidget):
         except Exception:
             result = ("D000 [ERROR]: Не удалось завершить локальную диагностику.\n"
                       "Скопируй код D000 для технической поддержки.")
-        self.diagnostic_output.setPlainText(result)
+        self.diagnostic_output.setPlainText(result + "\n" +
+                                            latest_report_summary())
 
     def copy_diagnostics(self):
         result = self.diagnostic_output.toPlainText()
