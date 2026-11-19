@@ -2,7 +2,7 @@ import { inspectZip, ScanReject } from "./zip.ts";
 import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.15";
 
 // Stored, tiny ZIP test fixture constructed without third-party archivers.
-function sampleZip(filename:string, dataBytes:Uint8Array, badCrc=false) {
+function sampleZip(filename:string, dataBytes:Uint8Array, badCrc=false, method=0, packed=dataBytes) {
   const text=new TextEncoder().encode(filename);
   const crcTable=new Uint32Array(256);
   for(let i=0;i<256;i++){
@@ -18,14 +18,14 @@ function sampleZip(filename:string, dataBytes:Uint8Array, badCrc=false) {
   const word=(n:number)=>{output.push(n&255,(n>>>8)&255)};
   const dword=(n:number)=>{word(n&65535);word(n>>>16)};
   const local=output.length;
-  dword(0x04034b50);word(20);word(0);word(0);word(0);word(0);
-  dword(crc);dword(dataBytes.length);dword(dataBytes.length);
+  dword(0x04034b50);word(20);word(0);word(method);word(0);word(0);
+  dword(crc);dword(packed.length);dword(dataBytes.length);
   word(text.length);word(0);
-  output.push(...text,...dataBytes);
+  output.push(...text,...packed);
   const centralOffset=output.length;
-  dword(0x02014b50);word(20);word(20);word(0);word(0);
+  dword(0x02014b50);word(20);word(20);word(0);word(method);
   word(0);word(0);dword(crc);
-  dword(dataBytes.length);dword(dataBytes.length);
+  dword(packed.length);dword(dataBytes.length);
   word(text.length);word(0);word(0);word(0);word(0);
   dword(0);dword(local);
   output.push(...text);
@@ -60,4 +60,19 @@ Deno.test("reject invalid central directory", async()=>{
   const zip=sampleZip("readme.txt",new TextEncoder().encode("ok"));
   zip[zip.length-22]=0;
   await assertRejects(()=>inspectZip(zip),ScanReject);
+});
+
+Deno.test("accept raw deflate-compressed ZIP member and verify CRC", async()=>{
+  const payload=new TextEncoder().encode("hello world");
+  // Deterministic DEFLATE-raw stream created with zlib (no ZIP wrapper).
+  const deflated=Uint8Array.from("cb48cdc9c95728cf2fca490100".match(/../g)!,x=>parseInt(x,16));
+  const report=await inspectZip(sampleZip("readme.txt",payload,false,8,deflated));
+  assertEquals(report.files,1);
+});
+Deno.test("reject suspicious compression expansion before decompression", async()=>{
+  const payload=new Uint8Array(10000);
+  await assertRejects(
+    ()=>inspectZip(sampleZip("readme.txt",payload,false,8,new Uint8Array([1]))),
+    ScanReject
+  );
 });
