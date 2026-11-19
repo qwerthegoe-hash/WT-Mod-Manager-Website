@@ -164,8 +164,11 @@ class BrandedInstallerTests(unittest.TestCase):
         self.assertIn('"--onefile"', builder)
         self.assertNotIn('"--onedir"', builder)
         self.assertNotIn('build("installed")', builder)
-        self.assertIn('":assets"', builder)
+        self.assertIn('":assets/icons"', builder)
         self.assertIn('":config"', builder)
+        self.assertNotIn('str(ROOT / "config") + ":config"', builder)
+        self.assertIn('"support_config.json"', builder)
+        self.assertIn('"update_config.json"', builder)
 
     def test_setup_launcher_rejects_nonwindows_execution(self):
         with self.assertRaises(RuntimeError):
