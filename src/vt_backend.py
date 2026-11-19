@@ -12,6 +12,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 from src.desktop_sync import API_KEY, API_ROOT, _load_token
 from src.mod_security import VirusTotalError
+from src.offline_mode import is_offline
 
 ENDPOINT = API_ROOT + "/functions/v1/wtmm-vt-lookup"
 VALID_HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -24,6 +25,8 @@ class _NoRedirect(HTTPRedirectHandler):
 
 
 def lookup_shared_vt_hash(digest: str) -> dict:
+    if is_offline():
+        raise VirusTotalError("WT Offline Mode включён: VirusTotal недоступен.")
     if not isinstance(digest, str) or not VALID_HASH.fullmatch(digest):
         raise VirusTotalError("Неправильный SHA-256.")
     token = _load_token()
