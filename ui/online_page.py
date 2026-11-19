@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QScrollArea,
     QLabel, QPushButton, QListWidget, QListWidgetItem, QMessageBox,
     QApplication, QTabWidget, QLineEdit, QComboBox, QInputDialog,
-    QAbstractItemView, QCheckBox, QPlainTextEdit
+    QAbstractItemView, QCheckBox, QPlainTextEdit, QProgressBar
 )
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
@@ -131,6 +131,18 @@ class OnlinePage(QWidget):
         )
         self.update_summary.setWordWrap(True)
         updates.addWidget(self.update_summary)
+        self.update_progress = QProgressBar()
+        self.update_progress.setRange(0, 100)
+        self.update_progress.setValue(0)
+        self.update_progress.setFormat("Скачивание: %p%")
+        self.update_progress.setAccessibleName("Прогресс скачивания обновления")
+        self.update_progress.hide()
+        updates.addWidget(self.update_progress)
+        self.update_progress_note = QLabel("")
+        self.update_progress_note.setObjectName("Subtitle")
+        self.update_progress_note.setWordWrap(True)
+        self.update_progress_note.hide()
+        updates.addWidget(self.update_progress_note)
         update_actions = QGridLayout()
         update_actions.setSpacing(8)
         self.update_button = QPushButton("Проверить обновления")
@@ -499,6 +511,39 @@ class OnlinePage(QWidget):
             QApplication.clipboard().setText(result)
             self.status.setText("Диагностика скопирована без личных данных.")
 
+    def begin_update_download(self):
+        self.update_progress.setValue(0)
+        self.update_progress.setFormat("Скачивание: %p%")
+        self.update_progress.show()
+        self.update_progress_note.setText(
+            "Скачиваем официальную версию и проверяем SHA-256. "
+            "Приложение пока продолжает работать."
+        )
+        self.update_progress_note.show()
+        self.install_update_button.setEnabled(False)
+
+    def set_update_download_progress(self, value):
+        percent = max(0, min(100, int(value)))
+        self.update_progress.setValue(percent)
+        if percent == 100:
+            self.update_progress_note.setText(
+                "Загрузка завершена. Проверяем файл и начинаем обновление."
+            )
+
+    def finish_update_download(self, started):
+        if started:
+            self.update_progress.setValue(100)
+            self.update_progress_note.setText(
+                "Запускается обновление в прежней папке. "
+                "Приложение откроется после завершения установки."
+            )
+        else:
+            self.update_progress.hide()
+            self.update_progress_note.setText(
+                "Обновление не установлено. Можно повторить попытку."
+            )
+            self.install_update_button.setEnabled(True)
+
     def set_available_update(self, info):
         if not isinstance(info, dict):
             return
@@ -507,7 +552,7 @@ class OnlinePage(QWidget):
             "Доступен WT Mod Manager " + version +
             ". Обновление можно скачать и установить без удаления модов и настроек."
         )
-        self.install_update_button.setText("Скачать и установить " + version)
+        self.install_update_button.setText("Обновить до " + version)
         self.install_update_button.setEnabled(True)
         self.install_update_button.show()
         self.refresh_update_notices()
