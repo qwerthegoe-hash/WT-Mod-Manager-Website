@@ -28,8 +28,10 @@ def build() -> None:
         "--name=WTModManager",
         "--paths=" + str(ROOT),
         "--icon=" + str(ICON),
-        "--add-data=" + str(ROOT / "assets") + ":assets",
-        "--add-data=" + str(ROOT / "config") + ":config",
+        # Explicit allowlist: do NOT silently bundle future secrets/.env files.
+        "--add-data=" + str(ROOT / "assets" / "icons") + ":assets/icons",
+        "--add-data=" + str(ROOT / "config" / "support_config.json") + ":config",
+        "--add-data=" + str(ROOT / "config" / "update_config.json") + ":config",
         "--add-binary=" + str(ROOT / "build" / "wtmm_taskbar.dll") + ":.",
         "--distpath=" + str(ROOT / "dist"),
         "--workpath=" + str(ROOT / "build" / "pyinstaller-onefile"),
@@ -44,7 +46,9 @@ def main() -> None:
         raise SystemExit("WT Mod Manager packages must be built on Windows.")
 
     required = [
-        ROOT / "src" / "main.py", ROOT / "assets", ROOT / "config", LOGO,
+        ROOT / "src" / "main.py", ROOT / "assets" / "icons", LOGO,
+        ROOT / "config" / "update_config.json",
+        ROOT / "config" / "support_config.json",
         ROOT / "build" / "wtmm_taskbar.dll",
     ]
     missing = [str(path) for path in required if not path.exists()]
