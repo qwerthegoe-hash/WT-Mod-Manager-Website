@@ -24,6 +24,7 @@ from ui.i18n import translate_ui
 from ui.update_ui import UpdateController
 from src.update_notifications import consume_install_status
 from src.taskbar_pin import request_taskbar_pin, fallback_instructions
+from src import crash_recovery
 
 
 # ==========================================
@@ -211,6 +212,28 @@ class WTManagerApp:
         self.updater.tray_notification.connect(self.show_tray_message)
         QTimer.singleShot(3000, self.updater.check)
         QTimer.singleShot(800, self.show_last_update_result)
+
+    def show_recovery_notice(self):
+        notice = crash_recovery.last_recovery_notice()
+        if not notice:
+            return
+        self.open_manager()
+        if notice.get("after_update"):
+            detail = (
+                "Предыдущий запуск после обновления завершился неожиданно. "
+                "Это ещё не доказывает ошибку обновления. "
+                "Проверь диагностику и при необходимости восстанови "
+                "предыдущую версию в разделе «Загрузки»."
+            )
+        else:
+            detail = (
+                "Предыдущий сеанс закончился без обычного завершения. "
+                "Причиной могла быть перезагрузка Windows или сбой программы. "
+                "В разделе «Диагностика» доступен локальный отчёт."
+            )
+        QMessageBox.information(
+            self.manager, "WT Recovery — проверка после сбоя", detail
+        )
 
     def notify_update_available(self, info):
         if self.manager is not None:
@@ -470,6 +493,9 @@ def main():
             pass
 
     app = QApplication(sys.argv)
+    crash_recovery.start_session(updated="--updated" in sys.argv)
+    crash_recovery.install_error_handlers()
+    app.aboutToQuit.connect(crash_recovery.clean_exit)
 
     app.setApplicationName(
         "WT Mod Manager"
@@ -482,6 +508,8 @@ def main():
 
     # Start the application controller
     controller = WTManagerApp(app)
+    if crash_recovery.last_recovery_notice():
+        QTimer.singleShot(1400, controller.show_recovery_notice)
 
     # After a verified update, reopen the manager rather than remaining
     # hidden in the tray. The startup status is added to the inbox.
