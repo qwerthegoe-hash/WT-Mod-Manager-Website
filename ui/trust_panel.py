@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.trust_center import local_executable_trust, format_local_trust
-from src.crash_recovery import latest_report_summary
+from src.crash_recovery import latest_report_summary, latest_safe_report
 
 
 class TrustWorker(QThread):
@@ -57,6 +57,9 @@ class TrustPanel(QGroupBox):
         )
         actions.addWidget(self.site_button)
         col.addLayout(actions)
+        self.copy_crash_button = QPushButton("Скопировать отчёт об ошибке")
+        self.copy_crash_button.clicked.connect(self.copy_crash)
+        col.addWidget(self.copy_crash_button)
         self.recovery_note = QLabel(latest_report_summary())
         self.recovery_note.setWordWrap(True)
         col.addWidget(self.recovery_note)
@@ -79,6 +82,16 @@ class TrustPanel(QGroupBox):
     def _done(self):
         self.worker = None
         self.inspect_button.setEnabled(True)
+
+    def copy_crash(self):
+        report = latest_safe_report()
+        if report:
+            QApplication.clipboard().setText(report)
+            self.recovery_note.setText(
+                "Безличный отчёт скопирован. Отправлять его или нет — решаешь ты."
+            )
+        else:
+            self.recovery_note.setText("Нет отчётов об ошибках для копирования.")
 
     def stop(self):
         if self.worker is not None and self.worker.isRunning():
