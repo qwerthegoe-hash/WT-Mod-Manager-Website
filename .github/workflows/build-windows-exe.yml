@@ -77,6 +77,9 @@ jobs:
       - name: Generate branded wizard art from official logo
         run: python tools/build_installer_assets.py
 
+      - name: Test installer graphics, upgrade compatibility and safe uninstall
+        run: python -m unittest discover -s tests -p "test_installer_*.py" -v
+
       - name: Install Inno Setup 6.7.1
         shell: pwsh
         run: |
