@@ -50,8 +50,18 @@ Deno.test("reject executable mod content type", async()=>{
   const zip=sampleZip("config/autorun.bat",new TextEncoder().encode("not allowed"));
   await assertRejects(()=>inspectZip(zip),ScanReject);
 });
-Deno.test("reject disguised Windows executable magic", async()=>{
+Deno.test("short MZ header is not enough to declare executable", async()=>{
   const zip=sampleZip("textures/fake.png",new Uint8Array([77,90,0,0,0]));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"review");
+});
+Deno.test("real Windows PE header concealed in PNG gets rejected", async()=>{
+  const payload=new Uint8Array(160);
+  payload[0]=77;payload[1]=90; // DOS MZ signature
+  payload[0x3c]=0x80;         // e_lfanew -> full PE header
+  payload[0x80]=80; payload[0x81]=69;
+  payload[0x82]=0; payload[0x83]=0;
+  const zip=sampleZip("textures/fake.png",payload);
   await assertRejects(()=>inspectZip(zip),ScanReject);
 });
 Deno.test("reject corrupted CRC", async()=>{
