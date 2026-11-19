@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QInputDialog, QApplication
 from src.profile_paths import DATA_DIR
 from src.game_discovery import find_game_roots, find_sight_folders, find_skin_templates
@@ -27,6 +28,9 @@ def _show_error(parent, error):
 
 def _suggested_folder(parent, caption, initial, suggestions):
     """Skip repeated folder dialogs only for an unambiguous existing target."""
+    # Hold Ctrl when clicking Install to override an automatically found path.
+    if QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
+        return _folder(parent, caption, initial)
     paths = list(dict.fromkeys(str(p) for p in suggestions))
     if len(paths) == 1:
         return paths[0]
