@@ -250,6 +250,7 @@ def restore_previous_mod(user_id: str, mod_id: str) -> tuple[int, str]:
     library[mod_id] = {
         "title": str(previous.get("title", ""))[:90],
         "version": str(previous.get("version", ""))[:32],
+        "game_version": str(previous.get("game_version") or "")[:24] or None,
         "category": category,
         "sha256": str(previous.get("sha256", "")),
         "files": files,
@@ -302,6 +303,7 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
             previous = {
                 "title": str(old.get("title", ""))[:90],
                 "version": str(old.get("version", ""))[:32],
+                "game_version": str(old.get("game_version") or "")[:24] or None,
                 "category": category,
                 "sha256": str(old.get("sha256", "")),
                 "files": list(old_names),
@@ -323,6 +325,10 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
     library[mod_id] = {
         "title": str(meta.get("title", ""))[:90],
         "version": str(meta.get("version", ""))[:32],
+        "game_version": (str(meta["game_version"])[:24]
+                         if isinstance(meta.get("game_version"), str) and
+                         re.fullmatch(r"[0-9]+(?:[.][0-9]+){1,3}", meta["game_version"])
+                         else None),
         "category": category,
         "sha256": archive_sha,
         "files": names,
