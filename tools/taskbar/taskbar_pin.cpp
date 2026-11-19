@@ -2,6 +2,7 @@
 // The only entrypoint is invoked after a user clicks the application's button.
 // No Explorer registry writes, shell verbs, policy changes or silent pinning.
 #include <windows.h>
+#include <roapi.h>
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.UI.Shell.h>
@@ -29,6 +30,9 @@ extern "C" __declspec(dllexport) int __stdcall WTMMRequestTaskbarPin() noexcept 
     // Return: 0 request started, 1 API unavailable, 2 policy denied,
     // 3 LAF token required, 4 Windows API rejected the request.
     try {
+        const HRESULT apartment = RoInitialize(RO_INIT_SINGLETHREADED);
+        if (FAILED(apartment) && apartment != RPC_E_CHANGED_MODE)
+            return 4;
         if (laf_required()) return 3;
         const auto factory = winrt::try_get_activation_factory<
             shell::TaskbarManager, shell::ITaskbarManagerDesktopAppSupportStatics>();
