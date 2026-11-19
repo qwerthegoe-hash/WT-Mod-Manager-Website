@@ -32,7 +32,7 @@ class DiagnosticsTests(unittest.TestCase):
                  patch("src.desktop_sync._load_token", return_value=None):
                 checks = diagnostics.inspect_local()
             codes = {check.code for check in checks}
-            self.assertEqual(codes, {f"D{i:03}" for i in range(1, 10)})
+            self.assertEqual(codes, {f"D{i:03}" for i in range(1, 13)})
             report = diagnostics.format_report(checks)
             self.assertNotIn("User Secret Path", report)
             self.assertNotIn("Local Mods", report)
