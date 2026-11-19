@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
 
-VERSION = "1.3.0-beta.5"
+VERSION = "1.3.0-beta.6"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
@@ -64,6 +64,14 @@ def repository():
 
 
 def update_channel():
+    """Per-user channel preference selected during setup, never a repo secret."""
+    preference = DATA_DIR / "update-channel.json"
+    try:
+        state = json.loads(preference.read_text(encoding="utf-8"))
+        if isinstance(state, dict) and state.get("channel") in ("stable", "beta"):
+            return state["channel"]
+    except (OSError, ValueError, TypeError):
+        pass
     value = _configuration().get("channel", "stable")
     return value if value in ("stable", "beta") else "stable"
 
