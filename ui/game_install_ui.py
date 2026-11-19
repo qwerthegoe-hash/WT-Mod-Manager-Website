@@ -9,7 +9,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QInputDialog, QApplication
 from src.profile_paths import DATA_DIR
 from src.vehicle_camouflages import (
-    list_vehicle_templates, vehicle_from_template, next_preset_destination,
+    list_vehicle_templates, vehicle_from_template, list_scalable_layers,
     plan_vehicle_package, plan_vehicle_image, record_preset,
     installed_presets, forget_transaction,
 )
@@ -104,7 +104,7 @@ def install_camouflage_dialog(parent, image_file=None):
             "Что нужно установить для выбранной техники?",
             [
                 "Готовый камуфляж (.blk + текстуры)",
-                "Картинка (простой масштабируемый камуфляж)",
+                "Картинка (выбор цветового слоя и вида узора)",
             ], 0, False
         )
         if not ok:
@@ -129,6 +129,34 @@ def install_camouflage_dialog(parent, image_file=None):
         template = _choose_vehicle_template(parent)
         if template is None:
             return
+        texture_layer = None
+        pattern_mode = "fit"
+        if source_kind == "image":
+            layers = list_scalable_layers(template)
+            if not layers:
+                raise InstallError(
+                    "В игровом шаблоне нет подходящего цветового слоя. "
+                    "Для этой машины установи готовый комплект .blk + текстуры."
+                )
+            if len(layers) > 1:
+                texture_layer, accepted = QInputDialog.getItem(
+                    parent, "Слой камуфляжа",
+                    "Куда нанести изображение? Служебные normal-карты скрыты.",
+                    list(layers), 0, False,
+                )
+                if not accepted:
+                    return
+            format_label, accepted = QInputDialog.getItem(
+                parent, "Вид рисунка",
+                "Как подготовить изображение для выбранной техники?",
+                [
+                    "Целая картинка с сохранением пропорций",
+                    "Повторяющийся узор с зеркальными краями",
+                ], 0, False,
+            )
+            if not accepted:
+                return
+            pattern_mode = "mirror" if format_label.startswith("Повторяющийся") else "fit"
         # Temporary conversion happens exclusively inside WTMM's own
         # user-data folder; game data is not written until the preview is
         # explicitly confirmed.
@@ -141,7 +169,8 @@ def install_camouflage_dialog(parent, image_file=None):
         ) as stage:
             if source_kind == "image":
                 plan, dest, vehicle, display, number = plan_vehicle_image(
-                    source, template, Path(stage)
+                    source, template, Path(stage),
+                    texture_layer=texture_layer, pattern_mode=pattern_mode
                 )
             else:
                 plan, dest, vehicle, display, number = plan_vehicle_package(

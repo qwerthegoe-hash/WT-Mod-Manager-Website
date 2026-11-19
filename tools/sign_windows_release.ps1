@@ -9,12 +9,22 @@ $ErrorActionPreference = "Stop"
 # If none are configured, do not pretend that the release is signed.
 $encoded = $env:WTMM_SIGN_PFX_BASE64
 $password = $env:WTMM_SIGN_PFX_PASSWORD
+$requireSignature = $env:WTMM_REQUIRE_AUTHENTICODE -eq "true"
+$expectedThumbprint = [string]$env:WTMM_SIGN_CERT_THUMBPRINT
+$expectedThumbprint = ($expectedThumbprint -replace '\s', '').ToUpperInvariant()
 if (-not $encoded -and -not $password) {
-  Write-Output "No code-signing certificate configured: release remains unsigned."
+  if ($requireSignature) {
+    throw "Authenticode is required for this release, but no publisher certificate was configured."
+  }
+  Write-Output "No code-signing certificate configured: this beta remains unsigned."
   exit 0
 }
 if (-not $encoded -or -not $password) {
   throw "Both code-signing secrets must be configured together."
+}
+# Pin to an actual reviewed public publisher certificate (not a private key).
+if ($expectedThumbprint -notmatch '^[A-F0-9]{40}$') {
+  throw "WTMM_SIGN_CERT_THUMBPRINT must be the publisher certificate's 40-digit hex thumbprint."
 }
 
 $exe = Get-Command signtool.exe -ErrorAction SilentlyContinue |
@@ -44,7 +54,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed for $path" }
     & $exe verify /pa /v $path
     if ($LASTEXITCODE -ne 0) { throw "Signature verification failed for $path" }
-    Write-Output "Verified Authenticode signature: $path"
+    $signature = Get-AuthenticodeSignature -LiteralPath $path
+    if ($signature.Status -ne 'Valid' -or -not $signature.SignerCertificate) {
+      throw "Windows did not trust the publisher's Authenticode signature for $path"
+    }
+    $actualThumbprint = $signature.SignerCertificate.Thumbprint.ToUpperInvariant()
+    if ($actualThumbprint -ne $expectedThumbprint) {
+      throw "Authenticode signer is not the expected publisher certificate for $path"
+    }
+    Write-Output "Windows verified the trusted and expected publisher signature: $path"
   }
 }
 finally {

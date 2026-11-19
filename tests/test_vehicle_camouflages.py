@@ -129,6 +129,85 @@ class VehicleCamouflageTests(unittest.TestCase):
                 camo.plan_vehicle_image(self.camo_file, self.template, Path(stage))
         self.assertEqual(list(self.skins.iterdir()), [self.template])
 
+    def test_multilayer_template_supports_explicit_color_selection_and_mirror(self):
+        extra = (
+            'replace_tex {\n'
+            '  from:t="camo_desert*"\n'
+            '  to:t="second_color.dds"\n'
+            '}\n'
+            'replace_tex {\n'
+            '  from:t="camo_normal_n*"\n'
+            '  to:t="normal_n.tga"\n'
+            '}\n'
+        )
+        self.original_blk.write_text(CONFIG + extra, encoding="utf-8")
+        (self.template / "second_color.dds").write_bytes(b"DDS ")
+        (self.template / "normal_n.tga").write_bytes(b"normal-map")
+        layers = camo.list_scalable_layers(self.template)
+        self.assertEqual(len(layers), 2)
+        self.assertIn("second_color.dds", layers[1])
+        self.assertFalse(any("normal_n.tga" in label for label in layers))
+        with tempfile.TemporaryDirectory() as stage:
+            with self.assertRaisesRegex(InstallError, "Выбери один слой"):
+                camo.plan_vehicle_image(
+                    self.camo_file, self.template, Path(stage)
+                )
+            plan, destination, _, _, _ = camo.plan_vehicle_image(
+                self.camo_file, self.template, Path(stage),
+                texture_layer=layers[1], pattern_mode="mirror"
+            )
+            # Do not modify either mapping until the install is confirmed.
+            self.assertIn('to:t="second_color.dds"', self.original_blk.read_text("utf-8"))
+            self.assertFalse(destination.exists())
+            result = install_planned(plan)
+        cfg = (destination / f"{VEHICLE}.blk").read_text("utf-8")
+        self.assertIn('to:t="default_green.tga"', cfg)
+        self.assertIn('to:t="wtmm_pattern_001.tga"', cfg)
+        self.assertIn('to:t="normal_n.tga"', cfg)
+        self.assertEqual(
+            (destination / "normal_n.tga").read_bytes(), b"normal-map"
+        )
+        with Image.open(destination / "wtmm_pattern_001.tga") as image:
+            self.assertEqual(image.size, (1024, 1024))
+            for y in (0, 100, 511, 1023):
+                self.assertEqual(image.getpixel((0, y)), image.getpixel((1023, y)))
+            for x in (0, 100, 511, 1023):
+                self.assertEqual(image.getpixel((x, 0)), image.getpixel((x, 1023)))
+        self.assertEqual(restore_transaction(result["transaction"]), len(plan))
+        self.assertEqual(self.original_blk.read_text("utf-8"), CONFIG + extra)
+
+    def test_one_color_dds_template_accepts_regular_image(self):
+        self.original_blk.write_text(
+            CONFIG.replace("default_green.tga", "base_color.dds"),
+            encoding="utf-8"
+        )
+        self.original_skin.unlink()
+        (self.template / "base_color.dds").write_bytes(b"DDS ")
+        layers = camo.list_scalable_layers(self.template)
+        self.assertEqual(len(layers), 1)
+        with tempfile.TemporaryDirectory() as stage:
+            plan, destination, _, _, _ = camo.plan_vehicle_image(
+                self.camo_file, self.template, Path(stage)
+            )
+            install_planned(plan)
+        rewritten = (destination / f"{VEHICLE}.blk").read_text("utf-8")
+        self.assertIn("wtmm_pattern_001.tga", rewritten)
+        self.assertTrue((destination / "base_color.dds").exists())
+
+    def test_reject_unknown_color_layer_or_invalid_pattern_mode(self):
+        with tempfile.TemporaryDirectory() as stage:
+            with self.assertRaises(InstallError):
+                camo.plan_vehicle_image(
+                    self.camo_file, self.template, Path(stage),
+                    texture_layer="fake layer"
+                )
+            with self.assertRaises(InstallError):
+                camo.plan_vehicle_image(
+                    self.camo_file, self.template, Path(stage),
+                    pattern_mode="invalid"
+                )
+        self.assertEqual(list(self.skins.iterdir()), [self.template])
+
     def test_reject_symlink_inside_package(self):
         package = self.root / "linked_pack"
         package.mkdir()

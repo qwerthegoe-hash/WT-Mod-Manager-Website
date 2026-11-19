@@ -23,6 +23,7 @@ PRESETS = DATA_DIR / "vehicle-camouflages.json"
 VEHICLE_ID = re.compile(r"^[a-z0-9][a-z0-9_]{0,75}$", re.I)
 CAMO_FOLDER = re.compile(r"^WT_Mod_Camouflage_([0-9]{3})__([a-z0-9_]+)$", re.I)
 TEXTURE_TO = re.compile(rb'\bto\s*:\s*t\s*=\s*"([^"\r\n]+)"', re.I)
+TEXTURE_FROM = re.compile(rb'\bfrom\s*:\s*t\s*=\s*"([^"\r\n]+)"', re.I)
 REPLACE_BLOCK = re.compile(rb'\breplace_tex\s*\{([^{}]*)\}', re.I | re.S)
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tga", ".dds"}
 
@@ -110,11 +111,60 @@ def plan_vehicle_package(package_folder: Path, template_folder: Path):
     return plan, destination, vehicle_id, display, serial
 
 
-def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
-    """Turn one image into a simple scalable texture using a real game template.
+def _scalable_layers(config: bytes, source_files: list[Path]):
+    """Eligible albedo replacement layers from a genuine vehicle template.
 
-    Refuse templates with zero/multiple replace_tex rules. Fixed/UV-mapped
-    skins require a matching ready-made .blk package instead.
+    Never replace a normal/roughness map with a decorative RGB image; game
+    lighting relies on the encoded texture channels. Keep source mapping order.
+    """
+    available = {file.name.casefold() for file in source_files}
+    layers = []
+    for index, match in enumerate(REPLACE_BLOCK.finditer(config), 1):
+        to_match = TEXTURE_TO.search(match.group(1))
+        from_match = TEXTURE_FROM.search(match.group(1))
+        if not to_match or not from_match:
+            continue
+        try:
+            filename = to_match.group(1).decode("utf-8")
+            reference = from_match.group(1).decode("utf-8")
+        except UnicodeError:
+            continue
+        if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\.(?:tga|dds)", filename, re.I)
+                or filename.casefold() not in available):
+            continue
+        # A normal/roughness/damage mask must not be turned into albedo by accident.
+        candidate = filename.rsplit(".", 1)[0].casefold()
+        original_ref = reference.rstrip("*").casefold()
+        if (re.search(r"(?:_n|_normal|_nm|_rough|_damage)$", candidate)
+                or re.search(r"(?:_n|_normal|_nm|_rough|_damage)$", original_ref)):
+            continue
+        label = f"Слой {index}: {reference} → {filename}"
+        layers.append((label, match))
+        if len(layers) > 32:
+            raise InstallError("Слишком много заменяемых слоёв в шаблоне.")
+    return layers
+
+
+def list_scalable_layers(template_folder: Path) -> tuple[str, ...]:
+    """Present eligible layers before any image conversion or game write."""
+    template = validate_skin_template(template_folder)
+    vehicle = vehicle_from_template(template)
+    files = _iter_source_files(template, CAMO_EXT)
+    config = (template / f"{vehicle}.blk").read_bytes()
+    if len(config) > 2 * 1024 * 1024:
+        raise InstallError("Конфигурация шаблона слишком большая.")
+    return tuple(label for label, _ in _scalable_layers(config, files))
+
+
+def plan_vehicle_image(
+    image_file: Path, template_folder: Path, staging: Path,
+    texture_layer: str | None = None, pattern_mode: str = "fit",
+):
+    """Make a 1024x1024 TGA for one chosen scalable albedo layer.
+
+    Multiple replace_tex layers can be chosen individually. Complex fixed
+    UV-mapped skins still require an appropriate prepared package; a single
+    photo cannot infer 3D UV coordinates or the game's render state.
     """
     from PIL import Image, ImageOps, UnidentifiedImageError
 
@@ -123,6 +173,8 @@ def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
             or source.suffix.casefold() not in IMAGE_EXT
             or source.stat().st_size > 32 * 1024 * 1024):
         raise InstallError("Выбери обычную картинку PNG/JPG/TGA/DDS до 32 МиБ.")
+    if pattern_mode not in {"fit", "mirror"}:
+        raise InstallError("Неизвестный способ подготовки картинки.")
 
     template = validate_skin_template(template_folder)
     vehicle_id = vehicle_from_template(template)
@@ -136,23 +188,21 @@ def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
     config = config_path.read_bytes()
     if len(config) > 2 * 1024 * 1024:
         raise InstallError("Конфигурация шаблона слишком большая.")
-
-    replace_blocks = [match for match in REPLACE_BLOCK.finditer(config)
-                      if TEXTURE_TO.search(match.group(1))]
-    if len(replace_blocks) != 1:
+    layers = _scalable_layers(config, src_files)
+    if not layers:
         raise InstallError(
-            "У машины нет одного однозначного масштабируемого слоя. "
-            "Для сложного камуфляжа загрузи готовый комплект .blk + текстуры."
+            "В шаблоне нет подходящего масштабируемого цветового слоя. "
+            "Для сложного фиксированного камуфляжа нужен комплект текстур по UV-развёртке."
         )
-    entry = replace_blocks[0]
-    target_match = TEXTURE_TO.search(entry.group(1))
-    referenced = target_match.group(1).decode("utf-8", errors="replace")
-    if (Path(referenced).name != referenced
-            or not referenced.casefold().endswith(".tga")
-            or not any(p.name.casefold() == referenced.casefold() for p in src_files)):
-        raise InstallError(
-            "Не найден оригинальный масштабируемый TGA-слой шаблона."
-        )
+    if texture_layer is None and len(layers) > 1:
+        raise InstallError("В шаблоне несколько подходящих слоёв. Выбери один слой.")
+    if texture_layer is None:
+        entry = layers[0][1]
+    else:
+        matching = [match for label, match in layers if label == texture_layer]
+        if len(matching) != 1:
+            raise InstallError("Выбранный слой больше не найден в игровом шаблоне.")
+        entry = matching[0]
 
     destination, display, serial = next_preset_destination(template)
     staged = Path(staging)
@@ -160,23 +210,34 @@ def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
         raise InstallError("Нельзя создавать текстуры в символической ссылке.")
     staged.mkdir(parents=True, exist_ok=True)
     converted = staged / f"wtmm_pattern_{serial:03d}.tga"
-    # Keep the whole pattern without random clipping: use square fit with
-    # padding so portrait/landscape images still produce a valid texture.
     try:
         with Image.open(source) as original:
             if (original.width > 8192 or original.height > 8192
                     or original.width * original.height > 32_000_000):
                 raise InstallError("Слишком большое разрешение изображения.")
-            image = ImageOps.exif_transpose(original)
-            image = image.convert("RGB")
-            image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
-            canvas = Image.new("RGB", (1024, 1024), image.getpixel((0, 0)))
-            canvas.paste(image, ((1024 - image.width) // 2, (1024 - image.height) // 2))
+            image = ImageOps.exif_transpose(original).convert("RGB")
+            if pattern_mode == "mirror":
+                # Mirrored edges tile continuously: left/right and top/bottom
+                # pixels match, unlike an arbitrary padded screenshot.
+                tile = ImageOps.pad(image, (512, 512),
+                                    color=image.getpixel((0, 0)),
+                                    method=Image.Resampling.LANCZOS)
+                canvas = Image.new("RGB", (1024, 1024))
+                canvas.paste(tile, (0, 0))
+                canvas.paste(ImageOps.mirror(tile), (512, 0))
+                canvas.paste(ImageOps.flip(tile), (0, 512))
+                canvas.paste(ImageOps.flip(ImageOps.mirror(tile)), (512, 512))
+            else:
+                image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                canvas = Image.new("RGB", (1024, 1024), image.getpixel((0, 0)))
+                canvas.paste(
+                    image, ((1024 - image.width) // 2, (1024 - image.height) // 2)
+                )
             canvas.save(converted, format="TGA")
-    except (OSError, ValueError, UnidentifiedImageError) as error:
+    except (OSError, ValueError, UnidentifiedImageError,
+            Image.DecompressionBombError) as error:
         raise InstallError("Не удалось подготовить картинку в формат TGA.") from error
 
-    # Replace ONLY the unique destination within the unique scalable rule.
     block = entry.group(0)
     new_block, count = TEXTURE_TO.subn(
         lambda match: match.group(0).replace(
@@ -200,7 +261,6 @@ def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
         _entry(converted, destination / converted.name),
     ])
     return plan, destination, vehicle_id, display, serial
-
 
 def installed_presets() -> list[dict]:
     try:
