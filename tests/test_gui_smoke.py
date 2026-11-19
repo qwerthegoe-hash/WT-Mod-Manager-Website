@@ -20,6 +20,8 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertEqual(len(window.nav_buttons), 6)
             self.assertIsNotNone(window.sights_page)
             self.assertIsNotNone(window.camouflages_page)
+            self.assertIsNotNone(window.camouflages_page.installed_camo_list)
+            self.assertFalse(window.camouflages_page.install_selected_image.isEnabled())
             self.assertIsNotNone(window.sounds_page)
             self.assertIsNotNone(window.settings_page)
             self.assertIsNotNone(window.online_page)
