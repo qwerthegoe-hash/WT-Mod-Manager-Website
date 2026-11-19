@@ -96,19 +96,18 @@ def main():
               font=_font(25), fill="#87A6C9", anchor="mm")
     image.convert("RGB").save(OUT / "wizard.png", optimize=True)
 
-    # The old small image covered all 320x320 pixels with an opaque, almost
-    # black gradient. Inno then shrank that square to 58x58, exposing harsh
-    # black corners on its dark-gray title area. Render a real RGBA rounded
-    # card: antialiased transparency outside the radius, clipped logo inside.
-    # Inno Setup uses WizardSmallImageBackColor=none, so no corner fill occurs.
+    # Inno Setup's small image is composited over a deliberately specified
+    # solid header color. Avoid alpha compositing differences in dark mode:
+    # render an opaque rounded card with already antialiased edges instead.
+    # The panel color MUST match WizardSmallImageBackColor in the .iss script.
     scale = 4
     side = 320
-    outer = Image.new("RGBA", (side * scale, side * scale), (0, 0, 0, 0))
+    panel_color = (32, 43, 58)  # #202B3A
+    outer = Image.new("RGB", (side * scale, side * scale), panel_color)
     card = _gradient(side * scale, side * scale).convert("RGBA")
     logo = _logo(258 * scale)
-    # The original supplied logo artwork may itself have an opaque black
-    # rectangular background. Round THAT internal photo too, not just the
-    # outer card, or its dark square remains visible against the blue wizard.
+    # The supplied artwork can itself contain a rectangular background,
+    # so clip its content separately before composing it into the card.
     inner_mask = Image.new("L", logo.size, 0)
     ImageDraw.Draw(inner_mask).rounded_rectangle(
         (0, 0, logo.width - 1, logo.height - 1),
@@ -123,17 +122,17 @@ def main():
         width=4 * scale,
     )
     mask = Image.new("L", (side * scale, side * scale), 0)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rounded_rectangle(
+    ImageDraw.Draw(mask).rounded_rectangle(
         (5 * scale, 5 * scale, 315 * scale, 315 * scale),
         radius=38 * scale, fill=255,
     )
-    card.putalpha(mask)
-    outer.alpha_composite(card)
+    # Flatten before resampling, not after: the corner pixels are stable RGB
+    # and will never appear as black in transparent-image renderers.
+    outer.paste(card.convert("RGB"), (0, 0), mask)
     small = outer.resize((side, side), Image.Resampling.LANCZOS)
     small.save(OUT / "wizard-small.png", optimize=True)
-    assert small.getpixel((0, 0))[3] == 0
-    assert small.getpixel((side // 2, side // 2))[3] == 255
+    assert small.mode == "RGB"
+    assert small.getpixel((0, 0)) == panel_color
     print("Generated branded Inno Setup assets in", OUT)
 
 
