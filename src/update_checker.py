@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
 from src.offline_mode import is_offline
+from src.release_rollout import eligible, fetch_policy
 
 VERSION = "1.3.0-beta.12"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
@@ -152,8 +153,10 @@ def find_update():
     payload = _api_json(f"https://api.github.com/repos/{repo}/releases?per_page=30")
     if not isinstance(payload, list):
         raise ValueError("Unexpected release metadata.")
+    policy = fetch_policy()
     found = [_release_candidate(item, repo) for item in payload]
-    valid = [item for item in found if item is not None]
+    valid = [item for item in found if item is not None and
+             eligible(str(item["version"]), policy)]
     if not valid:
         return None
     newest = max(valid, key=lambda item: item["_sort_key"])
