@@ -802,7 +802,7 @@ class ManagerWindow(QMainWindow):
         # ==================================
 
         self.setWindowTitle(
-            "WT Mod Manager 1.2"
+            "WT Mod Manager 1.3.6"
         )
 
         self.setWindowIcon(application_logo_icon())
@@ -949,7 +949,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION BETA 1.3.4"
+            "VERSION BETA 1.3.6"
         )
 
         self.version.setObjectName(
