@@ -17,6 +17,7 @@ on:
       - "tests/test_release_integrity.py"
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
+      - "tests/test_settings_recovery.py"
       - "tests/test_mod_suite.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
@@ -40,6 +41,7 @@ on:
       - "tests/test_release_integrity.py"
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
+      - "tests/test_settings_recovery.py"
       - "tests/test_mod_suite.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
@@ -104,6 +106,9 @@ jobs:
 
       - name: Test WT Recovery, local trust and update disk constraints
         run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
+      - name: Test atomic user settings recovery and interrupted migration
+        run: python -m unittest discover -s tests -p "test_settings_recovery.py" -v
+
       - name: Test WT Mod Suite all twelve safety and offline paths
         run: python -m unittest discover -s tests -p "test_mod_suite.py" -v
 
