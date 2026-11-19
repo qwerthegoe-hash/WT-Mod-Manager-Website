@@ -62,7 +62,7 @@ Source: "wtmm.installed"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; DestName: "README.txt"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\WT Mod Manager"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExe}"
+Name: "{group}\WT Mod Manager"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExe}"; AppUserModelID: "WTModManager.Desktop"
 Name: "{group}\Удалить WT Mod Manager"; Filename: "{uninstallexe}"
 
 [UninstallDelete]
