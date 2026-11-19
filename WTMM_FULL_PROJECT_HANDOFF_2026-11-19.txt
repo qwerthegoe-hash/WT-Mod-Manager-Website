@@ -928,6 +928,10 @@ FILE: src/crash_recovery.py
   PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
   GIT_BYTES: 5503
 
+FILE: docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md
+  PURPOSE: user vehicle-camouflage roadmap, non-public visibility, virtual vs live test limits
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
+
 FILE: docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md
   PURPOSE: точная схема будущих обновлений из приложения, безопасность, перечень изменённых файлов, ручная приёмка
   GIT_BYTES: новый файл в отдельной ветке, не опубликованный релиз
@@ -939,6 +943,10 @@ FILE: src/desktop_sync.py
 FILE: src/diagnostics.py
   PURPOSE: локальные тесты путей, настроек, обновлений и профиля с кодами D001-D009 без личных данных
   GIT_BYTES: 5750
+
+FILE: src/vehicle_camouflages.py
+  PURPOSE: read-only model selection from genuine game templates; separate numbered cosmetic presets; bounded image conversion and local registry
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
 
 FILE: src/game_mod_installer.py
   PURPOSE: пользовательское добавление прицелов/камуфляжей/звуков в War Thunder после проверки путей, бэкапы, откат изменений
@@ -1019,6 +1027,10 @@ FILE: tests/test_desktop_sync.py
 FILE: tests/test_diagnostics_and_rollback.py
   PURPOSE: Python unittest по модулю diagnostics and rollback; проверять при изменениях функциональности
   GIT_BYTES: 4338
+
+FILE: tests/test_vehicle_camouflages.py
+  PURPOSE: virtual temporary War Thunder directory; simple rainbow image, per-vehicle compatibility, safe backup/rollback, links and ambiguity refusals
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
 
 FILE: tests/test_game_mod_installer.py
   PURPOSE: Python unittest по модулю game mod installer; проверять при изменениях функциональности
@@ -1343,6 +1355,45 @@ Inno Setup загружается ВНУТРИ программы и прове�
 Нужны CI, ручной Windows E2E и новый version/tag для реального релиза.
 Не утверждать, что Beta 13 уже содержит этот механизм. Нет обхода
 SmartScreen, нет подмены подписи и нет гарантированного installed rollback.
+
+================================================================================
+08E. ПОСЛЕ PR #59 — ВИЗУАЛЬНЫЕ КАМУФЛЯЖИ ПО КОНКРЕТНОЙ ТЕХНИКЕ
+================================================================================
+Ветка: feature/vehicle-camouflage-workflow-20261119.
+База: feature/one-click-in-app-updates-20261119 (PR #59), а не main.
+Подробное описание: docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md.
+Все новые изменения ниже НЕ опубликованы в Beta 13.
+
+- src/vehicle_camouflages.py: название «WT Mod камуфляж №001», 002 и
+  далее в локальном WTMM, отдельная папка WT_Mod_Camouflage_001__vehicle_id
+  в UserSkins; старый template_ не перезаписывается. ID техники получен
+  только из реального созданного игрой шаблона и имени его vehicle_id.blk.
+  Готовый набор должен содержать ровно один верный .blk и текстуру.
+  Изображение преобразуется в TGA, только если ровно один replace_tex
+  масштабируемый слой из игры однозначно определён; иначе отказ.
+- ui/game_install_ui.py: человек выбирает технику из игровых шаблонов;
+  предпросмотр, подтверждение, защитные ограничения, backup/rollback
+  остались в существующей системе. Запись локального реестра только
+  после успешной установки; откат удаляет строку из локального списка.
+- ui/media_page.py / ui/camouflages_page.py: видимый список именованных
+  камуфляжей по технике и кнопка из ранее загруженной картинки.
+- tests/test_vehicle_camouflages.py: синтетическая временная структура
+  War Thunder (прим. модель KV-1); генерация PNG с искусственным узором;
+  проверки совпадения ID, нумерации, сохранения шаблона, локального
+  backup/rollback, запрета ссылок и неоднозначных конфигураций.
+- tests/test_gui_smoke.py, Windows + desktop sync CI: новые проверки
+  без реальной игры и без сетевой установки.
+
+ОГРАНИЧЕНИЯ: локальные пользовательские камуфляжи War Thunder видны
+только владельцу (официальная wiki.warthunder.com/cdk/creation_camo).
+Невозможно обеспечить отображение у друзей / взвода без серверной
+поддержки самой игры; WTMM не внедряется в её процесс. Именование в
+игровом выпадающем списке зависит от клиента и может отличаться от
+дружелюбного имени в WTMM. ZIP, сложные UV-пакеты и реальное игровое
+3D-отображение нельзя считать протестированными лишь по mock CI.
+PR #59 обновления и новый PR камуфляжей зависят друг от друга:
+объединять после полной успешной CI и отдельной практической проверки
+перехода Beta13 → следующая версия.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ
