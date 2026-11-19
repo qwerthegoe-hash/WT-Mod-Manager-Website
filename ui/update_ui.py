@@ -23,6 +23,7 @@ CHECK_INTERVAL_MS = 10 * 60 * 1000
 
 class UpdateWorker(QObject):
     finished = Signal(object, str)
+    progress = Signal(int)
 
     def __init__(self, download_info=None):
         super().__init__()
@@ -32,7 +33,9 @@ class UpdateWorker(QObject):
     def run(self):
         try:
             if self.download_info is not None:
-                path = download_verified(self.download_info)
+                path = download_verified(
+                    self.download_info, progress_callback=self.progress.emit
+                )
                 value = {"path": path, "release": self.download_info}
             else:
                 value = find_update()
@@ -45,6 +48,9 @@ class UpdateController(QObject):
     update_available = Signal(object)
     notifications_changed = Signal()
     tray_notification = Signal(str, str)
+    download_started = Signal()
+    download_progress = Signal(int)
+    download_finished = Signal(bool)
 
     def __init__(self, parent=None, on_install_ready=None):
         super().__init__(parent if isinstance(parent, QObject) else None)
@@ -139,13 +145,20 @@ class UpdateController(QObject):
             return
         if self.thread is not None:
             return
-        choice = QMessageBox.question(
-            self.parent_window, "Скачать обновление",
+        confirmation = (
             "Доступна " + str(info["version"]) +
-            (". Скачать официальный установщик с проверкой SHA-256?"
-             if info.get("kind") == "installer" else
-             ". Скачать официальный WTModManager.exe с проверкой SHA-256?") +
-            "\nПриложение продолжит работать во время скачивания.",
+            ".\n\nСкачать и проверить официальное обновление, затем "
+            "обновить WT Mod Manager в той же папке?\n"
+            "Приложение закроется и откроется заново автоматически. "
+            "Настройки, моды и ярлыки сохранятся."
+            if info.get("kind") == "installer" else
+            "Доступна " + str(info["version"]) +
+            ".\n\nСкачать и проверить официальный portable EXE? "
+            "После загрузки можно подтвердить замену."
+        )
+        choice = QMessageBox.question(
+            self.parent_window, "Обновить WT Mod Manager",
+            confirmation,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -165,6 +178,9 @@ class UpdateController(QObject):
         self.thread = QThread(self)
         self.worker = UpdateWorker(info)
         self.worker.moveToThread(self.thread)
+        if info is not None:
+            self.worker.progress.connect(self.download_progress.emit)
+            self.download_started.emit()
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(
             lambda result, error, is_download=info is not None:
@@ -189,6 +205,7 @@ class UpdateController(QObject):
         self._manual_check = False
         if error:
             if downloaded:
+                self.download_finished.emit(False)
                 record_event(
                     "update_failed", "Не удалось скачать обновление",
                     "Скачивание или проверка не прошли: " + error,
@@ -238,6 +255,7 @@ class UpdateController(QObject):
         # Re-check the staged file immediately before handing it to the
         # installer, even though the download worker already verified it.
         if _sha256(staged) != info["digest"]:
+            self.download_finished.emit(False)
             QMessageBox.warning(
                 self.parent_window, "Ошибка обновления",
                 "Загруженный файл изменился после проверки. Установка отменена."
@@ -251,30 +269,27 @@ class UpdateController(QObject):
         )
         self.notifications_changed.emit()
 
-        if info.get("kind") == "installer":
-            prompt = (
-                "WT Mod Manager " + str(info["version"]) +
-                " скачан и проверен по SHA-256.\n"
-                "Открыть фирменный мастер обновления и закрыть текущую "
-                "программу? Выбор папки, ярлыки и удаление останутся под "
-                "управлением установщика Windows. Моды и настройки сохранятся."
-            )
-        else:
+        # The installed version already received explicit consent BEFORE
+        # download. It now uses the existing Inno installer in-place without
+        # asking the user to step through a second wizard.
+        if info.get("kind") != "installer":
             prompt = (
                 "WT Mod Manager " + str(info["version"]) +
                 " скачан и проверен.\nЗавершить программу, сохранить "
                 "предыдущий EXE и открыть новую версию?\n"
                 "Моды и настройки сохранятся."
             )
-        choice = QMessageBox.question(
-            self.parent_window, "Установить обновление",
-            prompt,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        if choice != QMessageBox.StandardButton.Yes:
-            return
+            choice = QMessageBox.question(
+                self.parent_window, "Установить обновление",
+                prompt,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if choice != QMessageBox.StandardButton.Yes:
+                self.download_finished.emit(False)
+                return
         if sys.platform != "win32" or not getattr(sys, "frozen", False):
+            self.download_finished.emit(False)
             QMessageBox.information(
                 self.parent_window, "Обновление",
                 "Замена приложения доступна только в готовом Windows EXE."
@@ -286,7 +301,9 @@ class UpdateController(QObject):
             else:
                 launch_verified_update(staged, info["digest"])
         except (OSError, ValueError, RuntimeError) as problem:
+            self.download_finished.emit(False)
             QMessageBox.warning(self.parent_window, "Ошибка обновления", str(problem))
             return
+        self.download_finished.emit(True)
         if callable(self.on_install_ready):
             QTimer.singleShot(0, self.on_install_ready)
