@@ -521,8 +521,19 @@ async function showModDetails(id) {
             error: "Ошибка сканирования. Автоматически выполняется до трёх попыток."
         })[current] || "Ожидает проверки";
         content.append(node("p", "mod-status " + row.status, message));
+        if (Number.isInteger(row.triage_files) && row.triage_files > 0)
+            content.append(node("p", "mods-review-note",
+                "Файлов внутри ZIP: " + row.triage_files +
+                " · проверены пути, CRC и лимиты распаковки."));
         if (row.triage_note)
             content.append(node("p", "mods-review-note", row.triage_note));
+        if (row.scan_status === "pending")
+            content.append(node("p", "mods-review-note",
+                "Антивирусная проверка не завершена или не настроена. " +
+                "Структурный анализ не подтверждает отсутствие вирусов."));
+        if (row.scan_note && row.scan_status !== "blocked")
+            content.append(node("p", "mods-review-note",
+                "Антивирусный отчёт: " + row.scan_note));
         if (row.scan_status === "blocked")
             content.append(node("p", "mods-review-note",
                 "Антивирус обнаружил потенциальную угрозу. Публикация запрещена до расследования возможного ложного срабатывания."));
