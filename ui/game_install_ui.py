@@ -105,13 +105,13 @@ def _execute(parent, plan, category, config_root=None):
         QMessageBox.information(parent, "Установка", "Файлы уже установлены и не изменились.")
         return
     summary = (
-        f"{category}: предпросмотр установки\\n\\n"
-        f"Новые файлы: {review.additions}\\n"
-        f"Заменить файлы: {review.replacements}\\n"
-        f"Без изменений: {review.unchanged}\\n"
-        f"Объём записи: {review.bytes_to_copy / (1024 * 1024):.1f} МиБ\\n"
+        f"{category}: предпросмотр установки\n\n"
+        f"Новые файлы: {review.additions}\n"
+        f"Заменить файлы: {review.replacements}\n"
+        f"Без изменений: {review.unchanged}\n"
+        f"Объём записи: {review.bytes_to_copy / (1024 * 1024):.1f} МиБ\n"
         f"Оценка места с резервными копиями: "
-        f"{review.required_space / (1024 * 1024):.1f} МиБ\\n\\n"
+        f"{review.required_space / (1024 * 1024):.1f} МиБ\n\n"
         "Сначала просмотри конфликтующие назначения. "
         "Изменения не начнутся до подтверждения."
     )
@@ -120,8 +120,8 @@ def _execute(parent, plan, category, config_root=None):
     box.setIcon(QMessageBox.Icon.Warning if review.replacements else QMessageBox.Icon.Information)
     box.setText(summary)
     if review.conflicting_filenames:
-        box.setDetailedText("Конфликты (только имена файлов):\\n" +
-                            "\\n".join(review.conflicting_filenames))
+        box.setDetailedText("Конфликты (только имена файлов):\n" +
+                            "\n".join(review.conflicting_filenames))
     replace = box.addButton("Установить с резервной копией", QMessageBox.ButtonRole.AcceptRole)
     keep = box.addButton("Сохранить существующие" if review.replacements else "Без замен",
                          QMessageBox.ButtonRole.ActionRole)
@@ -167,7 +167,7 @@ def _execute(parent, plan, category, config_root=None):
         pass  # Game changes are already committed; do not falsely claim failure.
     QMessageBox.information(
         parent, "Готово",
-        f"{category}: установлено/обновлено файлов: {result['copied']}.\\n"
+        f"{category}: установлено/обновлено файлов: {result['copied']}.\n"
         "Резервная копия создана. Прогресс отражён в истории установок."
     )
 
