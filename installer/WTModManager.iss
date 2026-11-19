@@ -91,7 +91,7 @@ end;
 procedure InitializeWizard();
 var
   Path: String;
-  Saved: String;
+  Saved: AnsiString;
 begin
   WizardForm.WelcomeLabel1.Caption := 'WT MOD MANAGER';
   WizardForm.WelcomeLabel2.Caption :=
@@ -170,7 +170,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Path: String;
-  Json: String;
+  Json: AnsiString;
 begin
   if CurStep = ssPostInstall then
   begin
