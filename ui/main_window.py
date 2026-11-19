@@ -950,7 +950,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION " + APP_VERSION.toUpperCase()
+            "VERSION " + APP_VERSION.upper()
         )
 
         self.version.setObjectName(
