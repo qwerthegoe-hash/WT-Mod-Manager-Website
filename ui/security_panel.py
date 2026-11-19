@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from src.mod_security import (
     SecurityError, VirusTotalError, inspect_mod_file, lookup_vt_sha256,
-    has_vt_key, save_vt_key, remove_vt_key
+    has_vt_key, save_vt_key, remove_vt_key, verify_vt_key
 )
 
 
@@ -47,6 +47,17 @@ class VirusTotalLookup(QThread):
             self.result_ready.emit(None, str(error))
 
 
+class VirusTotalKeyProbe(QThread):
+    result_ready = Signal(bool, str)
+
+    def run(self):
+        try:
+            verify_vt_key()
+            self.result_ready.emit(True, "")
+        except (VirusTotalError, OSError) as error:
+            self.result_ready.emit(False, str(error))
+
+
 class SecurityPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -54,6 +65,7 @@ class SecurityPanel(QWidget):
         self._digest = ""
         self._worker = None
         self._vt_worker = None
+        self._key_worker = None
         app = QApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop_workers)
@@ -110,6 +122,13 @@ class SecurityPanel(QWidget):
         self.remove_button = QPushButton("Удалить ключ")
         self.remove_button.clicked.connect(self.remove_key)
         grid.addWidget(self.remove_button, 1, 1)
+        self.check_key_button = QPushButton("Проверить API-ключ")
+        self.check_key_button.setToolTip(
+            "Проверяет доступность VirusTotal по хешу пустого файла. "
+            "Никакие моды или их содержимое не отправляются."
+        )
+        self.check_key_button.clicked.connect(self.check_key)
+        grid.addWidget(self.check_key_button, 2, 0, 1, 2)
         vt_layout.addLayout(grid)
         self.key_status = QLabel("")
         self.key_status.setWordWrap(True)
@@ -130,8 +149,10 @@ class SecurityPanel(QWidget):
             "API-ключ сохранён в защищённом профиле Windows (DPAPI)."
             if has_vt_key() else "API-ключ не подключён. Локальная проверка доступна без него."
         )
-        self.lookup_button.setEnabled(bool(self._digest and has_vt_key()) and
+        is_set = has_vt_key()
+        self.lookup_button.setEnabled(bool(self._digest and is_set) and
                                       self._vt_worker is None)
+        self.check_key_button.setEnabled(is_set and self._key_worker is None)
 
     def choose_file(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -198,6 +219,36 @@ class SecurityPanel(QWidget):
         self.key_entry.clear()
         self._refresh_key_status()
 
+    def check_key(self):
+        if self._key_worker is not None or not has_vt_key():
+            return
+        self.key_status.setText("Проверяем ключ через VirusTotal (1 API-запрос)…")
+        self.check_key_button.setEnabled(False)
+        self.save_button.setEnabled(False)
+        self.remove_button.setEnabled(False)
+        worker = VirusTotalKeyProbe(self)
+        self._key_worker = worker
+        worker.result_ready.connect(self._on_key_result)
+        worker.finished.connect(worker.deleteLater)
+        worker.finished.connect(self._on_key_finished)
+        worker.start()
+
+    def _on_key_result(self, valid, error):
+        if valid:
+            self.key_status.setText(
+                "VirusTotal ответил успешно: ключ действителен для запроса отчётов."
+            )
+        else:
+            self.key_status.setText(
+                "Не удалось подтвердить API-ключ: " + str(error)
+            )
+
+    def _on_key_finished(self):
+        self._key_worker = None
+        self.save_button.setEnabled(True)
+        self.remove_button.setEnabled(True)
+        self.check_key_button.setEnabled(has_vt_key())
+
     def check_virustotal(self):
         if not self._digest or self._vt_worker is not None:
             return
@@ -244,6 +295,6 @@ class SecurityPanel(QWidget):
     def _stop_workers(self):
         # The native QThread objects are owned by this widget. Do not destroy
         # them while a bounded local check or network lookup is still running.
-        for worker in (self._worker, self._vt_worker):
+        for worker in (self._worker, self._vt_worker, self._key_worker):
             if worker is not None and worker.isRunning():
                 worker.wait(20000)
