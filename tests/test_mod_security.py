@@ -104,6 +104,19 @@ class ModSecurityTests(unittest.TestCase):
         self.assertTrue(request.full_url.endswith("/" + "f" * 64))
         self.assertNotIn("file", str(request.data))
 
+    def test_key_probe_uses_only_public_empty_file_hash(self):
+        with patch("src.mod_security.lookup_vt_sha256",
+                   return_value={"known": False}) as lookup:
+            self.assertTrue(sec.verify_vt_key())
+        self.assertEqual(lookup.call_args.args[0],
+                         sec.hashlib.sha256(b"").hexdigest())
+
+    def test_key_probe_does_not_mask_unauthorized_response(self):
+        with patch("src.mod_security.lookup_vt_sha256",
+                   side_effect=sec.VirusTotalError("Unauthorized")):
+            with self.assertRaises(sec.VirusTotalError):
+                sec.verify_vt_key()
+
     def test_never_persist_key_without_windows_dpapi(self):
         with patch.object(sec.sys, "platform", "linux"):
             with self.assertRaises(sec.VirusTotalError):

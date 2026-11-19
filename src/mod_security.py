@@ -183,6 +183,17 @@ def remove_vt_key() -> None:
         raise VirusTotalError("Не удалось удалить локальный API-ключ.") from error
 
 
+def verify_vt_key() -> bool:
+    """User-triggered authentication probe. Sends only a public SHA-256.
+
+    A valid key may return HTTP 404 for an unknown hash; lookup_vt_sha256
+    treats this as an authorized result. This consumes one public API request.
+    """
+    empty_sha256 = hashlib.sha256(b"").hexdigest()
+    lookup_vt_sha256(empty_sha256)
+    return True
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, msg, headers, newurl):
         return None

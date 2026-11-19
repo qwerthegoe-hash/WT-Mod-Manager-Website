@@ -33,7 +33,8 @@ try {
   if ($Stage -eq "native") {
     $paths = @("build\wtmm_taskbar.dll")
   } elseif ($Stage -eq "payload") {
-    $paths = @("dist\WTModManager.exe", "dist\WTModManager\WTModManager.exe")
+    # The exact same signed single-file app is shipped portable and installed.
+    $paths = @("dist\WTModManager.exe")
   } else {
     $paths = @("dist\WTModManager-Setup.exe")
   }
