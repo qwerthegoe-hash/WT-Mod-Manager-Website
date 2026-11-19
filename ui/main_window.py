@@ -1321,7 +1321,7 @@ class ManagerWindow(QMainWindow):
             self.game_status.setText(status)
             self.game_status.setToolTip(
                 "Автопоиск не меняет файлы игры. "
-                "При импорте можно выбрать любую папку вручную."
+                "При установке удерживай Ctrl, чтобы выбрать папку вручную."
             )
         except OSError:
             self.game_status.setText("Автопоиск недоступен; выберите папку вручную")
