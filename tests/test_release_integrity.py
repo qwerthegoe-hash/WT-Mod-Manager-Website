@@ -16,7 +16,7 @@ class ReleaseIntegrityTests(unittest.TestCase):
             (self.folder / name).write_bytes(b"MZ" + b"x" * (1024 * 1024 + 4))
         self.kwargs = {
             "folder": self.folder,
-            "version": "1.3.0-beta.13",
+            "version": "1.3.0-beta.14",
             "repository": rel.REPOSITORY,
             "commit": "a" * 40,
             "run_url": (
@@ -27,7 +27,7 @@ class ReleaseIntegrityTests(unittest.TestCase):
         }
 
     def test_version_matches_app_installer_and_notes(self):
-        self.assertEqual(rel.current_version(), "1.3.0-beta.13")
+        self.assertEqual(rel.current_version(), "1.3.0-beta.14")
 
     def test_unsigned_release_is_explicit(self):
         obj = rel.make_manifest(**self.kwargs)
@@ -73,7 +73,7 @@ class ReleaseIntegrityTests(unittest.TestCase):
         obj = rel.make_manifest(**self.kwargs)
         rel.write_manifest(self.folder, obj)
         with self.assertRaisesRegex(ValueError, "version mismatch"):
-            rel.verify_manifest(self.folder, "1.3.0-beta.14")
+            rel.verify_manifest(self.folder, "1.3.0-beta.15")
 
     def test_reject_unexpected_binary_type(self):
         (self.folder / rel.ARTIFACTS[1]).write_bytes(

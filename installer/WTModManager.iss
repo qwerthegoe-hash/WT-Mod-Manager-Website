@@ -1,8 +1,8 @@
-; WT Mod Manager branded Windows installer, beta 1.3.13.
+; WT Mod Manager branded Windows installer, beta 1.3.14.
 ; The installer itself NEVER silently pins the taskbar.
 ; Per-user mod files/settings live in %LOCALAPPDATA%\WTModManager and survive.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0-beta.13"
+  #define MyAppVersion "1.3.0-beta.14"
 #endif
 #define AppName "WT Mod Manager"
 #define AppExe "WTModManager.exe"
@@ -48,7 +48,7 @@ VersionInfoCompany=WT Mod Manager Community
 VersionInfoDescription=WT Mod Manager Windows Installer
 VersionInfoProductName=WT Mod Manager
 VersionInfoCopyright=WT Mod Manager Community
-VersionInfoVersion=1.3.0.13
+VersionInfoVersion=1.3.0.14
 WizardResizable=yes
 WizardKeepAspectRatio=yes
 AllowNoIcons=yes
@@ -77,8 +77,24 @@ Type: files; Name: "{userstartup}\WT Mod Manager.lnk"
 
 [Run]
 Filename: "{app}\{#AppExe}"; Parameters: "{code:GetLaunchParams}"; Description: "Запустить WT Mod Manager"; Flags: postinstall nowait skipifsilent
+; Only the verified, user-confirmed in-app update uses this restart path.
+; Other silent setups (e.g. CI or enterprise deployment) must NOT auto-run.
+Filename: "{app}\{#AppExe}"; Parameters: "--updated"; Flags: nowait skipifnotsilent runasoriginaluser; Check: IsOneClickUpdate
 
 [Code]
+function IsOneClickUpdate(): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if Lowercase(ParamStr(I)) = '/wtmmautoupdate' then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
 function HasLegacyRuntime(): Boolean;
 begin
   Result := FileExists(ExpandConstant('{app}\wtmm.installed')) and
@@ -270,6 +286,16 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
+    if IsOneClickUpdate() then
+    begin
+      { Preserve the user's previous channel, mods and configuration. }
+      { The new app picks this marker up and records a verified upgrade notice. }
+      Path := ExpandConstant('{localappdata}\WTModManager\updates');
+      if ForceDirectories(Path) then
+        SaveStringToFile(Path + '\last-update-status.txt',
+          'Обновление установлено. WT Mod Manager {#MyAppVersion}.', False);
+      Exit;
+    end;
     Path := ExpandConstant('{localappdata}\WTModManager');
     if ForceDirectories(Path) then
     begin

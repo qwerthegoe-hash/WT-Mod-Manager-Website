@@ -111,6 +111,42 @@ class UpdateControllerTests(unittest.TestCase):
         self.controller._finished({"version":"v1.4.0"}, "", downloaded=False)
         self.assertFalse(seen)
 
+    def test_one_click_installed_update_only_confirms_before_download(self):
+        from PySide6.QtWidgets import QMessageBox
+        info = {"version": "v1.4.0-beta.1", "kind": "installer"}
+        self.controller.current_update = info
+        with patch("ui.update_ui.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.Yes) as prompt, \
+             patch.object(self.controller, "_start") as start:
+            self.controller.request_install()
+        prompt.assert_called_once()
+        start.assert_called_once_with(info)
+        self.assertIn("той же папке", prompt.call_args.args[2])
+
+    def test_installed_update_handoff_never_asks_again_after_download(self):
+        import ui.update_ui as update_ui
+        info = {
+            "version": "v1.4.0-beta.1", "kind": "installer",
+            "digest": "a" * 64,
+        }
+        stage = Path(self.folder.name) / "WTModManager-Setup.exe"
+        stage.write_bytes(b"MZ" + b"A" * 100)
+        status = []
+        self.controller.download_finished.connect(status.append)
+        with (
+            patch.object(update_ui, "_sha256", return_value=info["digest"]),
+            patch.object(update_ui.sys, "platform", "win32"),
+            patch.object(update_ui.sys, "frozen", True, create=True),
+            patch.object(update_ui, "launch_setup_update") as start,
+            patch.object(update_ui.QMessageBox, "question") as prompt,
+        ):
+            self.controller._finished(
+                {"release": info, "path": stage}, "", downloaded=True
+            )
+        prompt.assert_not_called()
+        start.assert_called_once_with(stage, info["digest"])
+        self.assertEqual(status, [True])
+
     def test_disabled_auto_does_not_start_network_check(self):
         events.set_auto_check(False)
         with patch.object(self.controller,"_start") as start:

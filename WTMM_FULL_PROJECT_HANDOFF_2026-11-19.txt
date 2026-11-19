@@ -3,10 +3,11 @@ WT MOD MANAGER — ПОЛНОЕ ТЕХНИЧЕСКОЕ ДОСЬЕ И ПЕРЕД�
 Срез состояния: 19 ноября 2026 (Europe/Kyiv).
 Основной проект: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website
 Основная ветка: main
-Проверенный релиз: v1.3.0-beta.12
-Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12
-Commit выпущенной версии: 95a38e292b4e1e70c37bdef9a7dd16c28a58b486
-GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
+Проверенный опубликованный релиз: v1.3.0-beta.13
+Кандидат следующего релиза (в PR, ещё не опубликован): 1.3.0-beta.14
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13
+Commit выпущенной версии: a122abf4f6649e4598c5fa865861aaa53a4c1cc5
+GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44543556869
 Сайт: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/
 Trust Center: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/trust.html
 GitHub Pages: исходники лежат в docs/, не путать с Python desktop.
@@ -15,11 +16,11 @@ GitHub Pages: исходники лежат в docs/, не путать с Pytho
 ВНИМАНИЕ: это документ-«снимок», а не автоматический синхронизатор будущих изменений. Перед любыми новыми изменениями проверить актуальную ветку и последнюю версию. Здесь различаются ПОДТВЕРЖДЕНО, РЕАЛИЗОВАНО, ОПЦИОНАЛЬНО/НЕ НАСТРОЕНО и ТРЕБУЕТ ПРОВЕРКИ. Не приписывать проекту то, чего CI или живой сервер не доказывают.
 
 ================================================================================
-BETA 13 — WT MOD SUITE 2.0 (в работе в PR #55, на момент подготовки документа НЕ опубликована)
+BETA 13 — WT MOD SUITE 2.0 (исторический этап: опубликована 19 ноября 2026)
 --------------------------------------------------------------------------------
-Версия исходников: 1.3.0-beta.13. Последним ПОДТВЕРЖДЁННЫМ опубликованным выпуском до успешного merge/release остаётся v1.3.0-beta.12.
+Исторический выпуск: 1.3.0-beta.13. Текущий кандидат 1.3.0-beta.14 — ветка PR #60; НЕ считать его опубликованным до успешной main CI и GitHub Releases.
 PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
-ВНИМАНИЕ: не выдавать функции Beta 13 за опубликованный EXE, пока CI на main и GitHub Releases не подтвердят выход.
+ВНИМАНИЕ: Beta 13 опубликована; новые функции Beta 14 пока есть лишь в рабочих ветках и не входят в выпущенный Beta 13 EXE.
 
 12 дополнительных направлений:
 1) Conflict Resolver: ui/game_install_ui.py вызывает src/mod_suite.py preview_install/resolve_conflicts, показывает реальные замены, позволяет оставить старые файлы / сделать backup-замену / отменить. Существующие транзакционные backup и rollback в src/game_mod_installer.py сохранены.
@@ -44,7 +45,7 @@ PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
 
 Главное пожелание: перед каждым изменением читать АКТУАЛЬНЫЕ файлы проекта; менять точечно, не сокращать UI и не удалять функции; работать через новую ветку + PR + CI; проверять безопасность секретов; выпускать версию только после успешной Windows-сборки. Все релизные номера согласовывать между src/update_checker.py, installer/WTModManager.iss, installer/release-notes.txt и .github/workflows/build-windows-exe.yml, а также тестами.
 
-Последнее проверенное: Beta 12 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. В последующем документальном улучшении удалены только кэш-файлы *.pyc из Git (исходники сохранены). Это НЕ новый desktop релиз: версия остаётся beta.12.
+Последнее проверенное опубликованное на момент подготовки кандидата: Beta 13 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. Следующее обновление 1.3.0-beta.14 готовится в PR и пока не является доступным EXE.
 
 КРИТИЧНО: текущий публичный релиз помечен UNSIGNED. Sigstore attestation != Authenticode, SHA-256 != цифровая подпись, код проекта не может легально «заставить» Windows доверять новой программе. Нет гарантии убрать SmartScreen без настоящего доверенного сертификата и репутации издателя.
 
@@ -928,6 +929,14 @@ FILE: src/crash_recovery.py
   PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
   GIT_BYTES: 5503
 
+FILE: docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md
+  PURPOSE: user vehicle-camouflage roadmap, non-public visibility, virtual vs live test limits
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
+
+FILE: docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md
+  PURPOSE: точная схема будущих обновлений из приложения, безопасность, перечень изменённых файлов, ручная приёмка
+  GIT_BYTES: новый файл в отдельной ветке, не опубликованный релиз
+
 FILE: src/desktop_sync.py
   PURPOSE: привязка Windows-клиента к веб-аккаунту через серверный challenge, DPAPI, фоновая синхронизация и rollback модов
   GIT_BYTES: 23591
@@ -936,12 +945,16 @@ FILE: src/diagnostics.py
   PURPOSE: локальные тесты путей, настроек, обновлений и профиля с кодами D001-D009 без личных данных
   GIT_BYTES: 5750
 
+FILE: src/vehicle_camouflages.py
+  PURPOSE: read-only model selection from genuine game templates; separate numbered cosmetic presets; bounded image conversion and local registry
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
+
 FILE: src/game_mod_installer.py
   PURPOSE: пользовательское добавление прицелов/камуфляжей/звуков в War Thunder после проверки путей, бэкапы, откат изменений
   GIT_BYTES: 14529
 
 FILE: src/installed_updater.py
-  PURPOSE: передача проверенного установщика Inno Setup при подтверждённом обновлении установленной версии
+  PURPOSE: проверка SHA-256 и запуск Inno Setup для установленной версии в прежней папке, one-click silent progress, без shell
   GIT_BYTES: 1765
 
 FILE: src/main.py
@@ -1015,6 +1028,10 @@ FILE: tests/test_desktop_sync.py
 FILE: tests/test_diagnostics_and_rollback.py
   PURPOSE: Python unittest по модулю diagnostics and rollback; проверять при изменениях функциональности
   GIT_BYTES: 4338
+
+FILE: tests/test_vehicle_camouflages.py
+  PURPOSE: virtual temporary War Thunder directory; simple rainbow image, per-vehicle compatibility, safe backup/rollback, links and ambiguity refusals
+  GIT_BYTES: новый файл в отдельном PR, не в Beta 13
 
 FILE: tests/test_game_mod_installer.py
   PURPOSE: Python unittest по модулю game mod installer; проверять при изменениях функциональности
@@ -1303,6 +1320,81 @@ FILE: tests/test_mod_suite.py
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
   GIT_BYTES: generated
+
+================================================================================
+08D. ONE-CLICK ОБНОВЛЕНИЯ УСТАНОВЛЕННОГО WT MOD MANAGER — PR, НЕ РЕЛИЗ
+================================================================================
+Ветка от main a122abf4f6649e4598c5fa865861aaa53a4c1cc5:
+feature/one-click-in-app-updates-20261119.
+Полное описание: docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md.
+Различать состояние кода этой ветки и опубликованный v1.3.0-beta.13.
+
+РЕАЛИЗОВАНО В ЭТОЙ ВЕТКЕ:
+- src/installed_updater.py передаёт проверенный Setup в существующую
+  папку программы через /DIR=, /SILENT, /NORESTART и /CLOSEAPPLICATIONS.
+  /SILENT показывает прогресс и ошибки, не обходит требования Windows/UAC.
+- installer/WTModManager.iss принимает только явный /WTMMAUTOUPDATE для
+  автозапуска обновлённой программы --updated после штатного Inno install;
+  обычные silent install (включая CI) не запускают приложение самовольно.
+  При one-click апдейте installer не сбрасывает update-channel.json.
+  Сохраняется штатный uninstall/shortcut/user-data handling.
+- ui/update_ui.py: одно подтверждение ПЕРЕД скачиванием, после успешного
+  SHA256 не запрашивает второй мастер для installed-версии; portable
+  updater сохраняет собственный текущий безопасный процесс.
+- src/update_checker.py: необязательный callback 0..100% для скачивания,
+  старые вызовы не ломаются, кэш повторно сверяется по SHA.
+- ui/online_page.py и src/main.py: процент скачивания, статус установки,
+  кнопка «Обновить до ...» в существующей вкладке «Загрузки».
+- tests/test_installer_integration.py, tests/test_update_notifications.py,
+  tests/test_gui_smoke.py + Windows workflow: offline тесты на согласие,
+  проверку хеша, нестандартный путь, отсутствие shell/повторных диалогов.
+
+ТЕХНИЧЕСКОЕ ОГРАНИЧЕНИЕ:
+Обновление не означает «без скачивания вообще»: полный официальный
+Inno Setup загружается ВНУТРИ программы и проверяется перед запуском.
+Если установлена только portable-версия, работает portable_updater.
+Нужны CI, ручной Windows E2E и новый version/tag для реального релиза.
+Не утверждать, что Beta 13 уже содержит этот механизм. Нет обхода
+SmartScreen, нет подмены подписи и нет гарантированного installed rollback.
+
+================================================================================
+08E. ПОСЛЕ PR #59 — ВИЗУАЛЬНЫЕ КАМУФЛЯЖИ ПО КОНКРЕТНОЙ ТЕХНИКЕ
+================================================================================
+Ветка: feature/vehicle-camouflage-workflow-20261119.
+База: feature/one-click-in-app-updates-20261119 (PR #59), а не main.
+Подробное описание: docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md.
+Все новые изменения ниже НЕ опубликованы в Beta 13.
+
+- src/vehicle_camouflages.py: название «WT Mod камуфляж №001», 002 и
+  далее в локальном WTMM, отдельная папка WT_Mod_Camouflage_001__vehicle_id
+  в UserSkins; старый template_ не перезаписывается. ID техники получен
+  только из реального созданного игрой шаблона и имени его vehicle_id.blk.
+  Готовый набор должен содержать ровно один верный .blk и текстуру.
+  Изображение преобразуется в TGA, только если ровно один replace_tex
+  масштабируемый слой из игры однозначно определён; иначе отказ.
+- ui/game_install_ui.py: человек выбирает технику из игровых шаблонов;
+  предпросмотр, подтверждение, защитные ограничения, backup/rollback
+  остались в существующей системе. Запись локального реестра только
+  после успешной установки; откат удаляет строку из локального списка.
+- ui/media_page.py / ui/camouflages_page.py: видимый список именованных
+  камуфляжей по технике и кнопка из ранее загруженной картинки.
+- tests/test_vehicle_camouflages.py: синтетическая временная структура
+  War Thunder (прим. модель KV-1); генерация PNG с искусственным узором;
+  проверки совпадения ID, нумерации, сохранения шаблона, локального
+  backup/rollback, запрета ссылок и неоднозначных конфигураций.
+- tests/test_gui_smoke.py, Windows + desktop sync CI: новые проверки
+  без реальной игры и без сетевой установки.
+
+ОГРАНИЧЕНИЯ: локальные пользовательские камуфляжи War Thunder видны
+только владельцу (официальная wiki.warthunder.com/cdk/creation_camo).
+Невозможно обеспечить отображение у друзей / взвода без серверной
+поддержки самой игры; WTMM не внедряется в её процесс. Именование в
+игровом выпадающем списке зависит от клиента и может отличаться от
+дружелюбного имени в WTMM. ZIP, сложные UV-пакеты и реальное игровое
+3D-отображение нельзя считать протестированными лишь по mock CI.
+PR #59 обновления и новый PR камуфляжей зависят друг от друга:
+объединять после полной успешной CI и отдельной практической проверки
+перехода Beta13 → следующая версия.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ

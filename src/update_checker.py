@@ -20,7 +20,7 @@ from src.profile_paths import DATA_DIR
 from src.offline_mode import is_offline
 from src.release_rollout import eligible, fetch_policy
 
-VERSION = "1.3.0-beta.13"
+VERSION = "1.3.0-beta.14"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
@@ -163,8 +163,12 @@ def find_update():
     return {key: value for key, value in newest.items() if key != "_sort_key"}
 
 
-def download_verified(info):
-    """Bounded stream from the official release, verified before staging."""
+def download_verified(info, progress_callback=None):
+    """Download into user-local staging with hash verification and optional progress.
+
+    A callback reports integer percentages (0..100). Existing callers can
+    omit it; progress is only reported for the verified release asset.
+    """
     if is_offline():
         raise OSError("WT Offline Mode включён: скачивание обновлений остановлено.")
     repo = repository()
@@ -189,6 +193,8 @@ def download_verified(info):
     temp = target_dir / filename.replace(".exe", ".download")
     if target.exists() and target.is_file() and not target.is_symlink() and target.stat().st_size == info["size"]:
         if _sha256(target) == info["digest"]:
+            if progress_callback is not None:
+                progress_callback(100)
             return target
     # Reserve space for both the partial download and verified staged copy.
     # Installed/portable updates never delete personal mods to free space.
@@ -200,7 +206,10 @@ def download_verified(info):
             "Освободи место на диске и повтори загрузку."
         )
     downloaded = 0
+    last_percent = -1
     sha = hashlib.sha256()
+    if progress_callback is not None:
+        progress_callback(0)
     try:
         request = urllib.request.Request(url, headers={
             "User-Agent": "WTModManager-Updater/1.3"
@@ -217,6 +226,10 @@ def download_verified(info):
                     raise ValueError("Downloaded update is larger than expected.")
                 sha.update(block)
                 file.write(block)
+                percent = min(99, downloaded * 100 // info["size"])
+                if progress_callback is not None and percent > last_percent:
+                    last_percent = percent
+                    progress_callback(percent)
         if downloaded != info["size"] or sha.hexdigest() != info["digest"]:
             raise ValueError("Update SHA-256 or file size mismatch.")
         with temp.open("rb") as downloaded_file:
@@ -224,6 +237,8 @@ def download_verified(info):
         if signature != b"MZ":
             raise ValueError("Download is not a Windows executable.")
         temp.replace(target)
+        if progress_callback is not None:
+            progress_callback(100)
         return target
     finally:
         temp.unlink(missing_ok=True)

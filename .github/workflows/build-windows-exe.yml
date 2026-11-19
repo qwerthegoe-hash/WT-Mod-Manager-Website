@@ -18,6 +18,12 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_vehicle_camouflages.py"
+      - "src/vehicle_camouflages.py"
+      - "ui/media_page.py"
+      - "ui/game_install_ui.py"
+      - "tests/test_update_notifications.py"
+      - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -41,6 +47,12 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_vehicle_camouflages.py"
+      - "src/vehicle_camouflages.py"
+      - "ui/media_page.py"
+      - "ui/game_install_ui.py"
+      - "tests/test_update_notifications.py"
+      - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -67,7 +79,7 @@ jobs:
       artifact-metadata: write
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.13
+      WTMM_VERSION: 1.3.0-beta.14
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -106,6 +118,17 @@ jobs:
         run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
       - name: Test WT Mod Suite all twelve safety and offline paths
         run: python -m unittest discover -s tests -p "test_mod_suite.py" -v
+      - name: Test vehicle-bound visual camouflages on synthetic game files
+        run: python -m unittest discover -s tests -p "test_vehicle_camouflages.py" -v
+      - name: Test existing local custom-content backup and rollback
+        run: python -m unittest discover -s tests -p "test_game_mod_installer.py" -v
+
+      - name: Test in-app one-click updates, version checks and installed setup validation
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p "test_installer_integration.py" -v
+          python -m unittest discover -s tests -p "test_update_notifications.py" -v
 
       - name: Test new Downloads UI and non-network mod security checks
         env:
@@ -225,10 +248,38 @@ jobs:
           finally {
             taskkill.exe /PID $app.Id /T /F 2>$null | Out-Null
           }
+          # Exercise the new one-click Inno update path on a real Windows runner:
+          # same destination, saved channel, and automatic updated GUI relaunch.
+          $prefs = Join-Path $env:LOCALAPPDATA "WTModManager\update-channel.json"
+          New-Item -ItemType Directory -Path (Split-Path $prefs) -Force | Out-Null
+          Set-Content -LiteralPath $prefs -Encoding utf8 -Value '{"channel":"stable"}'
+          $updateArgs = '/SILENT /NORESTART /CLOSEAPPLICATIONS /DIR="' + $target + '" /WTMMAUTOUPDATE'
+          # Start-Process -Wait can wait for a descendant app launched by Inno.
+          # Wait only for Setup itself, then inspect the relaunched app separately.
+          $oneClick = Start-Process -FilePath $setup -ArgumentList $updateArgs -PassThru
+          if (-not $oneClick.WaitForExit(120000)) {
+            throw "One-click Setup did not complete within its test timeout"
+          }
+          if ($oneClick.ExitCode -ne 0) { throw "One-click in-app Setup failed" }
+          $afterPrefs = Get-Content -LiteralPath $prefs -Raw | ConvertFrom-Json
+          if ($afterPrefs.channel -ne "stable") { throw "In-app update unexpectedly changed the user's channel" }
+          $updatedExe = Join-Path $target "WTModManager.exe"
+          $restarted = $null
+          for ($i = 0; $i -lt 15; $i++) {
+            $restarted = Get-Process -Name "WTModManager" -ErrorAction SilentlyContinue |
+              Where-Object { $_.Path -eq $updatedExe } | Select-Object -First 1
+            if ($restarted) { break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $restarted) { throw "One-click installer did not relaunch the installed app" }
+          Start-Sleep -Seconds 3
+          $restarted.Refresh()
+          if ($restarted.HasExited) { throw "One-click updated GUI closed unexpectedly" }
+          taskkill.exe /PID $restarted.Id /T /F 2>$null | Out-Null
           $u = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "Uninstaller failed" }
           if (Test-Path "$target\WTModManager.exe") { throw "Program not removed after uninstall" }
-          Write-Output "Installed app, launched GUI and uninstalled successfully"
+          Write-Output "Installed, upgraded in-place, auto-relaunched, preserved channel and uninstalled successfully"
 
       - name: Verify EXE signatures and generate release evidence
         shell: pwsh
@@ -306,7 +357,7 @@ jobs:
       contents: write
       attestations: read
     env:
-      WTMM_VERSION: 1.3.0-beta.13
+      WTMM_VERSION: 1.3.0-beta.14
     steps:
       - name: Checkout exact tested commit
         uses: actions/checkout@v4

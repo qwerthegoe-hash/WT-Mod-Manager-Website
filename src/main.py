@@ -404,6 +404,15 @@ class WTManagerApp:
             self.manager.online_page.install_update_requested.connect(
                 self.updater.request_install
             )
+            self.updater.download_started.connect(
+                self.manager.online_page.begin_update_download
+            )
+            self.updater.download_progress.connect(
+                self.manager.online_page.set_update_download_progress
+            )
+            self.updater.download_finished.connect(
+                self.manager.online_page.finish_update_download
+            )
             self.manager.online_page.auto_check_changed.connect(
                 self.updater.set_automatic_checks_enabled
             )

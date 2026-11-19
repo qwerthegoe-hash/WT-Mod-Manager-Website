@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 from src.profile_paths import MODS_DIR, online_visible_files
 from ui.game_install_ui import install_camouflage_dialog, restore_last_game_install
+from src.vehicle_camouflages import installed_presets
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -153,13 +154,46 @@ class MediaPage(QWidget):
         left_layout.addWidget(self.file_list, 1)
         left_layout.addLayout(buttons)
         if self.folder.name == "camouflages":
-            skin_install = QPushButton("Установить камуфляж в War Thunder")
-            skin_install.setToolTip("Нужен набор .blk и текстур, а также созданный в игре шаблон техники.")
+            skin_install = QPushButton("Добавить камуфляж для техники")
+            skin_install.setToolTip(
+                "Выбери технику по созданному в игре шаблону. "
+                "Поддерживаются готовые наборы .blk + текстуры и картинки."
+            )
             skin_install.clicked.connect(lambda: install_camouflage_dialog(self))
-            restore_game = QPushButton("Откатить установку в игре")
+            self.install_selected_image = QPushButton(
+                "Создать камуфляж из выбранной картинки"
+            )
+            self.install_selected_image.setEnabled(False)
+            self.install_selected_image.setToolTip(
+                "Создать отдельный WT Mod камуфляж №... из масштабируемого слоя. "
+                "Не все шаблоны совместимы."
+            )
+            self.install_selected_image.clicked.connect(
+                lambda: install_camouflage_dialog(self, self.current_file)
+            )
+            restore_game = QPushButton("Откатить последнюю установку")
             restore_game.clicked.connect(lambda: restore_last_game_install(self))
+            self.installed_camo_heading = QLabel("Мои камуфляжи по технике")
+            self.installed_camo_heading.setObjectName("MediaHeading")
+            self.installed_camo_list = QListWidget()
+            self.installed_camo_list.setMaximumHeight(116)
+            self.installed_camo_list.setToolTip(
+                "Локальные наборы. Другие игроки не увидят их автоматически."
+            )
+            skin_hint = QLabel(
+                "Нужен шаблон из «Внешний вид» War Thunder. "
+                "После установки обнови список пользовательских камуфляжей "
+                "в самой игре и выбери новый набор. Видно только у себя."
+            )
+            skin_hint.setObjectName("MediaInfo")
+            skin_hint.setWordWrap(True)
             left_layout.addWidget(skin_install)
+            left_layout.addWidget(self.install_selected_image)
             left_layout.addWidget(restore_game)
+            left_layout.addWidget(self.installed_camo_heading)
+            left_layout.addWidget(self.installed_camo_list)
+            left_layout.addWidget(skin_hint)
+            self.refresh_installed_camouflages()
 
         # RIGHT CARD
         right = QFrame()
@@ -207,6 +241,21 @@ class MediaPage(QWidget):
 
         main.addLayout(content, 1)
 
+    def refresh_installed_camouflages(self):
+        if not hasattr(self, "installed_camo_list"):
+            return
+        self.installed_camo_list.clear()
+        presets = installed_presets()
+        if not presets:
+            self.installed_camo_list.addItem("Наборов пока нет")
+            return
+        for preset in reversed(presets[-40:]):
+            destination = Path(preset["folder"])
+            marker = "" if destination.is_dir() else " (файлы отсутствуют)"
+            self.installed_camo_list.addItem(
+                preset["label"] + " — " + preset["vehicle"] + marker
+            )
+
     def refresh_files(self):
         selected_name = (
             self.current_file.name
@@ -244,6 +293,8 @@ class MediaPage(QWidget):
     def clear_preview(self):
         self.current_file = None
         self.original_pixmap = None
+        if hasattr(self, "install_selected_image"):
+            self.install_selected_image.setEnabled(False)
 
         self.file_name.setText("Файл не выбран")
         self.details.setText("Нет выбранного файла")
@@ -265,6 +316,8 @@ class MediaPage(QWidget):
         )
 
         self.current_file = path
+        if hasattr(self, "install_selected_image"):
+            self.install_selected_image.setEnabled(True)
         self.file_name.setText(path.name)
 
         try:

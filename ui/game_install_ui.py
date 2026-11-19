@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QInputDialog, QApplication
 from src.profile_paths import DATA_DIR
+from src.vehicle_camouflages import (
+    list_vehicle_templates, vehicle_from_template, next_preset_destination,
+    plan_vehicle_package, plan_vehicle_image, record_preset,
+    installed_presets, forget_transaction,
+)
 from src.mod_suite import preview_install, resolve_conflicts, append_history
 from src.game_mod_installer import (
     InstallError, sight_plan, camouflage_plan, sound_plan,
@@ -52,22 +58,106 @@ def install_sight_dialog(parent):
         _show_error(parent, error)
 
 
-def install_camouflage_dialog(parent):
-    folder = _folder(
-        parent, "Выбери папку скачанного камуфляжа с .blk и текстурами",
-        Path.home()
-    )
-    if not folder:
-        return
-    template = _folder(
+def _choose_vehicle_template(parent):
+    """The actual game-created vehicle template determines compatibility."""
+    items = installed_presets()
+    recent = Path(items[-1]["folder"]).parent if items else Path.home()
+    selected = _folder(
         parent,
-        "Выбери шаблон техники в War Thunder/UserSkins/template_...",
-        Path.home()
+        "Выбери UserSkins игры или созданную в игре папку template_...",
+        recent,
     )
-    if not template:
-        return
+    if not selected:
+        return None
+    candidate = Path(selected)
+    if candidate.name.casefold() == "userskins":
+        templates = list_vehicle_templates(candidate)
+        if not templates:
+            raise InstallError(
+                "Шаблоны техники не найдены. В War Thunder открой «Внешний вид» "
+                "нужной машины и нажми «Создать шаблон камуфляжа»."
+            )
+        options = [
+            folder.name.removeprefix("template_") + " — " + folder.name
+            for folder in templates
+        ]
+        chosen, ok = QInputDialog.getItem(
+            parent, "Выбери технику",
+            "Для какого транспорта установить камуфляж?",
+            options, 0, False,
+        )
+        if not ok:
+            return None
+        candidate = templates[options.index(chosen)]
+    vehicle_from_template(candidate)  # Fail closed on wrong/unknown folder.
+    return candidate
+
+
+def install_camouflage_dialog(parent, image_file=None):
+    """Install an independent, numbered per-vehicle preset; never replace template."""
+    if image_file is not None:
+        source = Path(image_file)
+        source_kind = "image"
+    else:
+        label, ok = QInputDialog.getItem(
+            parent, "Источник камуфляжа",
+            "Что нужно установить для выбранной техники?",
+            [
+                "Готовый камуфляж (.blk + текстуры)",
+                "Картинка (простой масштабируемый камуфляж)",
+            ], 0, False
+        )
+        if not ok:
+            return
+        source_kind = "image" if label.startswith("Картинка") else "package"
+        if source_kind == "image":
+            selected, _ = QFileDialog.getOpenFileName(
+                parent, "Выбери изображение для рисунка камуфляжа",
+                str(Path.home()),
+                "Изображения (*.png *.jpg *.jpeg *.bmp *.webp *.dds *.tga)",
+            )
+        else:
+            selected = _folder(
+                parent, "Выбери папку готового камуфляжа с .blk и текстурами",
+                Path.home()
+            )
+        if not selected:
+            return
+        source = Path(selected)
+
     try:
-        _execute(parent, camouflage_plan(Path(folder), Path(template)), "Камуфляж")
+        template = _choose_vehicle_template(parent)
+        if template is None:
+            return
+        # Temporary conversion happens exclusively inside WTMM's own
+        # user-data folder; game data is not written until the preview is
+        # explicitly confirmed.
+        stage_root = DATA_DIR / "camo-staging"
+        if stage_root.is_symlink():
+            raise InstallError("Небезопасная папка временных изображений.")
+        stage_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(
+            dir=str(stage_root), prefix="wtmm-camo-"
+        ) as stage:
+            if source_kind == "image":
+                plan, dest, vehicle, display, number = plan_vehicle_image(
+                    source, template, Path(stage)
+                )
+            else:
+                plan, dest, vehicle, display, number = plan_vehicle_package(
+                    source, template
+                )
+            result = _execute(
+                parent, plan,
+                f"{display} ({vehicle})",
+                on_success=lambda transaction: record_preset(
+                    dest, vehicle, display, transaction
+                )
+            )
+        if result and result["status"] == "installed":
+            parent.refresh_installed_camouflages() if hasattr(
+                parent, "refresh_installed_camouflages"
+            ) else None
     except (OSError, ValueError, InstallError) as error:
         _show_error(parent, error)
 
@@ -97,7 +187,7 @@ def install_sound_dialog(parent):
         _show_error(parent, error)
 
 
-def _execute(parent, plan, category, config_root=None):
+def _execute(parent, plan, category, config_root=None, on_success=None):
     # Read-only preflight; no directory or game file is changed before consent.
     rows = list(plan)
     review = preview_install(rows)
@@ -171,11 +261,22 @@ def _execute(parent, plan, category, config_root=None):
         append_history("installed", result["transaction"], result["copied"])
     except OSError:
         pass  # Game changes are already committed; do not falsely claim failure.
+    if on_success is not None:
+        try:
+            on_success(result["transaction"])
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                parent, "Реестр камуфляжей",
+                "Файлы установлены, но не удалось обновить локальный список: "
+                + str(error),
+            )
     QMessageBox.information(
         parent, "Готово",
         f"{category}: установлено/обновлено файлов: {result['copied']}.\n"
         "Резервная копия создана. Прогресс отражён в истории установок."
     )
+    return result
+
 
 def restore_last_game_install(parent):
     try:
@@ -191,6 +292,12 @@ def restore_last_game_install(parent):
         if answer != QMessageBox.StandardButton.Yes:
             return
         count = restore_transaction(transaction)
+        try:
+            forget_transaction(transaction)
+        except OSError:
+            pass  # Files are already restored; do not hide a successful rollback.
+        if hasattr(parent, "refresh_installed_camouflages"):
+            parent.refresh_installed_camouflages()
         try:
             append_history("restored", transaction, count)
         except OSError:
