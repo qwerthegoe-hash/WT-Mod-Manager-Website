@@ -11,7 +11,13 @@ alter table public.wtmm_mods
     check (
       game_version is null or
       (length(game_version) between 3 and 24 and
-       game_version ~ '^[0-9]+(\\.[0-9]+){1,3}$')
+       game_version ~ '^[0-9]+([.][0-9]+){1,3})
+    );
+
+comment on column public.wtmm_mods.game_version is
+  'Optional version claimed by mod author; not a verified compatibility certification.';
+-- Original ownership RLS, MFA and server moderation protections remain active.
+)
     );
 
 comment on column public.wtmm_mods.game_version is
