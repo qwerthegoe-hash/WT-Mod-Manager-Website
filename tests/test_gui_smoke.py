@@ -36,6 +36,8 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertIsNotNone(window.online_page.security_panel)
             self.assertTrue(hasattr(window.online_page.security_panel, "choose_button"))
             self.assertTrue(hasattr(window.online_page.security_panel, "lookup_button"))
+            self.assertIsNotNone(window.online_page.trust_panel)
+            self.assertIsNotNone(window.online_page.channel_picker)
             self.assertIsNotNone(window.online_page.remote_notifications)
             self.assertIsNotNone(window.online_page.updates_inbox)
         finally:
