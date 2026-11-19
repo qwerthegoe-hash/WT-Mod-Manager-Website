@@ -26,7 +26,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.WTMM_SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout pinned repository revision without token persistence
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Confirm server credentials are configured
