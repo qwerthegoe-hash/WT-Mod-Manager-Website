@@ -24,6 +24,7 @@ def build() -> None:
         "--noconfirm",
         "--clean",
         "--onefile",
+        "--noupx",  # Avoid executable UPX packing, which can complicate AV analysis.
         "--windowed",
         "--name=WTModManager",
         "--paths=" + str(ROOT),
