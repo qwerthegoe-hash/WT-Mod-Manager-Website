@@ -121,12 +121,37 @@ class BrandedInstallerTests(unittest.TestCase):
             "CreateShellLink(",
             "Name: \"{group}\\WT Mod Manager\"",
             "Filename: \"{uninstallexe}\"",
-            "Filename: \"{sys}\\notepad.exe\"",
+            "FinishTaskbarPin",
+            "--offer-taskbar-pin",
+            "FinishAutoStart",
+            "ChannelPage",
+            "WizardSmallImageBackColor=none",
         ):
             self.assertIn(requirement, script)
         self.assertIn("Type: files; Name: \"{autodesktop}\\WT Mod Manager.lnk\"", script)
         self.assertNotIn("Name: \"{localappdata}\\WTModManager", script)
+        self.assertNotIn("notepad.exe", script.lower())
+        self.assertNotIn("Pin-to-taskbar.txt", script)
         self.assertNotIn("forcedtaskbarpin", script.lower())
+
+    def test_setup_selected_channel_is_per_user(self):
+        prefs = self.root / "update-channel.json"
+        prefs.write_text('{"channel":"stable"}', encoding="utf-8")
+        self.assertEqual(update_checker.update_channel(), "stable")
+        prefs.write_text('{"channel":"beta"}', encoding="utf-8")
+        self.assertEqual(update_checker.update_channel(), "beta")
+        prefs.write_text('{"channel":"untrusted"}', encoding="utf-8")
+        self.assertEqual(update_checker.update_channel(), "beta")
+        prefs.write_text("not json", encoding="utf-8")
+        self.assertEqual(update_checker.update_channel(), "beta")
+
+    def test_finish_page_replaces_text_guide_with_taskbar_request(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "installer" / "WTModManager.iss").read_text("utf-8")
+        self.assertIn("FinishTaskbarPin.Checked", script)
+        self.assertIn("--offer-taskbar-pin", script)
+        self.assertIn("Windows", script)
+        self.assertNotIn("Filename: \"{sys}\\notepad.exe\"", script)
 
     def test_setup_launcher_rejects_nonwindows_execution(self):
         with self.assertRaises(RuntimeError):

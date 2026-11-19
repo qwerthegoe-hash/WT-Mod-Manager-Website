@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGO = ROOT / "assets" / "icons" / "Logotip" / "LogotipProject.png"
@@ -96,12 +96,44 @@ def main():
               font=_font(25), fill="#87A6C9", anchor="mm")
     image.convert("RGB").save(OUT / "wizard.png", optimize=True)
 
-    small = _gradient(320, 320).convert("RGBA")
-    d = ImageDraw.Draw(small)
-    d.rounded_rectangle((5,5,315,315), radius=38,
-                        outline=(69, 126, 214, 190), width=4)
-    small.alpha_composite(_logo(258), (31,31))
+    # The old small image covered all 320x320 pixels with an opaque, almost
+    # black gradient. Inno then shrank that square to 58x58, exposing harsh
+    # black corners on its dark-gray title area. Render a real RGBA rounded
+    # card: antialiased transparency outside the radius, clipped logo inside.
+    # Inno Setup uses WizardSmallImageBackColor=none, so no corner fill occurs.
+    scale = 4
+    side = 320
+    outer = Image.new("RGBA", (side * scale, side * scale), (0, 0, 0, 0))
+    card = _gradient(side * scale, side * scale).convert("RGBA")
+    logo = _logo(258 * scale)
+    # The original supplied logo artwork may itself have an opaque black
+    # rectangular background. Round THAT internal photo too, not just the
+    # outer card, or its dark square remains visible against the blue wizard.
+    inner_mask = Image.new("L", logo.size, 0)
+    ImageDraw.Draw(inner_mask).rounded_rectangle(
+        (0, 0, logo.width - 1, logo.height - 1),
+        radius=68 * scale, fill=255,
+    )
+    logo.putalpha(ImageChops.multiply(logo.getchannel("A"), inner_mask))
+    card.alpha_composite(logo, (31 * scale, 31 * scale))
+    card_draw = ImageDraw.Draw(card)
+    card_draw.rounded_rectangle(
+        (5 * scale, 5 * scale, 315 * scale, 315 * scale),
+        radius=38 * scale, outline=(79, 159, 245, 255),
+        width=4 * scale,
+    )
+    mask = Image.new("L", (side * scale, side * scale), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rounded_rectangle(
+        (5 * scale, 5 * scale, 315 * scale, 315 * scale),
+        radius=38 * scale, fill=255,
+    )
+    card.putalpha(mask)
+    outer.alpha_composite(card)
+    small = outer.resize((side, side), Image.Resampling.LANCZOS)
     small.save(OUT / "wizard-small.png", optimize=True)
+    assert small.getpixel((0, 0))[3] == 0
+    assert small.getpixel((side // 2, side // 2))[3] == 255
     print("Generated branded Inno Setup assets in", OUT)
 
 

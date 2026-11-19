@@ -35,7 +35,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.5
+      WTMM_VERSION: 1.3.0-beta.6
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -59,6 +59,17 @@ jobs:
         run: |
           python -m compileall -q src ui tools tests
           python -c "import src.main; import ui.main_window; print('Python and Qt imports OK')"
+
+      - name: Compile official Windows taskbar helper
+        shell: pwsh
+        run: |
+          cmake -S tools/taskbar -B build/taskbar -A x64
+          if ($LASTEXITCODE -ne 0) { throw "Taskbar helper configuration failed" }
+          cmake --build build/taskbar --config Release --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw "Taskbar helper compilation failed" }
+          $dll = "build/taskbar/Release/wtmm_taskbar.dll"
+          if (-not (Test-Path $dll)) { throw "Native TaskbarManager DLL missing" }
+          Copy-Item $dll build/wtmm_taskbar.dll -Force
 
       - name: Build portable and installed application
         run: python tools/build_windows_exe.py
@@ -150,8 +161,8 @@ jobs:
           WT Mod Manager Windows Installer (Test Beta)
           Recommended: download WTModManager-Setup.exe.
           Own project logo, dark setup wizard, install-folder selection,
-          Start menu shortcut, optional desktop shortcut and taskbar pin
-          instructions, run-on-finish option and full uninstaller.
+          Start menu shortcut, optional desktop/startup shortcuts and taskbar pin
+          request via Windows user confirmation, run-on-finish option, update\n          channel selection, upgrade/repair and full uninstaller.
           The installer includes all Qt dependencies in its onedir payload.
           Personal settings and mods remain in %LOCALAPPDATA%\WTModManager.
           Legacy users may still download portable WTModManager.exe.

@@ -30,6 +30,7 @@ def build(mode: str) -> None:
         "--icon=" + str(ICON),
         "--add-data=" + str(ROOT / "assets") + ":assets",
         "--add-data=" + str(ROOT / "config") + ":config",
+        "--add-binary=" + str(ROOT / "build" / "wtmm_taskbar.dll") + ":.",
         "--distpath=" + str(ROOT / "dist"),
         "--workpath=" + str(ROOT / "build" / ("pyinstaller-" + mode)),
         "--specpath=" + str(ROOT / "build" / ("spec-" + mode)),
@@ -42,7 +43,10 @@ def main() -> None:
     if sys.platform != "win32":
         raise SystemExit("WT Mod Manager packages must be built on Windows.")
 
-    required = [ROOT / "src" / "main.py", ROOT / "assets", ROOT / "config", LOGO]
+    required = [
+        ROOT / "src" / "main.py", ROOT / "assets", ROOT / "config", LOGO,
+        ROOT / "build" / "wtmm_taskbar.dll",
+    ]
     missing = [str(path) for path in required if not path.exists()]
     if missing:
         raise SystemExit("Missing required project resources: " + ", ".join(missing))
