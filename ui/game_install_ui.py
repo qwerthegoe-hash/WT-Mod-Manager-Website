@@ -119,6 +119,11 @@ def _execute(parent, plan, category, config_root=None):
     box.setWindowTitle("WT Install Preview / Conflict Resolver")
     box.setIcon(QMessageBox.Icon.Warning if review.replacements else QMessageBox.Icon.Information)
     box.setText(summary)
+    if config_root is not None:
+        box.setInformativeText(
+            "При согласии будет также проверен и при необходимости обновлён "
+            "параметр sound.enable_mod в config.blk с резервной копией."
+        )
     if review.conflicting_filenames:
         box.setDetailedText("Конфликты (только имена файлов):\n" +
                             "\n".join(review.conflicting_filenames))
@@ -133,7 +138,7 @@ def _execute(parent, plan, category, config_root=None):
         return
     decision = "keep" if box.clickedButton() is keep else "replace"
     resolved = resolve_conflicts(rows, decision)
-    if not resolved or not any(not item.identical for item in resolved):
+    if not resolved or (not any(not item.identical for item in resolved) and config_root is None):
         QMessageBox.information(parent, "Установка", "Изменения не требуются.")
         return
     # Additional confirmation if game is on a separate nearly-full volume.
