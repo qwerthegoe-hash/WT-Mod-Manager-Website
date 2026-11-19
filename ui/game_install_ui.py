@@ -144,7 +144,8 @@ def _execute(parent, plan, category, config_root=None):
     # Additional confirmation if game is on a separate nearly-full volume.
     estimate = preview_install(resolved)
     try:
-        check_target = next(item.destination for item in resolved if not item.identical)
+        active_files = [item.destination for item in resolved if not item.identical]
+        check_target = (active_files[0] if active_files else Path(config_root) / "config.blk")
         existing_parent = check_target.parent
         while not existing_parent.exists() and existing_parent != existing_parent.parent:
             existing_parent = existing_parent.parent
