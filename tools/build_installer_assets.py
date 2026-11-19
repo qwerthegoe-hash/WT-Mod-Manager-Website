@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGO = ROOT / "assets" / "icons" / "Logotip" / "LogotipProject.png"
@@ -106,6 +106,15 @@ def main():
     outer = Image.new("RGBA", (side * scale, side * scale), (0, 0, 0, 0))
     card = _gradient(side * scale, side * scale).convert("RGBA")
     logo = _logo(258 * scale)
+    # The original supplied logo artwork may itself have an opaque black
+    # rectangular background. Round THAT internal photo too, not just the
+    # outer card, or its dark square remains visible against the blue wizard.
+    inner_mask = Image.new("L", logo.size, 0)
+    ImageDraw.Draw(inner_mask).rounded_rectangle(
+        (0, 0, logo.width - 1, logo.height - 1),
+        radius=68 * scale, fill=255,
+    )
+    logo.putalpha(ImageChops.multiply(logo.getchannel("A"), inner_mask))
     card.alpha_composite(logo, (31 * scale, 31 * scale))
     card_draw = ImageDraw.Draw(card)
     card_draw.rounded_rectangle(
