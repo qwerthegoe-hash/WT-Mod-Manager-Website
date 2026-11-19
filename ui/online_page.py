@@ -6,15 +6,18 @@ from pathlib import Path
 from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QMessageBox, QApplication, QTabWidget, QLineEdit,
-    QComboBox, QInputDialog, QAbstractItemView, QCheckBox,
-    QPlainTextEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QScrollArea,
+    QLabel, QPushButton, QListWidget, QListWidgetItem, QMessageBox,
+    QApplication, QTabWidget, QLineEdit, QComboBox, QInputDialog,
+    QAbstractItemView, QCheckBox, QPlainTextEdit
 )
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.update_notifications import load_notifications, mark_all_read
 from src.diagnostics import inspect_local, format_report
+from src.update_checker import VERSION, is_installed_app
+from src.portable_updater import previous_exe_available
+from ui.security_panel import SecurityPanel
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
     save_mod_profile, set_active_mod_profile, delete_mod_profile
@@ -32,112 +35,195 @@ class OnlinePage(QWidget):
 
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 28, 28, 28)
-        layout.setSpacing(15)
 
-        heading = QLabel("Скачанные моды и синхронизация")
-        heading.setObjectName("Title")
-        description = QLabel(
-            "Свяжи аккаунт сайта, чтобы моды из раздела «Скачанные» "
-            "появлялись только после нажатия «Добавить в приложение». "
-            "Локальные файлы с твоего ПК продолжат работать независимо от сайта."
+        # The content scrolls as a whole on smaller Windows displays.
+        # Nothing is positioned with absolute coordinates or overlap hacks.
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        scroller = QScrollArea(self)
+        scroller.setWidgetResizable(True)
+        scroller.setFrameShape(QFrame.Shape.NoFrame)
+        root_layout.addWidget(scroller)
+        body = QWidget()
+        body.setObjectName("DownloadsBody")
+        scroller.setWidget(body)
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(22, 18, 22, 22)
+        layout.setSpacing(14)
+
+        title = QLabel("Загрузки и синхронизация")
+        title.setObjectName("Title")
+        layout.addWidget(title)
+        subtitle = QLabel(
+            "Моды сайта подключаются только по твоему запросу. "
+            "Локальные моды работают независимо от аккаунта."
         )
-        description.setObjectName("Subtitle")
-        description.setWordWrap(True)
-        layout.addWidget(heading)
-        layout.addWidget(description)
+        subtitle.setObjectName("Subtitle")
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
 
+        def card(label):
+            frame = QFrame()
+            frame.setObjectName("ContentCard")
+            col = QVBoxLayout(frame)
+            col.setContentsMargins(16, 14, 16, 16)
+            col.setSpacing(10)
+            caption = QLabel(label)
+            caption.setObjectName("CardTitle")
+            col.addWidget(caption)
+            return frame, col
+
+        top = QGridLayout()
+        top.setHorizontalSpacing(14)
+        top.setVerticalSpacing(14)
+        top.setColumnStretch(0, 1)
+        top.setColumnStretch(1, 1)
+        layout.addLayout(top)
+
+        account_card, account = card("АККАУНТ САЙТА")
+        top.addWidget(account_card, 0, 0)
         self.status = QLabel("Аккаунт не подключён.")
-        self.status.setWordWrap(True)
         self.status.setObjectName("Subtitle")
-        layout.addWidget(self.status)
+        self.status.setWordWrap(True)
+        self.status.setMinimumHeight(48)
+        account.addWidget(self.status)
 
-        controls = QHBoxLayout()
         self.link_button = QPushButton("Связать аккаунт сайта")
         self.link_button.setObjectName("Primary")
         self.link_button.clicked.connect(self.connect_account)
-        self.refresh_button = QPushButton("Проверить сейчас")
+        self.refresh_button = QPushButton("Синхронизировать")
         self.refresh_button.clicked.connect(self.check_now)
         self.folder_button = QPushButton("Открыть мои файлы")
         self.folder_button.clicked.connect(self.open_folder)
         self.unlink_button = QPushButton("Отключить аккаунт")
         self.unlink_button.clicked.connect(self.disconnect_account)
-        for button in (self.link_button, self.refresh_button, self.folder_button, self.unlink_button):
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
-            controls.addWidget(button)
-        layout.addLayout(controls)
-        update_controls = QHBoxLayout()
+        account_actions = QGridLayout()
+        account_actions.setSpacing(8)
+        account_actions.addWidget(self.link_button, 0, 0, 1, 2)
+        account_actions.addWidget(self.refresh_button, 1, 0)
+        account_actions.addWidget(self.folder_button, 1, 1)
+        account_actions.addWidget(self.unlink_button, 2, 0, 1, 2)
+        account.addLayout(account_actions)
+        account.addStretch(1)
+
+        updates_card, updates = card("ОБНОВЛЕНИЯ")
+        top.addWidget(updates_card, 0, 1)
+        self.update_summary = QLabel(
+            "Текущая версия: " + VERSION + ". Новые версии проверяются в фоне."
+        )
+        self.update_summary.setWordWrap(True)
+        updates.addWidget(self.update_summary)
+        update_actions = QGridLayout()
+        update_actions.setSpacing(8)
         self.update_button = QPushButton("Проверить обновления")
         self.update_button.clicked.connect(self.check_update_requested.emit)
+        update_actions.addWidget(self.update_button, 0, 0)
         self.install_update_button = QPushButton("Скачать обновление")
         self.install_update_button.setEnabled(False)
+        self.install_update_button.hide()
         self.install_update_button.clicked.connect(self.install_update_requested.emit)
+        update_actions.addWidget(self.install_update_button, 1, 0)
+        updates.addLayout(update_actions)
         self.update_auto_checkbox = QCheckBox("Автопроверка каждые 10 минут")
         self.update_auto_checkbox.setChecked(load_notifications()["auto_check"])
         self.update_auto_checkbox.toggled.connect(self.auto_check_changed.emit)
-        update_controls.addWidget(self.update_button)
-        update_controls.addWidget(self.install_update_button)
-        update_controls.addWidget(self.update_auto_checkbox)
-        layout.addLayout(update_controls)
-        self.rollback_exe_button = QPushButton("Вернуть предыдущую версию EXE")
-        self.rollback_exe_button.setToolTip(
-            "Работает, если новая система обновлений сохранила проверенную предыдущую версию."
-        )
+        updates.addWidget(self.update_auto_checkbox)
+        self.rollback_exe_button = QPushButton("Вернуть предыдущую версию приложения")
         self.rollback_exe_button.clicked.connect(self.rollback_update_requested.emit)
-        layout.addWidget(self.rollback_exe_button)
-        self.update_summary = QLabel("Проверка новых выпусков работает и при свёрнутом окне.")
-        self.update_summary.setWordWrap(True)
-        layout.addWidget(self.update_summary)
+        self.rollback_exe_button.setToolTip(
+            "Откат доступен только когда сохранена проверенная предыдущая portable-версия."
+        )
+        self.rollback_exe_button.setVisible(
+            not is_installed_app() and previous_exe_available()
+        )
+        updates.addWidget(self.rollback_exe_button)
+        updates.addStretch(1)
 
+        inbox_card, inbox = card("УВЕДОМЛЕНИЯ")
+        layout.addWidget(inbox_card)
+        notice_grid = QGridLayout()
+        notice_grid.setHorizontalSpacing(14)
+        notice_grid.setVerticalSpacing(6)
+        notice_grid.setColumnStretch(0, 1)
+        notice_grid.setColumnStretch(1, 1)
+        inbox.addLayout(notice_grid)
+        notice_grid.addWidget(QLabel("Обновления приложения"), 0, 0)
+        notice_grid.addWidget(QLabel("Аккаунт и моды"), 0, 1)
         self.updates_inbox = QListWidget()
-        self.updates_inbox.setMaximumHeight(105)
-        self.updates_inbox.setToolTip("История уведомлений об обновлениях в этом профиле Windows")
-        layout.addWidget(self.updates_inbox)
-        self.read_notices_button = QPushButton("Отметить уведомления прочитанными")
+        self.updates_inbox.setMaximumHeight(90)
+        self.updates_inbox.setToolTip("История уведомлений этого профиля Windows")
+        notice_grid.addWidget(self.updates_inbox, 1, 0)
+        self.remote_notifications = QListWidget()
+        self.remote_notifications.setMaximumHeight(90)
+        self.remote_notifications.addItem("Нет уведомлений аккаунта.")
+        self.remote_notifications.setToolTip(
+            "Уведомления сайта, модерации и сообщества"
+        )
+        notice_grid.addWidget(self.remote_notifications, 1, 1)
+        self.read_notices_button = QPushButton("Прочитать обновления")
         self.read_notices_button.clicked.connect(self.mark_update_notices_read)
-        layout.addWidget(self.read_notices_button)
+        notice_grid.addWidget(self.read_notices_button, 2, 0)
+        site_notice_actions = QHBoxLayout()
+        self.notices_refresh = QPushButton("Обновить")
+        self.notices_refresh.clicked.connect(self.check_account_notifications)
+        site_notice_actions.addWidget(self.notices_refresh)
+        self.notices_mark_read = QPushButton("Прочитать")
+        self.notices_mark_read.clicked.connect(self.mark_account_notifications_read)
+        site_notice_actions.addWidget(self.notices_mark_read)
+        notice_grid.addLayout(site_notice_actions, 2, 1)
+        self._seen_account_notices = None
         self.refresh_update_notices()
 
         self.tabs = QTabWidget()
-        layout.addWidget(self.tabs, 1)
+        self.tabs.setDocumentMode(True)
+        self.tabs.setMinimumHeight(410)
+        layout.addWidget(self.tabs)
+
+        # 1. Downloaded mods. Presets belong above the list, not beneath it.
         offline_tab = QWidget()
         offline_layout = QVBoxLayout(offline_tab)
+        offline_layout.setContentsMargins(12, 14, 12, 12)
+        offline_layout.setSpacing(10)
+        presets = QHBoxLayout()
+        presets.setSpacing(8)
+        self.profile_picker = QComboBox()
+        self.profile_picker.setMinimumWidth(140)
+        presets.addWidget(self.profile_picker, 1)
+        self.profile_apply = QPushButton("Применить")
+        self.profile_apply.clicked.connect(self.apply_selected_profile)
+        presets.addWidget(self.profile_apply)
+        self.profile_save = QPushButton("Сохранить набор")
+        self.profile_save.clicked.connect(self.save_selected_profile)
+        presets.addWidget(self.profile_save)
+        self.profile_delete = QPushButton("Удалить")
+        self.profile_delete.clicked.connect(self.remove_selected_profile)
+        presets.addWidget(self.profile_delete)
+        offline_layout.addLayout(presets)
         self.list_title = QLabel("Импортированные моды этого аккаунта")
         offline_layout.addWidget(self.list_title)
         self.library = QListWidget()
         self.library.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         offline_layout.addWidget(self.library, 1)
-        self.rollback_button = QPushButton("Восстановить предыдущую версию")
+        self.rollback_button = QPushButton("Восстановить выбранный мод")
         self.rollback_button.setEnabled(False)
         self.rollback_button.clicked.connect(self.restore_selected_version)
         self.library.itemSelectionChanged.connect(self.update_rollback_control)
         offline_layout.addWidget(self.rollback_button)
-        presets = QHBoxLayout()
-        self.profile_picker = QComboBox()
-        presets.addWidget(self.profile_picker, 1)
-        self.profile_save = QPushButton("Сохранить набор")
-        self.profile_save.clicked.connect(self.save_selected_profile)
-        presets.addWidget(self.profile_save)
-        self.profile_apply = QPushButton("Применить")
-        self.profile_apply.clicked.connect(self.apply_selected_profile)
-        presets.addWidget(self.profile_apply)
-        self.profile_delete = QPushButton("Удалить")
-        self.profile_delete.clicked.connect(self.remove_selected_profile)
-        presets.addWidget(self.profile_delete)
-        offline_layout.addLayout(presets)
-        self.tabs.addTab(offline_tab, "Мои загрузки")
+        self.tabs.addTab(offline_tab, "Мои моды")
 
+        # 2. The public catalogue retains its own search and actions.
         catalog_tab = QWidget()
         catalog_layout = QVBoxLayout(catalog_tab)
+        catalog_layout.setContentsMargins(12, 14, 12, 12)
         self.catalog_note = QLabel(
-            "Каталог сайта отображает только одобренные моды. Для загрузки "
-            "и передачи открой мод на сайте — автоматической установки нет."
+            "Показываются одобренные моды. Передача модов в приложение "
+            "происходит только через подтверждение на сайте."
         )
         self.catalog_note.setWordWrap(True)
         catalog_layout.addWidget(self.catalog_note)
         self.catalog_search = QLineEdit()
-        self.catalog_search.setPlaceholderText("Поиск по названию или категории")
+        self.catalog_search.setPlaceholderText("Поиск по названию и категории")
         self.catalog_search.textChanged.connect(self.render_catalog)
         catalog_layout.addWidget(self.catalog_search)
         self.catalog_list = QListWidget()
@@ -157,50 +243,46 @@ class OnlinePage(QWidget):
         self.tabs.addTab(catalog_tab, "Каталог сайта")
         self.catalog_rows = []
 
-        notifications_tab = QWidget()
-        notices_layout = QVBoxLayout(notifications_tab)
-        notices_layout.addWidget(QLabel("Уведомления сайта и приложения"))
-        self.remote_notifications = QListWidget()
-        self.remote_notifications.setToolTip(
-            "Уведомления вашего аккаунта: обновления модов, модерация и сообщество."
-        )
-        notices_layout.addWidget(self.remote_notifications)
-        notices_controls = QHBoxLayout()
-        self.notices_refresh = QPushButton("Проверить уведомления")
-        self.notices_refresh.clicked.connect(self.check_account_notifications)
-        self.notices_mark_read = QPushButton("Отметить прочитанными")
-        self.notices_mark_read.clicked.connect(self.mark_account_notifications_read)
-        notices_controls.addWidget(self.notices_refresh)
-        notices_controls.addWidget(self.notices_mark_read)
-        notices_layout.addLayout(notices_controls)
-        self.tabs.addTab(notifications_tab, "Уведомления")
-        self._seen_account_notices = None
-
+        # 3. Diagnostics and optional file/VT checks, hidden until selected.
         diagnostics_tab = QWidget()
-        diagnostic_layout = QVBoxLayout(diagnostics_tab)
-        diagnostic_layout.addWidget(QLabel("Кодовая диагностика WT Mod Manager"))
-        description = QLabel(
-            "Проверяет настройки, папки модов, обновления и привязку аккаунта. "
-            "Выполняется локально, без отправки личных данных или файлов."
+        diag_root = QVBoxLayout(diagnostics_tab)
+        diag_root.setContentsMargins(7, 7, 7, 7)
+        diagnostic_scroll = QScrollArea()
+        diagnostic_scroll.setWidgetResizable(True)
+        diagnostic_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        diag_root.addWidget(diagnostic_scroll)
+        diag_body = QWidget()
+        diagnostic_scroll.setWidget(diag_body)
+        diagnostic_layout = QVBoxLayout(diag_body)
+        diagnostic_layout.setContentsMargins(8, 8, 8, 8)
+        diagnostic_layout.setSpacing(10)
+        diagnostic_layout.addWidget(QLabel("Диагностика программы"))
+        diagnostic_description = QLabel(
+            "Проверка настроек, папок модов, обновлений и привязки аккаунта. "
+            "Личные файлы не отправляются."
         )
-        description.setWordWrap(True)
-        diagnostic_layout.addWidget(description)
+        diagnostic_description.setWordWrap(True)
+        diagnostic_layout.addWidget(diagnostic_description)
         self.diagnostic_output = QPlainTextEdit()
         self.diagnostic_output.setReadOnly(True)
-        self.diagnostic_output.setPlaceholderText("D001–D009: проверка ещё не выполнена.")
-        diagnostic_layout.addWidget(self.diagnostic_output, 1)
+        self.diagnostic_output.setMaximumHeight(130)
+        self.diagnostic_output.setPlaceholderText("D001–D009: проверка не выполнена.")
+        diagnostic_layout.addWidget(self.diagnostic_output)
         diagnostic_actions = QHBoxLayout()
-        self.diagnostic_scan = QPushButton("Запустить проверку")
+        self.diagnostic_scan = QPushButton("Запустить диагностику")
         self.diagnostic_scan.clicked.connect(self.run_diagnostics)
         diagnostic_actions.addWidget(self.diagnostic_scan)
-        self.diagnostic_copy = QPushButton("Копировать коды и результат")
+        self.diagnostic_copy = QPushButton("Копировать результат")
         self.diagnostic_copy.clicked.connect(self.copy_diagnostics)
         diagnostic_actions.addWidget(self.diagnostic_copy)
         diagnostic_layout.addLayout(diagnostic_actions)
-        self.tabs.addTab(diagnostics_tab, "Диагностика")
+        self.security_panel = SecurityPanel()
+        diagnostic_layout.addWidget(self.security_panel)
+        diagnostic_layout.addStretch(1)
+        self.tabs.addTab(diagnostics_tab, "Диагностика и безопасность")
 
         self.bridge = DesktopSync(self)
-        self.bridge.status_changed.connect(self.status.setText)
+        self.bridge.status_changed.connect(self._on_sync_status)
         self.bridge.account_changed.connect(self.on_account)
         self.bridge.files_changed.connect(self.on_import)
         self.bridge.catalog_changed.connect(self.on_catalog)
@@ -210,11 +292,29 @@ class OnlinePage(QWidget):
             app.aboutToQuit.connect(self.bridge.stop)
         self.refresh_library()
         self.refresh_profile_controls()
+        self._refresh_account_actions()
         self.profile_picker.currentIndexChanged.connect(
             lambda _: self.profile_delete.setEnabled(
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def _on_sync_status(self, message):
+        text = str(message or "")
+        if "409" in text and ("Server" in text or "HTTP" in text):
+            text = (
+                "Конфликт синхронизации (HTTP 409). Проверь привязку аккаунта "
+                "и нажми «Синхронизировать». Локальные моды не затронуты."
+            )
+        self.status.setText(text[:350])
+
+    def _refresh_account_actions(self):
+        linked = bool(self.bridge.user_id)
+        self.link_button.setVisible(not linked)
+        self.unlink_button.setVisible(linked)
+        self.refresh_button.setEnabled(linked)
+        self.notices_refresh.setEnabled(linked)
+        self.notices_mark_read.setEnabled(linked)
 
     def check_account_notifications(self):
         self.bridge.refresh_notifications()
@@ -272,6 +372,7 @@ class OnlinePage(QWidget):
         )
         self.install_update_button.setText("Скачать и установить " + version)
         self.install_update_button.setEnabled(True)
+        self.install_update_button.show()
         self.refresh_update_notices()
 
     def refresh_update_notices(self):
@@ -306,6 +407,7 @@ class OnlinePage(QWidget):
         self.account_changed.emit()
         self.refresh_library()
         self.refresh_profile_controls()
+        self._refresh_account_actions()
 
     def on_import(self, category):
         self.refresh_library()
@@ -493,10 +595,8 @@ class OnlinePage(QWidget):
             QMessageBox.warning(self, "Ошибка восстановления", str(error))
 
     def open_folder(self):
-        if not self.bridge.user_id:
-            QMessageBox.information(self, "Аккаунт", "Сначала свяжи аккаунт сайта.")
-            return
-        target = DATA_DIR / "accounts" / self.bridge.user_id / "mods"
+        target = (DATA_DIR / "accounts" / self.bridge.user_id / "mods"
+                  if self.bridge.user_id else DATA_DIR / "mods")
         target.mkdir(parents=True, exist_ok=True)
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
 
