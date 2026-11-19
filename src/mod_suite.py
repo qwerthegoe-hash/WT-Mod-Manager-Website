@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -90,10 +91,13 @@ def _atomic_json(target: Path, data: dict | list) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.is_symlink():
         raise OSError("Ссылка вместо локального журнала.")
-    tmp = target.with_name("." + target.name + ".tmp")
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=target.parent,
+        prefix=".wtmm-history-", suffix=".tmp", delete=False
+    ) as handle:
+        tmp = Path(handle.name)
+        json.dump(data, handle, ensure_ascii=False, indent=2)
     try:
-        with tmp.open("x", encoding="utf-8") as handle:
-            json.dump(data, handle, ensure_ascii=False, indent=2)
         os.replace(tmp, target)
     finally:
         tmp.unlink(missing_ok=True)
@@ -118,11 +122,14 @@ def history() -> list[dict]:
             continue
         if item.get("event") not in {"installed", "restored"}:
             continue
+        count = item.get("files", 0)
+        if type(count) is not int:
+            continue
         result.append({
             "transaction": item["transaction"],
             "event": item["event"],
             "time_utc": str(item.get("time_utc", ""))[:32],
-            "files": min(1000, max(0, int(item.get("files", 0)))),
+            "files": min(1000, max(0, count)),
         })
     return result
 
@@ -143,24 +150,34 @@ def installed_integrity() -> list[dict]:
     results = []
     if not REGISTRY_DIR.is_dir() or REGISTRY_DIR.is_symlink():
         return results
-    folders = sorted((p for p in REGISTRY_DIR.iterdir()
-                      if p.is_dir() and not p.is_symlink() and TRANSACTION.fullmatch(p.name)),
-                     key=lambda p: p.name, reverse=True)
-    for folder in folders[:MAX_LOG]:
-        rows = _read_json(folder / "manifest.json")
-        rows = rows.get("files") if isinstance(rows, dict) else None
-        if not isinstance(rows, list) or len(rows) > MAX_FILES:
+    snapshots = []
+    for folder in REGISTRY_DIR.iterdir():
+        if not folder.is_dir() or folder.is_symlink() or not TRANSACTION.fullmatch(folder.name):
             continue
+        data = _read_json(folder / "manifest.json")
+        if isinstance(data, dict) and isinstance(data.get("files"), list) and \
+                len(data["files"]) <= MAX_FILES:
+            timestamp = data.get("created_at", 0)
+            snapshots.append((timestamp if type(timestamp) is int else 0,
+                              folder, data["files"]))
+    snapshots.sort(key=lambda row: row[0], reverse=True)
+    latest_targets = set()
+    for _, folder, rows in snapshots[:MAX_LOG]:
         for item in rows:
             if not isinstance(item, dict) or not HASH.fullmatch(str(item.get("installed_digest", ""))):
                 continue
             dest = Path(str(item.get("target", "")))
+            if dest in latest_targets:
+                continue  # Previous versions replaced by a new install aren't broken.
+            latest_targets.add(dest)
             status = "unknown"
             try:
                 if dest.is_symlink():
                     status = "link"
                 elif not dest.is_file():
                     status = "missing"
+                elif dest.stat().st_size > 250 * 1024 * 1024:
+                    status = "oversized"
                 else:
                     with dest.open("rb") as stream:
                         dig = hashlib.file_digest(stream, "sha256").hexdigest()
