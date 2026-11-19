@@ -1,6 +1,7 @@
 "use strict";
 import { setupSiteLanguage, uiText, siteLocale } from "../js/site-language.mjs";
 import { upgradeModFilterSelects } from "./rounded-filters.mjs";
+import { DEFAULT_MOD_FILTERS, hasActiveModFilters, emptyModState } from "./mods-filter-state.mjs";
 setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
@@ -97,6 +98,48 @@ let loadingMoreMods = false;
 let pendingSearchRender = null;
 let queryGeneration = 0;
 let refreshGeneration = 0;
+let resettingModsFilters = false;
+
+function currentModFilterValues() {
+    return {
+        search: $("modsSearch").value,
+        category: $("modsCategory").value,
+        sort: $("modsSort").value,
+        author: $("modsAuthorFilter").value,
+        favoritesOnly: $("modsFavoritesOnly").checked
+    };
+}
+
+function updateResetControls() {
+    const hasFilters = hasActiveModFilters(currentModFilterValues());
+    $("modsResetFilters").disabled = !hasFilters;
+    $("modsEmptyReset").hidden = !hasFilters;
+}
+
+// A single server refresh after the batch reset, not five simultaneous queries.
+function resetAllModFilters() {
+    if (pendingSearchRender) clearTimeout(pendingSearchRender);
+    pendingSearchRender = null;
+    resettingModsFilters = true;
+    try {
+        $("modsSearch").value = DEFAULT_MOD_FILTERS.search;
+        $("modsCategory").value = DEFAULT_MOD_FILTERS.category;
+        $("modsSort").value = DEFAULT_MOD_FILTERS.sort;
+        $("modsAuthorFilter").value = DEFAULT_MOD_FILTERS.author;
+        $("modsFavoritesOnly").checked = DEFAULT_MOD_FILTERS.favoritesOnly;
+        // The existing rounded select widgets use native change to sync
+        // their displayed text. Reset mode suppresses their network callback.
+        for (const id of ["modsCategory", "modsSort"]) {
+            $(id).dispatchEvent(new Event("change", {bubbles: true}));
+        }
+    } finally {
+        resettingModsFilters = false;
+    }
+    ++queryGeneration; // Invalidate pending results from the old filters.
+    updateResetControls();
+    refresh().catch(error => say("Ошибка поиска модов: " + error.message, true));
+}
+
 function getModQuery() {
     return {
         p_view: currentView === "downloads" || (currentView === "moderation" && !isAdmin) ? "catalog" : currentView,
@@ -426,6 +469,11 @@ async function render() {
         button.setAttribute("aria-pressed", String(selected));
     });
     const rows = visibleRecords();
+    const filtered = hasActiveModFilters(currentModFilterValues());
+    const empty = emptyModState(currentView, filtered);
+    $("modsEmptyTitle").textContent = uiText(empty.title);
+    $("modsEmptyDescription").textContent = uiText(empty.description);
+    updateResetControls();
     updateAdminOverview();
     $("modsCounter").textContent = rows.length + (hasMoreMods ? " модов (загружено; есть ещё)" : " модов");
     $("modsEmpty").hidden = rows.length !== 0 || hasMoreMods;
@@ -444,13 +492,18 @@ async function refresh() {
     $("modsGrid").classList.add("is-loading");
     $("modsCounter").textContent = uiText("Загружаются ресурсы...");
     say("");
+    $("modsRetry").hidden = true;
     try {
         if (!await queryAll()) return;
         await render();
+        if (request === refreshGeneration) $("modsRetry").hidden = true;
         window.WTDiagnostics?.record?.("mods-refresh-ok");
     } catch (error) {
         window.WTDiagnostics?.record?.("mods-refresh-failed");
-        if (request === refreshGeneration) $("modsCounter").textContent = uiText("Ошибка загрузки.");
+        if (request === refreshGeneration) {
+            $("modsCounter").textContent = uiText("Ошибка загрузки.");
+            $("modsRetry").hidden = false;
+        }
         throw error;
     } finally {
         // A stale request must not hide the spinner of a newer tab/filter load.
@@ -866,6 +919,10 @@ async function previewCreatorStudio(){
     }
 }
 function bind() {
+    $("modsResetFilters").addEventListener("click", resetAllModFilters);
+    $("modsEmptyReset").addEventListener("click", resetAllModFilters);
+    $("modsRetry").addEventListener("click", () =>
+        refresh().catch(error => say("Ошибка загрузки модов: " + error.message, true)));
     $("creatorPreviewButton").addEventListener("click",
         ()=>void previewCreatorStudio());
     document.querySelectorAll(".mods-tab").forEach(button => {
@@ -884,6 +941,8 @@ function bind() {
     for (const id of ["modsSearch", "modsCategory", "modsSort",
           "modsFavoritesOnly", "modsAuthorFilter"]) {
         $(id).addEventListener(id === "modsSearch" ? "input" : "change", () => {
+            if (resettingModsFilters) return;
+            updateResetControls();
             // Debounced server-side search includes mods beyond loaded pages.
             if (pendingSearchRender) clearTimeout(pendingSearchRender);
             ++queryGeneration;

@@ -45,6 +45,36 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertIsNotNone(window.online_page.channel_picker)
             self.assertIsNotNone(window.online_page.remote_notifications)
             self.assertIsNotNone(window.online_page.updates_inbox)
+            self.assertIsNotNone(window.online_page.catalog_clear)
+            self.assertIsNotNone(window.online_page.catalog_count)
+            # Offline fake catalogue: no backend requests, personal data or files.
+            catalog = window.online_page
+            catalog.on_catalog([
+                {
+                    "id": "12345678-1234-4123-8123-123456789abc",
+                    "title": "Night Sight",
+                    "description": "Sharper contrast for dark scenes",
+                    "category": "sights",
+                    "version": "2.0",
+                    "status": "approved"
+                },
+                {
+                    "id": "22345678-1234-4123-8123-123456789abc",
+                    "title": "Sound Test",
+                    "description": "Ambient audio sample",
+                    "category": "sounds",
+                    "version": "1.0",
+                    "status": "approved"
+                }
+            ])
+            self.assertEqual(catalog.catalog_list.count(), 2)
+            catalog.catalog_search.setText("contrast")
+            self.assertEqual(catalog.catalog_list.count(), 1)
+            self.assertIn("1 из 2", catalog.catalog_count.text())
+            self.assertTrue(catalog.catalog_clear.isEnabled())
+            catalog.catalog_clear.click()
+            self.assertEqual(catalog.catalog_list.count(), 2)
+            self.assertFalse(catalog.catalog_clear.isEnabled())
         finally:
             window.online_page.bridge.stop()
             window.force_close()

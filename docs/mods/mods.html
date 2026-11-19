@@ -97,8 +97,10 @@
           </select>
         </label>
         <span class="community2-muted">Умный поиск по названию, описанию и авторам.</span>
+        <button id="modsResetFilters" type="button" class="mods-secondary mods-reset-filters" disabled>Сбросить фильтры</button>
     </div>
     <p id="modsNotice" role="status" aria-live="polite"></p>
+    <button id="modsRetry" class="mods-secondary mods-retry" type="button" hidden>Повторить загрузку</button>
     <p class="mods-hint">Архивы остаются в личном разделе «Скачанные моды». Передача в Windows-приложение происходит только после нажатия «Добавить в приложение».</p>
     <p id="modsLoading" class="mods-loading" role="status" aria-live="polite" hidden>
       <span class="mods-loading-spinner" aria-hidden="true"></span>
@@ -106,8 +108,9 @@
     </p>
     <section id="modsGrid" class="mods-grid" aria-label="Модификации"></section>
     <div id="modsEmpty" class="mods-empty" hidden>
-      <h2>Здесь пока пусто</h2>
-      <p>Выбери другую категорию или добавь свою первую модификацию.</p>
+      <h2 id="modsEmptyTitle">Здесь пока пусто</h2>
+      <p id="modsEmptyDescription">Выбери другую категорию или добавь свою первую модификацию.</p>
+      <button id="modsEmptyReset" type="button" class="mods-secondary" hidden>Сбросить фильтры</button>
     </div>
 
     <section id="submitPanel" class="mods-submit-panel" aria-labelledby="submitTitle" hidden>

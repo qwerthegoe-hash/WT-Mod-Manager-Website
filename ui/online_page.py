@@ -262,10 +262,21 @@ class OnlinePage(QWidget):
         )
         self.catalog_note.setWordWrap(True)
         catalog_layout.addWidget(self.catalog_note)
+        search_controls = QHBoxLayout()
         self.catalog_search = QLineEdit()
-        self.catalog_search.setPlaceholderText("Поиск по названию и категории")
+        self.catalog_search.setPlaceholderText("Поиск: название, описание, категория, версия")
+        self.catalog_search.setClearButtonEnabled(True)
         self.catalog_search.textChanged.connect(self.render_catalog)
-        catalog_layout.addWidget(self.catalog_search)
+        search_controls.addWidget(self.catalog_search, 1)
+        self.catalog_clear = QPushButton("Очистить")
+        self.catalog_clear.setToolTip("Сбросить поиск без повторной загрузки каталога")
+        self.catalog_clear.clicked.connect(self.catalog_search.clear)
+        self.catalog_clear.setEnabled(False)
+        search_controls.addWidget(self.catalog_clear)
+        catalog_layout.addLayout(search_controls)
+        self.catalog_count = QLabel("Каталог ещё не загружен")
+        self.catalog_count.setObjectName("Subtitle")
+        catalog_layout.addWidget(self.catalog_count)
         self.catalog_list = QListWidget()
         self.catalog_list.itemDoubleClicked.connect(self.open_selected_mod)
         catalog_layout.addWidget(self.catalog_list, 1)
@@ -563,29 +574,45 @@ class OnlinePage(QWidget):
         self.render_catalog()
 
     def render_catalog(self, *_):
+        # The bridge supplies the already-approved, account-scoped catalogue.
+        # Filtering remains strictly local; typing does not trigger new requests.
         query = self.catalog_search.text().strip().casefold()
+        self.catalog_clear.setEnabled(bool(self.catalog_search.text()))
         self.catalog_list.clear()
         labels = {
             "sights": "Прицелы", "camouflage": "Камуфляжи",
             "sounds": "Звуки", "visuals": "Графика",
             "interface": "Интерфейс", "other": "Другое"
         }
+        valid_total = 0
+        matches = 0
         for row in self.catalog_rows:
-            title = str(row.get("title", ""))[:90]
-            category = labels.get(row.get("category"), "Мод")
-            version = str(row.get("version", ""))[:32]
-            if query and query not in (title + " " + category).casefold():
-                continue
-            ident = str(row.get("id", ""))
+            ident = str(row.get("id") or "")
             if not UUID.fullmatch(ident):
+                continue
+            if row.get("status") not in (None, "approved"):
+                continue
+            valid_total += 1
+            title = str(row.get("title") or "")[:90]
+            category = labels.get(row.get("category"), "Мод")
+            version = str(row.get("version") or "")[:32]
+            description = str(row.get("description") or "")[:400]
+            if query and query not in (
+                title + " " + category + " " + description + " " + version
+            ).casefold():
                 continue
             item = QListWidgetItem(category + " • " + title + " • v" + version)
             item.setData(Qt.ItemDataRole.UserRole, ident)
             self.catalog_list.addItem(item)
-        if not self.catalog_list.count():
+            matches += 1
+        self.catalog_count.setText(
+            f"Найдено: {matches} из {valid_total}" if query
+            else f"Модов в каталоге: {valid_total}"
+        )
+        if matches == 0:
             self.catalog_list.addItem(
-                "Нет опубликованных модов" if not self.catalog_rows else
-                "Поиск не дал результатов"
+                "Поиск не дал результатов — очисти запрос" if query
+                else "Нет опубликованных модов"
             )
 
     def open_selected_mod(self, *_):

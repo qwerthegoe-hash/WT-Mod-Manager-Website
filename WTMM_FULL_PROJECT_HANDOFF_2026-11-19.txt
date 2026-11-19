@@ -808,6 +808,10 @@ FILE: docs/mods/mods.css
   PURPOSE: основное оформление каталога модов
   GIT_BYTES: 13034
 
+FILE: docs/mods/mods-filter-state.mjs
+  PURPOSE: pure helpers for catalog filter-reset state and contextual empty views
+  GIT_BYTES: новый файл в отдельном PR (не релиз)
+
 FILE: docs/mods/mods.html
   PURPOSE: веб-каталог модов, загрузки, фильтрация и модерация
   GIT_BYTES: 9957
@@ -927,6 +931,10 @@ FILE: src/audio_analysis.py
 FILE: src/crash_recovery.py
   PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
   GIT_BYTES: 5503
+
+FILE: docs/md/WTMM_SITE_APP_UX_BACKLOG_2026-11-19.md
+  PURPOSE: приоритеты улучшения существующего сайта и Windows приложения, TikTok-план, тесты
+  GIT_BYTES: новый файл в отдельном PR (не релиз)
 
 FILE: src/desktop_sync.py
   PURPOSE: привязка Windows-клиента к веб-аккаунту через серверный challenge, DPAPI, фоновая синхронизация и rollback модов
@@ -1260,6 +1268,10 @@ FILE: ui/update_ui.py
   PURPOSE: потоковая фоновая проверка и скачивание обновлений, UI подтверждения, уведомления
   GIT_BYTES: 13473
 
+FILE: tools/test-mod-catalog-controls.mjs
+  PURPOSE: offline regression каталога: reset, retry, 5 языков, пустые состояния
+  GIT_BYTES: новый файл в отдельном PR (не релиз)
+
 FILE: tools/test-project-handoff.mjs
   PURPOSE: CI регрессия целостности этого TXT: проверяет версию, наличие всех перечисленных реальных путей и статус unsigned
   GIT_BYTES: 2178
@@ -1303,6 +1315,34 @@ FILE: tests/test_mod_suite.py
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
   GIT_BYTES: generated
+
+================================================================================
+08C. ПОДДЕРЖКА САЙТА И WINDOWS UX — НЕ ОПУБЛИКОВАННЫЙ PR
+================================================================================
+Рабочая ветка: improve/catalog-ux-and-desktop-search-20261119
+Основа main a122abf4f6649e4598c5fa865861aaa53a4c1cc5, версия Beta 13.
+План: docs/md/WTMM_SITE_APP_UX_BACKLOG_2026-11-19.md.
+
+В коде ветки:
+- docs/mods/mods.html / mods.css / mods.js: полный сброс поиска/категории/
+  сортировки/автора/избранного за одно действие; кнопка retry после ошибок
+  загрузки; разные объяснения пустого каталога/скачанных/моих/модерации.
+  Используется существующий Supabase RPC и текущий guard устаревших запросов.
+- docs/mods/mods-filter-state.mjs: чистые функции для состояния каталога.
+- docs/js/site-language.mjs: пять языков для новых элементов и подсказок.
+- ui/online_page.py: поиск по описанию и версии в уже загруженном каталоге,
+  кнопка очистки и локальный счётчик результатов, без повторной передачи
+  текста запроса на сервер.
+- tools/test-mod-catalog-controls.mjs + tools/check-site.mjs и
+  tests/test_gui_smoke.py: регрессии фильтров и Qt на локальных тестовых данных.
+- Никаких изменений RLS, backend ключей, EXE подписи или игровых файлов.
+
+Ограничения:
+- Это код PR, не новые функции опубликованного Beta 13 или live GitHub Pages.
+- Для выпуска обязательны успешные Website, Windows Installer, Desktop Sync CI
+  и отдельная реальная браузерная/GUI проверка.
+- PR #56/#57 остаются независимыми: их текущий статус нужно проверить
+  перед интеграцией, не считать их код частью main автоматически.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ
