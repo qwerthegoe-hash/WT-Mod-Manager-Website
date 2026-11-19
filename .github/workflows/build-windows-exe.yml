@@ -18,6 +18,8 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_update_notifications.py"
+      - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -41,6 +43,8 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_update_notifications.py"
+      - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -106,6 +110,13 @@ jobs:
         run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
       - name: Test WT Mod Suite all twelve safety and offline paths
         run: python -m unittest discover -s tests -p "test_mod_suite.py" -v
+
+      - name: Test in-app one-click updates, version checks and installed setup validation
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p "test_installer_integration.py" -v
+          python -m unittest discover -s tests -p "test_update_notifications.py" -v
 
       - name: Test new Downloads UI and non-network mod security checks
         env:
