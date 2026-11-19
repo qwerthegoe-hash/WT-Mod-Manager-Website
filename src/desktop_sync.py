@@ -29,7 +29,7 @@ from urllib.request import Request, urlopen
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from src.profile_paths import DATA_DIR
-from src.offline_mode import require_network
+from src.offline_mode import require_network, is_offline
 
 API_ROOT = "https://ovvubbwzxikqcnuvvtjb.supabase.co"
 API_KEY = "sb_publishable_NYOePmdOT87GXNFpI9j8OQ_Y8CIyLez"
@@ -391,6 +391,8 @@ class DesktopSync(QObject):
         self.sync_now()
 
     def _start(self, action: str, token: str, **options) -> bool:
+        if is_offline():
+            return False  # Suppress automatic timers without network/error spam.
         if self._busy:
             return False
         self._busy = True
