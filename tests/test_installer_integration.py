@@ -153,6 +153,20 @@ class BrandedInstallerTests(unittest.TestCase):
         self.assertIn("Windows", script)
         self.assertNotIn("Filename: \"{sys}\\notepad.exe\"", script)
 
+    def test_installer_distributes_one_exe_not_exposed_runtime_tree(self):
+        root = Path(__file__).resolve().parents[1]
+        setup = (root / "installer" / "WTModManager.iss").read_text("utf-8")
+        builder = (root / "tools" / "build_windows_exe.py").read_text("utf-8")
+        self.assertIn('Source: "..\\dist\\WTModManager.exe"', setup)
+        self.assertNotIn('Source: "..\\dist\\WTModManager\\*"', setup)
+        self.assertIn('Name: "{app}\\_internal"; Check: HasLegacyRuntime', setup)
+        self.assertIn("def build() -> None:", builder)
+        self.assertIn('"--onefile"', builder)
+        self.assertNotIn('"--onedir"', builder)
+        self.assertNotIn('build("installed")', builder)
+        self.assertIn('":assets"', builder)
+        self.assertIn('":config"', builder)
+
     def test_setup_launcher_rejects_nonwindows_execution(self):
         with self.assertRaises(RuntimeError):
             launch_setup_update(self.root / "WTModManager-Setup.exe", "0"*64)
