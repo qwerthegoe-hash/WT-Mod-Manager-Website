@@ -196,7 +196,7 @@ async function fetchModPage(offset, query = getModQuery()) {
 async function enrichComparisonPaths(rows) {
     if(!rows.length)return;
     const {data,error}=await db.from("wtmm_mods")
-      .select("id,before_image_path,after_image_path,triage_status,triage_note,triage_files")
+      .select("id,before_image_path,after_image_path,triage_status,triage_note,triage_files,scan_status,scan_note")
       .in("id",rows.map(r=>r.id));
     if(error) {
       console.warn("Before/after images unavailable:",error.message);
@@ -516,11 +516,14 @@ async function showModDetails(id) {
             scanning: "Бот проверяет состав, размер, CRC и опасные файлы.",
             checked: "Структура ZIP проверена. Ожидает ручной модерации.",
             blocked: "ZIP отклонён системой автоматической проверки.",
-            error: "Временная ошибка проверки; система повторит попытку."
+            error: "Ошибка сканирования. Автоматически выполняется до трёх попыток."
         })[current] || "Ожидает проверки";
         content.append(node("p", "mod-status " + row.status, message));
         if (row.triage_note)
             content.append(node("p", "mods-review-note", row.triage_note));
+        if (row.scan_status === "blocked")
+            content.append(node("p", "mods-review-note",
+                "Антивирусная проверка пометила ZIP как опасный. Публикация запрещена."));
         if (row.rejection_reason)
             content.append(node("p", "mods-review-note", "Причина: " + row.rejection_reason));
     }
@@ -561,7 +564,7 @@ async function showModDetails(id) {
         }
     }
     if (currentView === "moderation" && isAdmin && row.status === "pending") {
-        const scanPassed = row.triage_status === "checked";
+        const scanPassed = row.triage_status === "checked" && row.scan_status !== "blocked";
         const warning = node("p", "mods-review-note",
             scanPassed
             ? "ZIP прошёл автоматическую структурную проверку. Проверь вручную перед публикацией."
