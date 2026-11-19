@@ -3,10 +3,11 @@ WT MOD MANAGER — ПОЛНОЕ ТЕХНИЧЕСКОЕ ДОСЬЕ И ПЕРЕД�
 Срез состояния: 19 ноября 2026 (Europe/Kyiv).
 Основной проект: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website
 Основная ветка: main
-Проверенный релиз: v1.3.0-beta.12
-Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12
-Commit выпущенной версии: 95a38e292b4e1e70c37bdef9a7dd16c28a58b486
-GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
+Проверенный опубликованный релиз: v1.3.0-beta.13
+Кандидат следующего релиза (в PR, ещё не опубликован): 1.3.0-beta.14
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13
+Commit выпущенной версии: a122abf4f6649e4598c5fa865861aaa53a4c1cc5
+GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44543556869
 Сайт: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/
 Trust Center: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/trust.html
 GitHub Pages: исходники лежат в docs/, не путать с Python desktop.
@@ -15,11 +16,11 @@ GitHub Pages: исходники лежат в docs/, не путать с Pytho
 ВНИМАНИЕ: это документ-«снимок», а не автоматический синхронизатор будущих изменений. Перед любыми новыми изменениями проверить актуальную ветку и последнюю версию. Здесь различаются ПОДТВЕРЖДЕНО, РЕАЛИЗОВАНО, ОПЦИОНАЛЬНО/НЕ НАСТРОЕНО и ТРЕБУЕТ ПРОВЕРКИ. Не приписывать проекту то, чего CI или живой сервер не доказывают.
 
 ================================================================================
-BETA 13 — WT MOD SUITE 2.0 (в работе в PR #55, на момент подготовки документа НЕ опубликована)
+BETA 13 — WT MOD SUITE 2.0 (исторический этап: опубликована 19 ноября 2026)
 --------------------------------------------------------------------------------
-Версия исходников: 1.3.0-beta.13. Последним ПОДТВЕРЖДЁННЫМ опубликованным выпуском до успешного merge/release остаётся v1.3.0-beta.12.
+Исторический выпуск: 1.3.0-beta.13. Текущий кандидат 1.3.0-beta.14 — ветка PR #60; НЕ считать его опубликованным до успешной main CI и GitHub Releases.
 PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
-ВНИМАНИЕ: не выдавать функции Beta 13 за опубликованный EXE, пока CI на main и GitHub Releases не подтвердят выход.
+ВНИМАНИЕ: Beta 13 опубликована; новые функции Beta 14 пока есть лишь в рабочих ветках и не входят в выпущенный Beta 13 EXE.
 
 12 дополнительных направлений:
 1) Conflict Resolver: ui/game_install_ui.py вызывает src/mod_suite.py preview_install/resolve_conflicts, показывает реальные замены, позволяет оставить старые файлы / сделать backup-замену / отменить. Существующие транзакционные backup и rollback в src/game_mod_installer.py сохранены.
@@ -44,7 +45,7 @@ PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
 
 Главное пожелание: перед каждым изменением читать АКТУАЛЬНЫЕ файлы проекта; менять точечно, не сокращать UI и не удалять функции; работать через новую ветку + PR + CI; проверять безопасность секретов; выпускать версию только после успешной Windows-сборки. Все релизные номера согласовывать между src/update_checker.py, installer/WTModManager.iss, installer/release-notes.txt и .github/workflows/build-windows-exe.yml, а также тестами.
 
-Последнее проверенное: Beta 12 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. В последующем документальном улучшении удалены только кэш-файлы *.pyc из Git (исходники сохранены). Это НЕ новый desktop релиз: версия остаётся beta.12.
+Последнее проверенное опубликованное на момент подготовки кандидата: Beta 13 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. Следующее обновление 1.3.0-beta.14 готовится в PR и пока не является доступным EXE.
 
 КРИТИЧНО: текущий публичный релиз помечен UNSIGNED. Sigstore attestation != Authenticode, SHA-256 != цифровая подпись, код проекта не может легально «заставить» Windows доверять новой программе. Нет гарантии убрать SmartScreen без настоящего доверенного сертификата и репутации издателя.
 
