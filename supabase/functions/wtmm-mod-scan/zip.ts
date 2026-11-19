@@ -52,6 +52,15 @@ function updateCrc(crc: number, chunk: Uint8Array): number {
 // Only strongly recognizable dangerous containers are rejected automatically.
 // Short "MZ" / "#!" prefixes may be legitimate text and need a human verdict.
 function inspectMagic(chunk: Uint8Array): "block"|"review"|null {
+  // Inspect PE's full DOS->PE header pointer, not just the short "MZ" prefix.
+  // A plain text file starting "MZ" isn't automatically a Windows executable.
+  if(chunk.length>=64 && chunk[0]===77 && chunk[1]===90) {
+    const peAt=(chunk[0x3c] | (chunk[0x3d]<<8) |
+      (chunk[0x3e]<<16) | (chunk[0x3f]<<24))>>>0;
+    if(peAt>=64 && peAt+4<=chunk.length &&
+       chunk[peAt]===80 && chunk[peAt+1]===69 &&
+       chunk[peAt+2]===0 && chunk[peAt+3]===0) return "block";
+  }
   if(chunk.length>=4 && chunk[0]===127 && chunk[1]===69 &&
       chunk[2]===76 && chunk[3]===70) return "block"; // ELF
   if(chunk.length>=4 && chunk[0]===80 && chunk[1]===75 &&
@@ -163,8 +172,8 @@ async function checkOne(bytes: Uint8Array, entry: Entry, review: Set<string>): P
     guard(seen<=entry.unpacked && seen<=MAX_SINGLE_FILE,
       "Файл больше заявленного размера");
     crc=updateCrc(crc,chunk);
-    if (prefix.length<8) {
-      const joined=new Uint8Array(Math.min(8,prefix.length+chunk.length));
+    if (prefix.length<256) {
+      const joined=new Uint8Array(Math.min(256,prefix.length+chunk.length));
       joined.set(prefix);
       joined.set(chunk.subarray(0,joined.length-prefix.length),prefix.length);
       prefix=joined;
