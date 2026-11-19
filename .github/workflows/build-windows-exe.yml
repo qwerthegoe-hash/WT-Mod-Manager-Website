@@ -242,7 +242,12 @@ jobs:
           New-Item -ItemType Directory -Path (Split-Path $prefs) -Force | Out-Null
           Set-Content -LiteralPath $prefs -Encoding utf8 -Value '{"channel":"stable"}'
           $updateArgs = '/SILENT /NORESTART /CLOSEAPPLICATIONS /DIR="' + $target + '" /WTMMAUTOUPDATE'
-          $oneClick = Start-Process -FilePath $setup -ArgumentList $updateArgs -Wait -PassThru
+          # Start-Process -Wait can wait for a descendant app launched by Inno.
+          # Wait only for Setup itself, then inspect the relaunched app separately.
+          $oneClick = Start-Process -FilePath $setup -ArgumentList $updateArgs -PassThru
+          if (-not $oneClick.WaitForExit(120000)) {
+            throw "One-click Setup did not complete within its test timeout"
+          }
           if ($oneClick.ExitCode -ne 0) { throw "One-click in-app Setup failed" }
           $afterPrefs = Get-Content -LiteralPath $prefs -Raw | ConvertFrom-Json
           if ($afterPrefs.channel -ne "stable") { throw "In-app update unexpectedly changed the user's channel" }
