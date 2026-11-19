@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src import update_checker
-from src.installed_updater import launch_setup_update
+from src.installed_updater import launch_setup_update, setup_update_arguments
 
 
 class FakeResponse(io.BytesIO):
@@ -173,6 +173,112 @@ class BrandedInstallerTests(unittest.TestCase):
     def test_setup_launcher_rejects_nonwindows_execution(self):
         with self.assertRaises(RuntimeError):
             launch_setup_update(self.root / "WTModManager-Setup.exe", "0"*64)
+
+
+class OneClickInstalledUpdateTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.installed_dir = self.root / "Custom Installed Folder"
+        self.installed_dir.mkdir()
+        self.installed_exe = self.installed_dir / "WTModManager.exe"
+        self.installed_exe.write_bytes(b"MZ" + b"A" * 16)
+        (self.installed_dir / "wtmm.installed").write_bytes(b"installed")
+        self.updates = self.root / "updates"
+        self.updates.mkdir()
+        self.setup = self.updates / "WTModManager-Setup.exe"
+        self.setup.write_bytes(b"MZ" + b"B" * (1024 * 1024))
+        self.digest = hashlib.sha256(self.setup.read_bytes()).hexdigest()
+
+    def test_update_command_preserves_custom_folder_without_hiding_errors(self):
+        import src.installed_updater as installed
+        args = setup_update_arguments(self.installed_dir)
+        self.assertIn("/SILENT", args)
+        self.assertIn("/NORESTART", args)
+        self.assertIn("/CLOSEAPPLICATIONS", args)
+        self.assertIn("/DIR=" + str(self.installed_dir), args)
+        self.assertIn("/WTMMAUTOUPDATE", args)
+        self.assertNotIn("/VERYSILENT", args)
+        self.assertNotIn("/SUPPRESSMSGBOXES", args)
+        with (
+            patch.object(installed.sys, "platform", "win32"),
+            patch.object(installed.sys, "frozen", True, create=True),
+            patch.object(installed.sys, "executable", str(self.installed_exe)),
+            patch.object(installed, "is_installed_app", return_value=True),
+            patch.object(installed, "SETUP_FILE", self.setup),
+            patch.object(installed.subprocess, "Popen") as popen,
+        ):
+            launch_setup_update(self.setup, self.digest)
+        popen.assert_called_once()
+        argv = popen.call_args.args[0]
+        self.assertEqual(argv[0], str(self.setup))
+        self.assertEqual(argv[1:], args)
+        self.assertFalse(popen.call_args.kwargs["shell"])
+
+    def test_tampered_setup_cannot_start(self):
+        import src.installed_updater as installed
+        with (
+            patch.object(installed.sys, "platform", "win32"),
+            patch.object(installed.sys, "frozen", True, create=True),
+            patch.object(installed.sys, "executable", str(self.installed_exe)),
+            patch.object(installed, "is_installed_app", return_value=True),
+            patch.object(installed, "SETUP_FILE", self.setup),
+            patch.object(installed.subprocess, "Popen") as popen,
+        ):
+            with self.assertRaises(ValueError):
+                launch_setup_update(self.setup, "0" * 64)
+        popen.assert_not_called()
+
+    def test_installer_auto_restart_does_not_affect_regular_silent_installs(self):
+        installer = (Path(__file__).resolve().parents[1]
+                     / "installer" / "WTModManager.iss").read_text("utf-8")
+        self.assertIn("function IsOneClickUpdate(): Boolean;", installer)
+        self.assertIn("if IsOneClickUpdate() then", installer)
+        self.assertIn("Check: IsOneClickUpdate", installer)
+        self.assertIn("Flags: nowait skipifnotsilent runasoriginaluser", installer)
+        self.assertIn('Parameters: "--updated"', installer)
+        self.assertIn("last-update-status.txt", installer)
+        self.assertIn("UsePreviousAppDir=yes", installer)
+        self.assertIn("RestartApplications=no", installer)
+        self.assertNotIn("PrivilegesRequired=admin", installer)
+
+    def test_download_progress_only_finishes_after_verified_binary(self):
+        binary = b"MZ" + b"A" * (1024 * 1024)
+        digest = hashlib.sha256(binary).hexdigest()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            update_dir = root / "updates"
+            config = root / "config.json"
+            config.write_text(json.dumps({
+                "github_repository": "qwerthegoe-hash/WT-Mod-Manager-Website",
+                "channel": "beta"
+            }), encoding="utf-8")
+            release = {
+                "name": "WTModManager-Setup.exe",
+                "kind": "installer",
+                "version": "v1.4.0-beta.1",
+                "url": ("https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/"
+                        "releases/download/v1.4.0-beta.1/WTModManager-Setup.exe"),
+                "size": len(binary),
+                "digest": digest,
+            }
+            with (
+                patch("src.update_checker.CONFIG_FILE", config),
+                patch("src.update_checker.DATA_DIR", root),
+                patch("src.update_checker.is_installed_app", return_value=True),
+                patch("src.update_checker.urllib.request.urlopen",
+                      side_effect=lambda request, timeout:
+                          FakeResponse(binary, release["url"])),
+            ):
+                progress = []
+                target = update_checker.download_verified(release, progress.append)
+                self.assertEqual(progress[0], 0)
+                self.assertEqual(progress[-1], 100)
+                self.assertEqual(target, update_dir / "WTModManager-Setup.exe")
+                cached = []
+                update_checker.download_verified(release, cached.append)
+                self.assertEqual(cached, [100])
 
 
 if __name__ == "__main__":
