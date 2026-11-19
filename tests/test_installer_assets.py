@@ -1,4 +1,4 @@
-"""Visual regression for the rounded, transparent Inno Setup mini logo."""
+"""Visual regression for a rounded mini-logo with opaque dark-mode corners."""
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,21 +10,23 @@ from tools import build_installer_assets
 
 
 class BrandedMiniLogoTests(unittest.TestCase):
-    def test_mini_card_has_transparent_antialiased_rounded_corners(self):
+    def test_mini_card_has_opaque_antialiased_rounded_corners(self):
         with tempfile.TemporaryDirectory() as tmp:
             destination = Path(tmp)
             with patch.object(build_installer_assets, "OUT", destination):
                 build_installer_assets.main()
-            image = Image.open(destination / "wizard-small.png").convert("RGBA")
+            with Image.open(destination / "wizard-small.png") as loaded:
+                self.assertEqual(loaded.mode, "RGB")
+                image = loaded.copy()
             self.assertEqual(image.size, (320, 320))
-            self.assertEqual(image.getpixel((0, 0))[3], 0)
-            self.assertEqual(image.getpixel((319, 0))[3], 0)
-            self.assertEqual(image.getpixel((0, 319))[3], 0)
-            self.assertEqual(image.getpixel((319, 319))[3], 0)
-            self.assertEqual(image.getpixel((160, 160))[3], 255)
-            self.assertTrue(
-                any(0 < image.getpixel((x, 5))[3] < 255 for x in range(0, 50)),
-                "Rounded edge is not antialiased"
+            panel = (32, 43, 58)
+            for xy in ((0, 0), (319, 0), (0, 319), (319, 319)):
+                self.assertEqual(image.getpixel(xy), panel)
+            self.assertNotEqual(image.getpixel((160, 160)), panel)
+            # Antialiasing produces different blended colors near the card edge
+            # while keeping the outside panel fully opaque.
+            self.assertGreater(
+                len({image.getpixel((x, 12)) for x in range(4, 50)}), 3
             )
             self.assertTrue((destination / "WTModManager.ico").is_file())
             with Image.open(destination / "wizard.png") as large:
