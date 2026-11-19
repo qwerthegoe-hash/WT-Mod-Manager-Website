@@ -67,3 +67,7 @@ jobs:
         run: deno check docs/supabase/functions/wtmm-desktop-bridge/index.ts
       - name: Type-check VT Edge gateway
         run: deno check supabase/functions/wtmm-vt-lookup/index.ts
+      - name: Type-check sequential ZIP queue scanner
+        run: deno check supabase/functions/wtmm-mod-scan/index.ts
+      - name: Test ZIP scanner without network or secrets
+        run: deno test supabase/functions/wtmm-mod-scan/zip_test.ts
