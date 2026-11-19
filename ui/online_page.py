@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.update_notifications import load_notifications, mark_all_read
 from src.diagnostics import inspect_local, format_report
-from src.update_checker import VERSION, is_installed_app
+from src.update_checker import VERSION, is_installed_app, update_channel, set_update_channel
 from src.portable_updater import previous_exe_available
 from ui.security_panel import SecurityPanel
 from ui.trust_panel import TrustPanel
@@ -131,6 +131,15 @@ class OnlinePage(QWidget):
         self.update_auto_checkbox.setChecked(load_notifications()["auto_check"])
         self.update_auto_checkbox.toggled.connect(self.auto_check_changed.emit)
         updates.addWidget(self.update_auto_checkbox)
+        channel_row = QHBoxLayout()
+        channel_row.addWidget(QLabel("Канал обновлений:"))
+        self.channel_picker = QComboBox()
+        self.channel_picker.addItem("Stable — проверенные версии", "stable")
+        self.channel_picker.addItem("Beta — новые функции", "beta")
+        self.channel_picker.setCurrentIndex(0 if update_channel() == "stable" else 1)
+        channel_row.addWidget(self.channel_picker, 1)
+        updates.addLayout(channel_row)
+        self.channel_picker.currentIndexChanged.connect(self._save_channel)
         self.rollback_exe_button = QPushButton("Вернуть предыдущую версию приложения")
         self.rollback_exe_button.clicked.connect(self.rollback_update_requested.emit)
         self.rollback_exe_button.setToolTip(
@@ -301,6 +310,26 @@ class OnlinePage(QWidget):
             lambda _: self.profile_delete.setEnabled(
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
+        )
+
+    def _save_channel(self, _index):
+        selected = self.channel_picker.currentData()
+        try:
+            set_update_channel(selected)
+        except (ValueError, OSError):
+            QMessageBox.warning(
+                self, "Канал обновлений",
+                "Не удалось сохранить выбранный канал обновлений."
+            )
+            self.channel_picker.blockSignals(True)
+            self.channel_picker.setCurrentIndex(
+                0 if update_channel() == "stable" else 1
+            )
+            self.channel_picker.blockSignals(False)
+            return
+        self.update_summary.setText(
+            "Канал: " + ("Stable" if selected == "stable" else "Beta") +
+            ". Проверка новых релизов доступна по кнопке выше."
         )
 
     def _on_sync_status(self, message):
