@@ -10,14 +10,13 @@ import hashlib
 import json
 import os
 import re
-import shutil
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
 from src.profile_paths import DATA_DIR
-from src.game_mod_installer import CopyPlan, InstallError, ROOT_BACKUPS, MAX_FILES
+from src.game_mod_installer import CopyPlan, InstallError, MAX_FILES
 
 REGISTRY_DIR = DATA_DIR / "game-installs"
 TIMELINE_PATH = REGISTRY_DIR / "timeline.json"
@@ -163,7 +162,8 @@ def installed_integrity() -> list[dict]:
                 elif not dest.is_file():
                     status = "missing"
                 else:
-                    dig = hashlib.file_digest(dest.open("rb"), "sha256").hexdigest()
+                    with dest.open("rb") as stream:
+                        dig = hashlib.file_digest(stream, "sha256").hexdigest()
                     status = "ok" if dig == item["installed_digest"] else "changed"
             except OSError:
                 status = "unavailable"
