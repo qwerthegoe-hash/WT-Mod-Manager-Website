@@ -92,7 +92,8 @@ def plan_vehicle_package(package_folder: Path, template_folder: Path):
     source = Path(package_folder)
     files = _iter_source_files(source, CAMO_EXT)
     blks = [file for file in files if file.suffix.casefold() == ".blk"]
-    if len(blks) != 1 or blks[0].name.casefold() != f"{vehicle_id}.blk".casefold():
+    if (len(blks) != 1 or blks[0].parent != source
+            or blks[0].name.casefold() != f"{vehicle_id}.blk".casefold()):
         raise InstallError(
             "Файл .blk не совпадает с выбранной техникой. "
             f"Для этого шаблона требуется {vehicle_id}.blk. "
@@ -126,6 +127,11 @@ def plan_vehicle_image(image_file: Path, template_folder: Path, staging: Path):
     template = validate_skin_template(template_folder)
     vehicle_id = vehicle_from_template(template)
     src_files = _iter_source_files(template, CAMO_EXT)
+    if len([item for item in src_files if item.suffix.casefold() == ".blk"]) != 1:
+        raise InstallError(
+            "Шаблон содержит несколько .blk. Используй готовый комплект "
+            "для выбранной техники."
+        )
     config_path = template / f"{vehicle_id}.blk"
     config = config_path.read_bytes()
     if len(config) > 2 * 1024 * 1024:
