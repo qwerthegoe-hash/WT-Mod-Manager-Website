@@ -63,7 +63,7 @@ jobs:
       - name: Compile official Windows taskbar helper
         shell: pwsh
         run: |
-          cmake -S tools/taskbar -B build/taskbar -G "Visual Studio 17 2022" -A x64
+          cmake -S tools/taskbar -B build/taskbar -A x64
           if ($LASTEXITCODE -ne 0) { throw "Taskbar helper configuration failed" }
           cmake --build build/taskbar --config Release --parallel 2
           if ($LASTEXITCODE -ne 0) { throw "Taskbar helper compilation failed" }
