@@ -62,7 +62,9 @@ class PortableUpdateTests(unittest.TestCase):
         new = self.fixture("v1.4.0-beta.1", digest="b"*64)
         wrong = self.fixture("v1.6.0-beta.1")
         wrong["assets"][0]["browser_download_url"] = "https://evil.example/WTModManager.exe"
-        with patch("src.update_checker._api_json", return_value=[wrong,beta,new]):
+        with patch("src.update_checker._api_json", return_value=[wrong,beta,new]), \
+             patch("src.update_checker.fetch_policy",
+                   return_value={"schema":1,"blocked_tags":[],"staged":{}}):
             found = update_checker.find_update()
         self.assertEqual(found["version"],"v1.4.0-beta.1")
         self.assertEqual(found["digest"],"b"*64)
