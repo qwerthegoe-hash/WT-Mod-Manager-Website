@@ -1,8 +1,8 @@
-; WT Mod Manager branded Windows installer, beta 1.3.7.
+; WT Mod Manager branded Windows installer, beta 1.3.8.
 ; The installer itself NEVER silently pins the taskbar.
 ; Per-user mod files/settings live in %LOCALAPPDATA%\WTModManager and survive.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0-beta.7"
+  #define MyAppVersion "1.3.0-beta.8"
 #endif
 #define AppName "WT Mod Manager"
 #define AppExe "WTModManager.exe"
@@ -48,7 +48,7 @@ VersionInfoCompany=WT Mod Manager Community
 VersionInfoDescription=WT Mod Manager Windows Installer
 VersionInfoProductName=WT Mod Manager
 VersionInfoCopyright=WT Mod Manager Community
-VersionInfoVersion=1.3.0.7
+VersionInfoVersion=1.3.0.8
 WizardResizable=yes
 WizardKeepAspectRatio=yes
 AllowNoIcons=yes
