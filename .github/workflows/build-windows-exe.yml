@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Use Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           architecture: 'x64'
@@ -302,7 +302,7 @@ jobs:
           persist-credentials: false
 
       - name: Use Python 3.12 for release verification
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           architecture: 'x64'
