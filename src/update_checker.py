@@ -20,7 +20,7 @@ from src.profile_paths import DATA_DIR
 from src.offline_mode import is_offline
 from src.release_rollout import eligible, fetch_policy
 
-VERSION = "1.3.0-beta.13"
+VERSION = "1.3.0-beta.14"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
