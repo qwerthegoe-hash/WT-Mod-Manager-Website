@@ -1,8 +1,8 @@
-; WT Mod Manager branded Windows installer, beta 1.3.8.
+; WT Mod Manager branded Windows installer, beta 1.3.9.
 ; The installer itself NEVER silently pins the taskbar.
 ; Per-user mod files/settings live in %LOCALAPPDATA%\WTModManager and survive.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0-beta.8"
+  #define MyAppVersion "1.3.0-beta.9"
 #endif
 #define AppName "WT Mod Manager"
 #define AppExe "WTModManager.exe"
@@ -48,7 +48,7 @@ VersionInfoCompany=WT Mod Manager Community
 VersionInfoDescription=WT Mod Manager Windows Installer
 VersionInfoProductName=WT Mod Manager
 VersionInfoCopyright=WT Mod Manager Community
-VersionInfoVersion=1.3.0.8
+VersionInfoVersion=1.3.0.9
 WizardResizable=yes
 WizardKeepAspectRatio=yes
 AllowNoIcons=yes
@@ -58,13 +58,18 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "..\dist\WTModManager\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\WTModManager.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "wtmm.installed"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; DestName: "README.txt"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\WT Mod Manager"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExe}"; AppUserModelID: "WTModManager.Desktop"
 Name: "{group}\Удалить WT Mod Manager"; Filename: "{uninstallexe}"
+
+[InstallDelete]
+; Remove only old runtime from an existing installation belonging to this app.
+; Original user data is stored separately under %LOCALAPPDATA%\WTModManager.
+Type: filesandordirs; Name: "{app}\_internal"; Check: HasLegacyRuntime
 
 [UninstallDelete]
 Type: files; Name: "{autodesktop}\WT Mod Manager.lnk"
@@ -74,6 +79,12 @@ Type: files; Name: "{userstartup}\WT Mod Manager.lnk"
 Filename: "{app}\{#AppExe}"; Parameters: "{code:GetLaunchParams}"; Description: "Запустить WT Mod Manager"; Flags: postinstall nowait skipifsilent
 
 [Code]
+function HasLegacyRuntime(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\wtmm.installed')) and
+            DirExists(ExpandConstant('{app}\_internal'));
+end;
+
 var
   FinishDesktopShortcut: TNewCheckBox;
   FinishTaskbarPin: TNewCheckBox;
