@@ -236,10 +236,33 @@ jobs:
           finally {
             taskkill.exe /PID $app.Id /T /F 2>$null | Out-Null
           }
+          # Exercise the new one-click Inno update path on a real Windows runner:
+          # same destination, saved channel, and automatic updated GUI relaunch.
+          $prefs = Join-Path $env:LOCALAPPDATA "WTModManager\update-channel.json"
+          New-Item -ItemType Directory -Path (Split-Path $prefs) -Force | Out-Null
+          Set-Content -LiteralPath $prefs -Encoding utf8 -Value '{"channel":"stable"}'
+          $updateArgs = '/SILENT /NORESTART /CLOSEAPPLICATIONS /DIR="' + $target + '" /WTMMAUTOUPDATE'
+          $oneClick = Start-Process -FilePath $setup -ArgumentList $updateArgs -Wait -PassThru
+          if ($oneClick.ExitCode -ne 0) { throw "One-click in-app Setup failed" }
+          $afterPrefs = Get-Content -LiteralPath $prefs -Raw | ConvertFrom-Json
+          if ($afterPrefs.channel -ne "stable") { throw "In-app update unexpectedly changed the user's channel" }
+          $updatedExe = Join-Path $target "WTModManager.exe"
+          $restarted = $null
+          for ($i = 0; $i -lt 15; $i++) {
+            $restarted = Get-Process -Name "WTModManager" -ErrorAction SilentlyContinue |
+              Where-Object { $_.Path -eq $updatedExe } | Select-Object -First 1
+            if ($restarted) { break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $restarted) { throw "One-click installer did not relaunch the installed app" }
+          Start-Sleep -Seconds 3
+          $restarted.Refresh()
+          if ($restarted.HasExited) { throw "One-click updated GUI closed unexpectedly" }
+          taskkill.exe /PID $restarted.Id /T /F 2>$null | Out-Null
           $u = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "Uninstaller failed" }
           if (Test-Path "$target\WTModManager.exe") { throw "Program not removed after uninstall" }
-          Write-Output "Installed app, launched GUI and uninstalled successfully"
+          Write-Output "Installed, upgraded in-place, auto-relaunched, preserved channel and uninstalled successfully"
 
       - name: Verify EXE signatures and generate release evidence
         shell: pwsh
