@@ -16,6 +16,7 @@ on:
       - "tools/build_sbom.py"
       - "tests/test_release_integrity.py"
       - "tests/test_build_sbom.py"
+      - "tests/test_recovery_and_trust.py"
       - "requirements-build.txt"
       - ".github/workflows/build-windows-exe.yml"
   push:
@@ -33,6 +34,7 @@ on:
       - "tools/build_sbom.py"
       - "tests/test_release_integrity.py"
       - "tests/test_build_sbom.py"
+      - "tests/test_recovery_and_trust.py"
       - "requirements-build.txt"
       - ".github/workflows/build-windows-exe.yml"
 
@@ -55,7 +57,7 @@ jobs:
       artifact-metadata: write
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.11
+      WTMM_VERSION: 1.3.0-beta.12
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -89,6 +91,9 @@ jobs:
 
       - name: Test build SBOM privacy and package consistency
         run: python -m unittest discover -s tests -p "test_build_sbom.py" -v
+
+      - name: Test WT Recovery, local trust and update disk constraints
+        run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
 
       - name: Test new Downloads UI and non-network mod security checks
         env:
@@ -289,7 +294,7 @@ jobs:
       contents: write
       attestations: read
     env:
-      WTMM_VERSION: 1.3.0-beta.11
+      WTMM_VERSION: 1.3.0-beta.12
     steps:
       - name: Checkout exact tested commit
         uses: actions/checkout@v4
