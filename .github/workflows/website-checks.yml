@@ -65,3 +65,5 @@ jobs:
         run: deno check docs/supabase/functions/contact-message/index.ts
       - name: Type-check desktop bridge
         run: deno check docs/supabase/functions/wtmm-desktop-bridge/index.ts
+      - name: Type-check VT Edge gateway
+        run: deno check supabase/functions/wtmm-vt-lookup/index.ts

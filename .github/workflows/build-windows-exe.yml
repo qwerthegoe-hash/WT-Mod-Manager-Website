@@ -37,7 +37,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.9
+      WTMM_VERSION: 1.3.0-beta.10
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -67,6 +67,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python -m unittest discover -s tests -p "test_mod_security.py" -v
+          python -m unittest discover -s tests -p "test_vt_backend.py" -v
           python -m unittest discover -s tests -p "test_gui_smoke.py" -v
 
       - name: Validate optional signing script syntax (no secrets)
