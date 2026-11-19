@@ -191,10 +191,11 @@ class Supabase:
             "scan_status": state, "scan_sha256": digest,
             "scan_completed_at": now(), "scan_note": note,
         }
-        # Previously published legacy objects fail closed when found unsafe.
-        if state == "blocked" and job["status"] == "approved":
+        # A ClamAV detection blocks BOTH pending and legacy published objects.
+        # Structural ZIP validation alone is never an antivirus verdict.
+        if state == "blocked" and job["status"] in ("pending", "approved"):
             updates["status"] = "rejected"
-            updates["rejection_reason"] = "Automatic archive safety review failed"
+            updates["rejection_reason"] = "Automatic antivirus/archive safety review failed"
         params = urllib.parse.urlencode({
             "id": "eq." + job["id"], "scan_status": "eq.scanning",
             "status": "eq." + job["status"],
