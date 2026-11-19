@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
+from src.offline_mode import is_offline
 
 VERSION = "1.3.0-beta.12"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
@@ -143,6 +144,8 @@ def _release_candidate(payload, repo):
 
 
 def find_update():
+    if is_offline():
+        return None  # No GitHub calls in explicit offline mode.
     repo = repository()
     if not repo:
         return None
@@ -159,6 +162,8 @@ def find_update():
 
 def download_verified(info):
     """Bounded stream from the official release, verified before staging."""
+    if is_offline():
+        raise OSError("WT Offline Mode включён: скачивание обновлений остановлено.")
     repo = repository()
     if not repo or not isinstance(info, dict):
         raise ValueError("Updater is not configured.")
