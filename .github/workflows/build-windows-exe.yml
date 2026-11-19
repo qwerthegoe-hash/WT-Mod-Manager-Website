@@ -308,7 +308,7 @@ jobs:
           architecture: 'x64'
 
       - name: Obtain Windows binaries from successful tested build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: WTModManager-Windows-${{ github.run_number }}
           path: dist
