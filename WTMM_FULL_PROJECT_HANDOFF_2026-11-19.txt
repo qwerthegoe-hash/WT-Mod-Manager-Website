@@ -928,6 +928,10 @@ FILE: src/crash_recovery.py
   PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
   GIT_BYTES: 5503
 
+FILE: docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md
+  PURPOSE: точная схема будущих обновлений из приложения, безопасность, перечень изменённых файлов, ручная приёмка
+  GIT_BYTES: новый файл в отдельной ветке, не опубликованный релиз
+
 FILE: src/desktop_sync.py
   PURPOSE: привязка Windows-клиента к веб-аккаунту через серверный challenge, DPAPI, фоновая синхронизация и rollback модов
   GIT_BYTES: 23591
@@ -941,7 +945,7 @@ FILE: src/game_mod_installer.py
   GIT_BYTES: 14529
 
 FILE: src/installed_updater.py
-  PURPOSE: передача проверенного установщика Inno Setup при подтверждённом обновлении установленной версии
+  PURPOSE: проверка SHA-256 и запуск Inno Setup для установленной версии в прежней папке, one-click silent progress, без shell
   GIT_BYTES: 1765
 
 FILE: src/main.py
@@ -1303,6 +1307,42 @@ FILE: tests/test_mod_suite.py
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
   GIT_BYTES: generated
+
+================================================================================
+08D. ONE-CLICK ОБНОВЛЕНИЯ УСТАНОВЛЕННОГО WT MOD MANAGER — PR, НЕ РЕЛИЗ
+================================================================================
+Ветка от main a122abf4f6649e4598c5fa865861aaa53a4c1cc5:
+feature/one-click-in-app-updates-20261119.
+Полное описание: docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md.
+Различать состояние кода этой ветки и опубликованный v1.3.0-beta.13.
+
+РЕАЛИЗОВАНО В ЭТОЙ ВЕТКЕ:
+- src/installed_updater.py передаёт проверенный Setup в существующую
+  папку программы через /DIR=, /SILENT, /NORESTART и /CLOSEAPPLICATIONS.
+  /SILENT показывает прогресс и ошибки, не обходит требования Windows/UAC.
+- installer/WTModManager.iss принимает только явный /WTMMAUTOUPDATE для
+  автозапуска обновлённой программы --updated после штатного Inno install;
+  обычные silent install (включая CI) не запускают приложение самовольно.
+  При one-click апдейте installer не сбрасывает update-channel.json.
+  Сохраняется штатный uninstall/shortcut/user-data handling.
+- ui/update_ui.py: одно подтверждение ПЕРЕД скачиванием, после успешного
+  SHA256 не запрашивает второй мастер для installed-версии; portable
+  updater сохраняет собственный текущий безопасный процесс.
+- src/update_checker.py: необязательный callback 0..100% для скачивания,
+  старые вызовы не ломаются, кэш повторно сверяется по SHA.
+- ui/online_page.py и src/main.py: процент скачивания, статус установки,
+  кнопка «Обновить до ...» в существующей вкладке «Загрузки».
+- tests/test_installer_integration.py, tests/test_update_notifications.py,
+  tests/test_gui_smoke.py + Windows workflow: offline тесты на согласие,
+  проверку хеша, нестандартный путь, отсутствие shell/повторных диалогов.
+
+ТЕХНИЧЕСКОЕ ОГРАНИЧЕНИЕ:
+Обновление не означает «без скачивания вообще»: полный официальный
+Inno Setup загружается ВНУТРИ программы и проверяется перед запуском.
+Если установлена только portable-версия, работает portable_updater.
+Нужны CI, ручной Windows E2E и новый version/tag для реального релиза.
+Не утверждать, что Beta 13 уже содержит этот механизм. Нет обхода
+SmartScreen, нет подмены подписи и нет гарантированного installed rollback.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ
