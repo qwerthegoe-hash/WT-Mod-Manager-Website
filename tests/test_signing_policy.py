@@ -46,7 +46,7 @@ class AuthenticodeReleasePolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             self.workflow.count("if: github.event_name == 'push' && github.ref == 'refs/heads/main'"),
-            5
+            6
         )
         self.assertEqual(
             self.workflow.count('WTMM_SIGN_CERT_THUMBPRINT: ${{ vars.WTMM_SIGN_CERT_THUMBPRINT }}'),
