@@ -18,7 +18,9 @@
 - Сайт GitHub Pages: `docs/index.html`; центр доверия: `docs/trust.html`.
 - Серверная проверка модов: `supabase/functions/wtmm-mod-scan/index.ts` и `zip.ts`.
 - Windows-сборка и релизы: `.github/workflows/build-windows-exe.yml`.
-- Последний проверенный релиз на дату досье: [v1.3.0-beta.12](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12).
+- Текущие выпуски: [GitHub Releases](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases). На дату создания досье последним опубликованным выпуском была v1.3.0-beta.13; обновления в один клик и визуальные пресеты подготовлены для v1.3.0-beta.14 (публикация только после успешных проверок).
+- План обновлений: [WTMM_ONE_CLICK_UPDATES_2026-11-19.md](docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md).
+- Новые локальные камуфляжи: [WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md](docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md).
 
 Досье описывает снимок состояния проекта на 19 ноября 2026 года. Секреты и private API keys не должны попадать в клиентскую сборку или публичный репозиторий.
 
