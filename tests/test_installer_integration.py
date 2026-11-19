@@ -125,7 +125,7 @@ class BrandedInstallerTests(unittest.TestCase):
             "--offer-taskbar-pin",
             "FinishAutoStart",
             "ChannelPage",
-            "WizardSmallImageBackColor=none",
+            "WizardSmallImageBackColor=#202B3A",
         ):
             self.assertIn(requirement, script)
         self.assertIn("Type: files; Name: \"{autodesktop}\\WT Mod Manager.lnk\"", script)

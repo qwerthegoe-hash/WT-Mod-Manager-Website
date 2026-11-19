@@ -1,8 +1,8 @@
-; WT Mod Manager branded Windows installer, beta 1.3.6.
+; WT Mod Manager branded Windows installer, beta 1.3.7.
 ; The installer itself NEVER silently pins the taskbar.
 ; Per-user mod files/settings live in %LOCALAPPDATA%\WTModManager and survive.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0-beta.6"
+  #define MyAppVersion "1.3.0-beta.7"
 #endif
 #define AppName "WT Mod Manager"
 #define AppExe "WTModManager.exe"
@@ -29,9 +29,10 @@ MinVersion=10.0
 WizardStyle=modern dark polar includetitlebar
 WizardImageFile=..\build\installer\wizard.png
 WizardSmallImageFile=..\build\installer\wizard-small.png
-WizardSmallImageBackColor=none
+WizardSmallImageBackColor=#202B3A
 WizardImageBackColor=#0D1625
 SetupIconFile=..\build\installer\WTModManager.ico
+InfoAfterFile=release-notes.txt
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 OutputDir=..\dist
@@ -47,7 +48,7 @@ VersionInfoCompany=WT Mod Manager Community
 VersionInfoDescription=WT Mod Manager Windows Installer
 VersionInfoProductName=WT Mod Manager
 VersionInfoCopyright=WT Mod Manager Community
-VersionInfoVersion=1.3.0.6
+VersionInfoVersion=1.3.0.7
 WizardResizable=yes
 WizardKeepAspectRatio=yes
 AllowNoIcons=yes
@@ -79,7 +80,12 @@ var
   FinishAutoStart: TNewCheckBox;
   FinishOptionsLaidOut: Boolean;
   ChannelPage: TInputOptionWizardPage;
+  InstallModePage: TInputOptionWizardPage;
+  PortableImportPage: TInputOptionWizardPage;
+  PortablePathPage: TInputDirWizardPage;
   PreviousVersion: String;
+  HasExistingInstall: Boolean;
+  ClearCachesOnUninstall: Boolean;
 
 function GetLaunchParams(Param: String): String;
 begin
@@ -98,9 +104,10 @@ begin
     'Фирменный мастер установки WT Mod Manager.' + #13#10 + #13#10 +
     'Выбери папку, затем настрой ярлыки на экране «Готово».' + #13#10 +
     'Моды и настройки пользователя сохраняются при переустановке.';
-  if RegQueryStringValue(HKCU,
+  HasExistingInstall := RegQueryStringValue(HKCU,
        'Software\Microsoft\Windows\CurrentVersion\Uninstall\WTModManager_is1',
-       'DisplayVersion', PreviousVersion) then
+       'DisplayVersion', PreviousVersion);
+  if HasExistingInstall then
   begin
     WizardForm.WelcomeLabel2.Caption :=
       WizardForm.WelcomeLabel2.Caption + #13#10 + #13#10 +
@@ -108,7 +115,19 @@ begin
       '. Повторная установка обновит или восстановит файлы программы.';
   end;
 
-  ChannelPage := CreateInputOptionPage(wpSelectDir,
+  InstallModePage := CreateInputOptionPage(wpSelectDir,
+    'Режим установки', 'Как установить WT Mod Manager?',
+    'Обычная установка сохраняет пользовательские данные. '
+    + 'В расширенном режиме можно выбрать канал обновлений и импортировать '
+    + 'настройки из portable-версии.',
+    True, False);
+  InstallModePage.Add('Обычная — установить или обновить');
+  InstallModePage.Add('Расширенная — выбрать дополнительные параметры');
+  if HasExistingInstall then
+    InstallModePage.Add('Восстановить — повторно установить файлы программы');
+  InstallModePage.Values[0] := True;
+
+  ChannelPage := CreateInputOptionPage(InstallModePage.ID,
     'Канал обновлений',
     'Какую версию программы получать?',
     'Стабильная — проверенные выпуски. Beta — новые функции раньше, ' +
@@ -123,6 +142,20 @@ begin
     if Pos('"stable"', Saved) > 0 then
       ChannelPage.Values[0] := True;
   end;
+
+  PortableImportPage := CreateInputOptionPage(ChannelPage.ID,
+    'Импорт из portable', 'Импортировать прежние настройки и моды?',
+    'Существующие пользовательские данные не перезаписываются.',
+    False, False);
+  PortableImportPage.Add('Импортировать данные из старой portable-папки');
+  PortableImportPage.Values[0] := False;
+
+  PortablePathPage := CreateInputDirPage(PortableImportPage.ID,
+    'Папка portable-версии', 'Откуда импортировать данные?',
+    'Выбери папку, содержащую data и mods прежней portable-версии.',
+    False, '');
+  PortablePathPage.Add('');
+  PortablePathPage.Values[0] := ExpandConstant('{userdocs}');
 
   FinishDesktopShortcut := TNewCheckBox.Create(WizardForm);
   FinishDesktopShortcut.Parent := WizardForm.FinishedPage;
@@ -143,6 +176,58 @@ begin
     FileExists(ExpandConstant('{userstartup}\WT Mod Manager.lnk'));
   FinishAutoStart.Height := ScaleY(23);
   FinishOptionsLaidOut := False;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if PageID = ChannelPage.ID then
+    Result := not InstallModePage.Values[1];
+  if PageID = PortableImportPage.ID then
+    Result := not InstallModePage.Values[1];
+  if PageID = PortablePathPage.ID then
+    Result := (not InstallModePage.Values[1]) or
+              (not PortableImportPage.Values[0]);
+end;
+
+procedure CopyPortableCategory(const SourceBase, TargetBase, Category: String);
+var
+  FromPath: String;
+  ToPath: String;
+  Entry: TFindRec;
+begin
+  FromPath := SourceBase + '\mods\' + Category;
+  ToPath := TargetBase + '\mods\' + Category;
+  if not DirExists(FromPath) then
+    Exit;
+  if not ForceDirectories(ToPath) then
+    Exit;
+  if FindFirst(FromPath + '\*', Entry) then
+  begin
+    try
+      repeat
+        if ((Entry.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0) and
+           ((Entry.Attributes and FILE_ATTRIBUTE_REPARSE_POINT) = 0) and
+           (not FileExists(ToPath + '\' + Entry.Name)) then
+          FileCopy(FromPath + '\' + Entry.Name,
+                   ToPath + '\' + Entry.Name, True);
+      until not FindNext(Entry);
+    finally
+      FindClose(Entry);
+    end;
+  end;
+end;
+
+procedure ImportPortableData(const SourceBase, TargetBase: String);
+begin
+  if FileExists(SourceBase + '\data\settings.json') and
+     not FileExists(TargetBase + '\settings.json') then
+    FileCopy(SourceBase + '\data\settings.json',
+             TargetBase + '\settings.json', True);
+  CopyPortableCategory(SourceBase, TargetBase, 'sights');
+  CopyPortableCategory(SourceBase, TargetBase, 'sounds');
+  CopyPortableCategory(SourceBase, TargetBase, 'camouflages');
+  CopyPortableCategory(SourceBase, TargetBase, 'configurations');
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -182,6 +267,9 @@ begin
       else
         Json := '{"channel":"beta"}';
       SaveStringToFile(Path + '\update-channel.json', Json, False);
+      if (not WizardSilent()) and InstallModePage.Values[1] and
+         PortableImportPage.Values[0] then
+        ImportPortableData(PortablePathPage.Values[0], Path);
     end;
   end;
 end;
@@ -191,6 +279,19 @@ var
   Shortcut: String;
 begin
   Result := True;
+  if (not WizardSilent()) and (CurPageID = PortablePathPage.ID) then
+  begin
+    if (not DirExists(PortablePathPage.Values[0])) or
+       ((not FileExists(PortablePathPage.Values[0] + '\data\settings.json')) and
+        (not DirExists(PortablePathPage.Values[0] + '\mods'))) then
+    begin
+      MsgBox('Выбери существующую portable-папку с data/settings.json '
+        + 'или каталогом mods. Никакие данные ещё не изменены.',
+        mbError, MB_OK);
+      Result := False;
+      Exit;
+    end;
+  end;
   if (CurPageID = wpFinished) and (not WizardSilent()) then
   begin
     Shortcut := ExpandConstant('{autodesktop}\WT Mod Manager.lnk');
@@ -229,5 +330,25 @@ begin
     // confirmation. The installer never silently changes the user's taskbar.
     if FinishTaskbarPin.Checked then
       WizardForm.RunList.Checked[0] := True;
+  end;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  ClearCachesOnUninstall := False;
+  if not UninstallSilent() then
+    ClearCachesOnUninstall :=
+      MsgBox('Удалить также временный кэш и скачанные обновления?'
+        + #13#10 + 'Настройки, моды и профили сохранятся в любом случае.',
+        mbConfirmation, MB_YESNO) = idYes;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usPostUninstall) and ClearCachesOnUninstall then
+  begin
+    DelTree(ExpandConstant('{localappdata}\WTModManager\cache'), True, True, True);
+    DelTree(ExpandConstant('{localappdata}\WTModManager\updates'), True, True, True);
   end;
 end;

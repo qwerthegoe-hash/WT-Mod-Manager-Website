@@ -35,7 +35,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.6
+      WTMM_VERSION: 1.3.0-beta.7
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -76,6 +76,9 @@ jobs:
 
       - name: Generate branded wizard art from official logo
         run: python tools/build_installer_assets.py
+
+      - name: Test installer graphics, upgrade compatibility and safe uninstall
+        run: python -m unittest discover -s tests -p "test_installer_*.py" -v
 
       - name: Install Inno Setup 6.7.1
         shell: pwsh
