@@ -19,6 +19,8 @@ from src.update_checker import VERSION, is_installed_app, update_channel, set_up
 from src.portable_updater import previous_exe_available
 from ui.security_panel import SecurityPanel
 from ui.trust_panel import TrustPanel
+from ui.mod_tools_panel import ModToolsPanel
+from src.offline_mode import is_offline, set_offline
 from src.crash_recovery import latest_report_summary
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
@@ -107,6 +109,14 @@ class OnlinePage(QWidget):
         account_actions.addWidget(self.folder_button, 1, 1)
         account_actions.addWidget(self.unlink_button, 2, 0, 1, 2)
         account.addLayout(account_actions)
+        self.offline_switch = QCheckBox("WT Offline Mode — без сети")
+        self.offline_switch.setChecked(is_offline())
+        self.offline_switch.setToolTip(
+            "Локальные моды и настройки работают как обычно. "
+            "Синхронизация, VirusTotal и обновления выключены."
+        )
+        self.offline_switch.toggled.connect(self.set_offline_mode)
+        account.addWidget(self.offline_switch)
         account.addStretch(1)
 
         updates_card, updates = card("ОБНОВЛЕНИЯ")
@@ -221,6 +231,12 @@ class OnlinePage(QWidget):
         self.rollback_button.clicked.connect(self.restore_selected_version)
         self.library.itemSelectionChanged.connect(self.update_rollback_control)
         offline_layout.addWidget(self.rollback_button)
+        self.mod_tools_panel = ModToolsPanel(
+            lambda: self.bridge.user_id,
+            lambda: imported_library(self.bridge.user_id),
+            self.refresh_profile_controls,
+        )
+        offline_layout.addWidget(self.mod_tools_panel)
         self.tabs.addTab(offline_tab, "Мои моды")
 
         # 2. The public catalogue retains its own search and actions.
@@ -306,11 +322,36 @@ class OnlinePage(QWidget):
         self.refresh_library()
         self.refresh_profile_controls()
         self._refresh_account_actions()
+        self._refresh_offline_controls()
         self.profile_picker.currentIndexChanged.connect(
             lambda _: self.profile_delete.setEnabled(
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def set_offline_mode(self, checked):
+        try:
+            set_offline(bool(checked))
+            self._refresh_offline_controls()
+        except (OSError, ValueError):
+            QMessageBox.warning(self, "WT Offline Mode",
+                                "Не удалось сохранить настройку офлайн-режима.")
+            self.offline_switch.blockSignals(True)
+            self.offline_switch.setChecked(is_offline())
+            self.offline_switch.blockSignals(False)
+
+    def _refresh_offline_controls(self):
+        offline = is_offline()
+        for button in (
+            self.link_button, self.refresh_button, self.update_button,
+            self.catalog_refresh, self.notices_refresh
+        ):
+            button.setEnabled(not offline)
+        if offline:
+            self.status.setText(
+                "WT Offline Mode активен. Локальная библиотека и настройки "
+                "доступны, сетевые действия приостановлены."
+            )
 
     def _save_channel(self, _index):
         selected = self.channel_picker.currentData()
