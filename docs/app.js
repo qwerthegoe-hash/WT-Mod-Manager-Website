@@ -14,7 +14,7 @@ const translations = {
         navProfile: "Profile",
         navMods: "Mods",
 
-        eyebrow: "PUBLIC BETA / VERSION 1.3.5",
+        eyebrow: "PUBLIC BETA / VERSION 1.3.6",
         headline: '<span class="hero-title-main">Manage your War Thunder mods</span> <em>All in one place</em>',
         lead: "Organize custom sights, camouflages, supported audio files and personal preferences in one convenient Windows tool. Free to use and built as an independent project for players.",
         heroDownload: "Get WT Mod Manager",
@@ -47,9 +47,9 @@ const translations = {
 
         downloadOverline: "DOWNLOAD",
         downloadTitle: "Ready to try the beta?",
-        downloadDesc: "Windows Beta 1.3.5 includes our branded installer. Choose a folder, install the complete app and optionally create a desktop shortcut.",
+        downloadDesc: "Windows Beta 1.3.6 includes our branded installer. Choose a folder, install the complete app and optionally create a desktop shortcut.",
         downloadSoon: "Windows download is temporarily unavailable.",
-        downloadReady: "Windows Beta 1.3.5 is available (branded installer).",
+        downloadReady: "Windows Beta 1.3.6 is available (branded installer).",
         downloadBtn: "Download for Windows",
         releases: "Release notes",
 
@@ -130,7 +130,7 @@ const translations = {
         navProfile: "Профиль",
         navMods: "Моды",
 
-        eyebrow: "ПУБЛИЧНАЯ БЕТА / ВЕРСИЯ 1.3.5",
+        eyebrow: "ПУБЛИЧНАЯ БЕТА / ВЕРСИЯ 1.3.6",
         headline: '<span class="hero-title-main">Управляй модами War Thunder</span> <em>Всё под контролем</em>',
         lead: "Управляй прицелами, камуфляжами, поддерживаемыми звуковыми файлами и настройками в одной удобной программе для Windows. Бесплатно, понятно и создано для игроков.",
         heroDownload: "Скачать WT Mod Manager",
@@ -163,9 +163,9 @@ const translations = {
 
         downloadOverline: "СКАЧАТЬ",
         downloadTitle: "Готов попробовать бета-версию?",
-        downloadDesc: "Бета 1.3.5 для Windows доступна с фирменным установщиком. Выбери папку, установи программу и настрой ярлыки.",
+        downloadDesc: "Бета 1.3.6 для Windows доступна с фирменным установщиком. Выбери папку, установи программу и настрой ярлыки.",
         downloadSoon: "Загрузка для Windows временно недоступна.",
-        downloadReady: "Бета 1.3.5 для Windows доступна (установщик EXE).",
+        downloadReady: "Бета 1.3.6 для Windows доступна (установщик EXE).",
         downloadBtn: "Скачать для Windows",
         releases: "История версий",
 
@@ -246,7 +246,7 @@ const translations = {
         navProfile: "Профіль",
         navMods: "Моди",
 
-        eyebrow: "ПУБЛІЧНА БЕТА / ВЕРСІЯ 1.3.5",
+        eyebrow: "ПУБЛІЧНА БЕТА / ВЕРСІЯ 1.3.6",
         headline: '<span class="hero-title-main">Керуй модами War Thunder</span> <em>Усе під контролем</em>',
         lead: "Керуй прицілами, камуфляжами, підтримуваними звуковими файлами й налаштуваннями в одній зручній програмі для Windows. Безкоштовно та створено для гравців.",
         heroDownload: "Завантажити WT Mod Manager",
@@ -279,9 +279,9 @@ const translations = {
 
         downloadOverline: "ЗАВАНТАЖЕННЯ",
         downloadTitle: "Готовий спробувати бета-версію?",
-        downloadDesc: "Бета 1.3.5 для Windows доступна з фірмовим установником. Обери папку, встанови програму й налаштуй ярлики.",
+        downloadDesc: "Бета 1.3.6 для Windows доступна з фірмовим установником. Обери папку, встанови програму й налаштуй ярлики.",
         downloadSoon: "Завантаження для Windows тимчасово недоступне.",
-        downloadReady: "Бета 1.3.5 для Windows доступна (інсталятор EXE).",
+        downloadReady: "Бета 1.3.6 для Windows доступна (інсталятор EXE).",
         downloadBtn: "Завантажити для Windows",
         releases: "Історія версій",
 
