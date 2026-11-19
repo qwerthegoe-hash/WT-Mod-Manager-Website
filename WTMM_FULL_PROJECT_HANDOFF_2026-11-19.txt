@@ -15,6 +15,29 @@ GitHub Pages: исходники лежат в docs/, не путать с Pytho
 ВНИМАНИЕ: это документ-«снимок», а не автоматический синхронизатор будущих изменений. Перед любыми новыми изменениями проверить актуальную ветку и последнюю версию. Здесь различаются ПОДТВЕРЖДЕНО, РЕАЛИЗОВАНО, ОПЦИОНАЛЬНО/НЕ НАСТРОЕНО и ТРЕБУЕТ ПРОВЕРКИ. Не приписывать проекту то, чего CI или живой сервер не доказывают.
 
 ================================================================================
+BETA 13 — WT MOD SUITE 2.0 (в работе в PR #55, на момент подготовки документа НЕ опубликована)
+--------------------------------------------------------------------------------
+Версия исходников: 1.3.0-beta.13. Последним ПОДТВЕРЖДЁННЫМ опубликованным выпуском до успешного merge/release остаётся v1.3.0-beta.12.
+PR: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/55
+ВНИМАНИЕ: не выдавать функции Beta 13 за опубликованный EXE, пока CI на main и GitHub Releases не подтвердят выход.
+
+12 дополнительных направлений:
+1) Conflict Resolver: ui/game_install_ui.py вызывает src/mod_suite.py preview_install/resolve_conflicts, показывает реальные замены, позволяет оставить старые файлы / сделать backup-замену / отменить. Существующие транзакционные backup и rollback в src/game_mod_installer.py сохранены.
+2) Install Preview: новый диалог с количеством добавляемых/заменяемых файлов, оценкой размера и подсказкой по config.blk для аудиомодов. Нет записи до согласия.
+3) Integrity Monitor: src/mod_suite.py читает manifest.json предыдущих установок, проверяет SHA-256 и показывает статус, никогда не переписывает игру автоматически.
+4) Compatibility Checker: отчёт сравнивает вручную введённую версию игры и author-declared game_version, несовпадение требует перепроверки, не заявляет авторскую версию доказательством совместимости.
+5) Modpacks: ui/mod_tools_panel.py экспортирует/импортирует JSON manifest из уже локально импортированных модов аккаунта, никогда не переносит ZIP, секреты и не скачивает файлы без отдельного действия.
+6) Timeline: локальный журнал установки/подтверждённого отката под %LOCALAPPDATA%; не телеметрия, пути файлов наружу не выводятся.
+7) Creator Studio: docs/mods/mods.html, docs/mods/mods.js, прежняя ZIP-проверка; предпросмотр перед upload и авторская версия игры в nullable DB column через additive docs/database/creator_studio_game_version_20261119.sql. Сначала применять SQL, затем публиковать frontend и redeploy Bridge.
+8) Scanner Reports 2.0: docs/js/scan-report.mjs показывает разделы ZIP, CRC, лимиты, ClamAV, VirusTotal и ручную модерацию честно. При отсутствии VT-отчёта выводится unknown, не clean.
+9) Diagnostics Pro: src/diagnostics.py добавляет D010-D012 и repair_safe_folders(); ui/online_page.py создаёт только отсутствующие локальные категории после подтверждения. Настройки и игра не меняются.
+10) Staged Releases: docs/json/release-rollout.json + src/release_rollout.py, опциональное участие в раннем Beta; случайная локальная seed, без hardware fingerprint, блокировка некоторых выпусков только в официальной выдаче обновлений.
+11) UI 2.0: ui/settings_page.py ищет по карточкам настроек; ui/online_page.py ставит две верхние карточки вертикально на узком окне.
+12) Offline Mode: src/offline_mode.py, ui/online_page.py, src/update_checker.py, src/desktop_sync.py, src/vt_backend.py: блокируются фоновые/ручные сетевые операции, локальные моды доступны.
+
+Тестирование: tests/test_mod_suite.py, tests/test_gui_smoke.py, tools/test-scanner-report.mjs, CI Windows и Website. Новые функции не подменяют настоящее антивирусное сканирование, цифровую подпись или серверную модерацию.
+
+================================================================================
 00. БЫСТРАЯ ПЕРЕДАЧА НОВОМУ ЧАТУ — ПРОЧИТАЙ В ПЕРВУЮ ОЧЕРЕДЬ
 ================================================================================
 Пользователь разрабатывает WT Mod Manager для Windows: Python 3.12, PySide6, PyInstaller --onefile, установщик Inno Setup. Есть сопутствующий сайт GitHub Pages (docs/) и Supabase backend для аккаунтов, медиа, модов и ZIP-сканирования. Цель — стабильная, проверяемая, безопасная программа и красивый интерфейс без удаления существующих функций. Код живёт в GitHub, не нужно присылать вручную ZIP, когда доступен GitHub connector.
@@ -1240,6 +1263,42 @@ FILE: ui/update_ui.py
 FILE: tools/test-project-handoff.mjs
   PURPOSE: CI регрессия целостности этого TXT: проверяет версию, наличие всех перечисленных реальных путей и статус unsigned
   GIT_BYTES: 2178
+
+FILE: src/mod_suite.py
+  PURPOSE: локальная база WT Mod Suite: сухой план установки, конфликты, SHA-256 аудит, compatibility hints, modpack JSON, timeline
+  GIT_BYTES: new in Beta13
+
+FILE: ui/mod_tools_panel.py
+  PURPOSE: UI управления модпаками, целостностью, историей и совместимостью
+  GIT_BYTES: new in Beta13
+
+FILE: src/offline_mode.py
+  PURPOSE: явный per-user офлайн-режим без удаления модов
+  GIT_BYTES: new in Beta13
+
+FILE: src/release_rollout.py
+  PURPOSE: опциональные ранние Beta волны и emergency pause без hardware fingerprint
+  GIT_BYTES: new in Beta13
+
+FILE: docs/json/release-rollout.json
+  PURPOSE: публичная политика staged releases; 100% по умолчанию
+  GIT_BYTES: new in Beta13
+
+FILE: docs/database/creator_studio_game_version_20261119.sql
+  PURPOSE: nullable game_version, add-only migration, RLS без изменений
+  GIT_BYTES: new in Beta13
+
+FILE: docs/js/scan-report.mjs
+  PURPOSE: правдивый отчёт ZIP/CRC/антивирус/VT/модерация на сайте
+  GIT_BYTES: new in Beta13
+
+FILE: tools/test-scanner-report.mjs
+  PURPOSE: проверки честных статусов безопасности на сайте
+  GIT_BYTES: new in Beta13
+
+FILE: tests/test_mod_suite.py
+  PURPOSE: регрессии 12 частей WT Mod Suite с offline/rollout/compatibility
+  GIT_BYTES: new in Beta13
 
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков

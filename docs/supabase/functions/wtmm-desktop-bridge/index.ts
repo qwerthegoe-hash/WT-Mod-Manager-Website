@@ -157,13 +157,14 @@ Deno.serve(async req=>{
       // Metadata only. No storage path or signed ZIP URL is disclosed here.
       // The user must explicitly download and request transfer on the site.
       const {data,error}=await admin.from("wtmm_mods")
-        .select("id,title,category,version,description,created_at")
+        .select("id,title,category,version,game_version,description,created_at")
         .eq("status","approved")
         .order("created_at",{ascending:false})
         .limit(100);
       if(error)throw error;
       return result({user_id:device.user_id,items:(data||[]).map(mod=>({
         id:mod.id,title:mod.title,category:mod.category,version:mod.version,
+        game_version:mod.game_version,
         description:String(mod.description||"").slice(0,180),
         created_at:mod.created_at
       }))},200,origin);
@@ -176,7 +177,7 @@ Deno.serve(async req=>{
       const list=data||[];
       if(!list.length)return result({user_id:device.user_id,items:[]},200,origin);
       const {data:mods,error:modError}=await admin.from("wtmm_mods")
-        .select("id,title,category,version,status")
+        .select("id,title,category,version,game_version,status")
         .in("id",list.map(x=>x.mod_id)).eq("status","approved");
       if(modError)throw modError;
       const index=new Map((mods||[]).map(mod=>[mod.id,mod]));
@@ -203,7 +204,7 @@ Deno.serve(async req=>{
         return result({acknowledged:true},200,origin);
       }
       const {data:mod,error:modError}=await admin.from("wtmm_mods")
-        .select("id,title,category,version,file_path,status")
+        .select("id,title,category,version,game_version,file_path,status")
         .eq("id",row.mod_id).eq("status","approved").maybeSingle();
       if(modError || !mod || !SUPPORTED.has(mod.category))
         return result({error:"Mod is unavailable or incompatible"},409,origin);
@@ -212,7 +213,8 @@ Deno.serve(async req=>{
       if(signed.error || !signed.data?.signedUrl)
         return result({error:"Package temporarily unavailable"},503,origin);
       return result({mod_id:mod.id,title:mod.title,category:mod.category,
-        version:mod.version,signed_url:signed.data.signedUrl},200,origin);
+        version:mod.version,game_version:mod.game_version,
+        signed_url:signed.data.signedUrl},200,origin);
     }
     return result({error:"Unknown action"},400,origin);
   }catch(err){

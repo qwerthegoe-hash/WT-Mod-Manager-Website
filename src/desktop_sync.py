@@ -29,6 +29,7 @@ from urllib.request import Request, urlopen
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from src.profile_paths import DATA_DIR
+from src.offline_mode import require_network, is_offline
 
 API_ROOT = "https://ovvubbwzxikqcnuvvtjb.supabase.co"
 API_KEY = "sb_publishable_NYOePmdOT87GXNFpI9j8OQ_Y8CIyLez"
@@ -100,6 +101,7 @@ def _save_token(token: str) -> None:
 
 
 def _call(action: str, token: str, **payload) -> dict:
+    require_network()
     body = json.dumps({"action": action, "device_token": token, **payload}).encode("utf-8")
     request = Request(BRIDGE, data=body, headers={
         "Content-Type": "application/json", "apikey": API_KEY,
@@ -118,6 +120,7 @@ def _call(action: str, token: str, **payload) -> dict:
 
 
 def _download_zip(url: str) -> bytes:
+    require_network()
     parsed = urlsplit(url)
     if (parsed.scheme != "https" or parsed.hostname != "ovvubbwzxikqcnuvvtjb.supabase.co"
             or parsed.username or parsed.password
@@ -247,6 +250,7 @@ def restore_previous_mod(user_id: str, mod_id: str) -> tuple[int, str]:
     library[mod_id] = {
         "title": str(previous.get("title", ""))[:90],
         "version": str(previous.get("version", ""))[:32],
+        "game_version": str(previous.get("game_version") or "")[:24] or None,
         "category": category,
         "sha256": str(previous.get("sha256", "")),
         "files": files,
@@ -299,6 +303,7 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
             previous = {
                 "title": str(old.get("title", ""))[:90],
                 "version": str(old.get("version", ""))[:32],
+                "game_version": str(old.get("game_version") or "")[:24] or None,
                 "category": category,
                 "sha256": str(old.get("sha256", "")),
                 "files": list(old_names),
@@ -320,6 +325,10 @@ def _install_account_mod(user_id: str, meta: dict, archive_bytes: bytes) -> int:
     library[mod_id] = {
         "title": str(meta.get("title", ""))[:90],
         "version": str(meta.get("version", ""))[:32],
+        "game_version": (str(meta["game_version"])[:24]
+                         if isinstance(meta.get("game_version"), str) and
+                         re.fullmatch(r"[0-9]+(?:[.][0-9]+){1,3}", meta["game_version"])
+                         else None),
         "category": category,
         "sha256": archive_sha,
         "files": names,
@@ -382,6 +391,8 @@ class DesktopSync(QObject):
         self.sync_now()
 
     def _start(self, action: str, token: str, **options) -> bool:
+        if is_offline():
+            return False  # Suppress automatic timers without network/error spam.
         if self._busy:
             return False
         self._busy = True

@@ -17,8 +17,10 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
+from src.offline_mode import is_offline
+from src.release_rollout import eligible, fetch_policy
 
-VERSION = "1.3.0-beta.12"
+VERSION = "1.3.0-beta.13"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
@@ -143,14 +145,18 @@ def _release_candidate(payload, repo):
 
 
 def find_update():
+    if is_offline():
+        return None  # No GitHub calls in explicit offline mode.
     repo = repository()
     if not repo:
         return None
     payload = _api_json(f"https://api.github.com/repos/{repo}/releases?per_page=30")
     if not isinstance(payload, list):
         raise ValueError("Unexpected release metadata.")
+    policy = fetch_policy()
     found = [_release_candidate(item, repo) for item in payload]
-    valid = [item for item in found if item is not None]
+    valid = [item for item in found if item is not None and
+             eligible(str(item["version"]), policy)]
     if not valid:
         return None
     newest = max(valid, key=lambda item: item["_sort_key"])
@@ -159,6 +165,8 @@ def find_update():
 
 def download_verified(info):
     """Bounded stream from the official release, verified before staging."""
+    if is_offline():
+        raise OSError("WT Offline Mode включён: скачивание обновлений остановлено.")
     repo = repository()
     if not repo or not isinstance(info, dict):
         raise ValueError("Updater is not configured.")

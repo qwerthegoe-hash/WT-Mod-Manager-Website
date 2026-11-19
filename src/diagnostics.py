@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -104,7 +105,49 @@ def inspect_local() -> list[Diagnostic]:
         "D009", "OK",
         "Проверка выполнена локально: моды, токены и личные файлы не отправлялись."
     ))
+    try:
+        if shutil.disk_usage(data).free < 256 * 1024 * 1024:
+            checks.append(_result("D010","WARN",
+                "Мало свободного места для резервных копий и обновлений."))
+        else:
+            checks.append(_result("D010","OK",
+                "Достаточно места для временных файлов."))
+    except OSError:
+        checks.append(_result("D010","WARN","Место на диске проверить не удалось."))
+    try:
+        from src.offline_mode import is_offline
+        checks.append(_result("D011","WARN" if is_offline() else "OK",
+            "Офлайн-режим включён, сетевые проверки отключены."
+            if is_offline() else "Сетевые функции разрешены (доступность не проверялась)."))
+    except (OSError, ValueError):
+        checks.append(_result("D011","WARN","Настройку соединения прочитать не удалось."))
+    try:
+        from src.crash_recovery import latest_safe_report
+        count = bool(latest_safe_report())
+        checks.append(_result("D012", "WARN" if count else "OK",
+            "Есть локальный отчёт о сбое, можно скопировать его в Trust Center."
+            if count else "Локальных аварийных отчётов нет."))
+    except (OSError, ValueError):
+        checks.append(_result("D012","WARN","Историю аварийных отчётов проверить не удалось."))
     return checks
+
+
+def repair_safe_folders() -> list[str]:
+    """Explicit opt-in; create absent per-user library dirs only.
+    Never delete, overwrite, chmod, or edit Windows/game files.
+    """
+    base = profile_paths.MODS_DIR
+    if base.is_symlink():
+        raise OSError("Папка модов является символической ссылкой.")
+    created = []
+    for category in ("sights", "sounds", "camouflages"):
+        target = base / category
+        if target.is_symlink() or (target.exists() and not target.is_dir()):
+            raise OSError("Небезопасная структура библиотеки модов.")
+        if not target.exists():
+            target.mkdir(parents=True, exist_ok=True)
+            created.append(category)
+    return created
 
 
 def format_report(checks: list[Diagnostic]) -> str:

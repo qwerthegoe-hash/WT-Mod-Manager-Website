@@ -112,7 +112,7 @@
 
     <section id="submitPanel" class="mods-submit-panel" aria-labelledby="submitTitle" hidden>
       <div class="mods-section-heading">
-        <h2 id="submitTitle">Загрузить модификацию</h2>
+        <h2 id="submitTitle">WT Mod Creator Studio</h2>
         <button type="button" id="closeSubmit" class="mods-secondary">Закрыть</button>
       </div>
       <p class="mods-hint">Файлы сначала попадают на проверку. После одобрения они станут доступны в каталоге.
@@ -134,6 +134,10 @@
         <label>Версия
           <input name="version" value="1.0" maxlength="32" required>
         </label>
+        <label>Версия War Thunder (необязательно)
+          <input name="game_version" maxlength="24" pattern="[0-9]+([.][0-9]+){1,3}" placeholder="Например, 2.45.0">
+          <small>Указывается автором, совместимость не подтверждается автоматически.</small>
+        </label>
         <label class="mods-full">Описание
           <textarea name="description" rows="5" maxlength="2500" placeholder="Что меняет мод? Как установить?"></textarea>
         </label>
@@ -150,6 +154,8 @@
           <input name="after" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
         </label>
         <p class="mods-full community2-upload-note">Для сравнения укажи оба изображения. Они будут доступны после одобрения модификации.</p>
+        <button id="creatorPreviewButton" type="button" class="mods-secondary mods-full">Предпросмотр ZIP и карточки (без отправки)</button>
+        <p id="creatorPreview" class="mods-hint mods-full" role="status" aria-live="polite">Нажми предпросмотр, чтобы увидеть число файлов, приблизительный размер и статус локальной проверки.</p>
         <button id="submitModButton" type="submit" class="mods-primary mods-full">Отправить на модерацию</button>
       </form>
       <p id="submitNotice" role="status" aria-live="polite"></p>

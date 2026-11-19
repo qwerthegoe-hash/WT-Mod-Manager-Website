@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "blocked_tags": [],
+  "staged": {},
+  "description": "Only restricts GitHub releases: 100 = everyone, 0 = temporarily paused. Between 1 and 99 requires opt-in Beta and a stable random cohort. Never changes binary hashes."
+}

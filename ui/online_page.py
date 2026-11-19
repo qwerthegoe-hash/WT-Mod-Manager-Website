@@ -14,11 +14,14 @@ from PySide6.QtWidgets import (
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.update_notifications import load_notifications, mark_all_read
-from src.diagnostics import inspect_local, format_report
+from src.diagnostics import inspect_local, format_report, repair_safe_folders
 from src.update_checker import VERSION, is_installed_app, update_channel, set_update_channel
 from src.portable_updater import previous_exe_available
 from ui.security_panel import SecurityPanel
 from ui.trust_panel import TrustPanel
+from ui.mod_tools_panel import ModToolsPanel
+from src.offline_mode import is_offline, set_offline
+from src.release_rollout import early_access, set_early_access
 from src.crash_recovery import latest_report_summary
 from src.profile_paths import (
     DATA_DIR, set_active_online_account, load_mod_profiles,
@@ -107,10 +110,22 @@ class OnlinePage(QWidget):
         account_actions.addWidget(self.folder_button, 1, 1)
         account_actions.addWidget(self.unlink_button, 2, 0, 1, 2)
         account.addLayout(account_actions)
+        self.offline_switch = QCheckBox("WT Offline Mode — без сети")
+        self.offline_switch.setChecked(is_offline())
+        self.offline_switch.setToolTip(
+            "Локальные моды и настройки работают как обычно. "
+            "Синхронизация, VirusTotal и обновления выключены."
+        )
+        self.offline_switch.toggled.connect(self.set_offline_mode)
+        account.addWidget(self.offline_switch)
         account.addStretch(1)
 
         updates_card, updates = card("ОБНОВЛЕНИЯ")
         top.addWidget(updates_card, 0, 1)
+        self._header_grid = top
+        self._account_card = account_card
+        self._updates_card = updates_card
+        self._compact_header = False
         self.update_summary = QLabel(
             "Текущая версия: " + VERSION + ". Новые версии проверяются в фоне."
         )
@@ -140,6 +155,14 @@ class OnlinePage(QWidget):
         channel_row.addWidget(self.channel_picker, 1)
         updates.addLayout(channel_row)
         self.channel_picker.currentIndexChanged.connect(self._save_channel)
+        self.early_beta_checkbox = QCheckBox("Участвовать в раннем тестировании Beta")
+        self.early_beta_checkbox.setChecked(early_access())
+        self.early_beta_checkbox.setToolTip(
+            "Необязательный ранний доступ к тестовым версиям. "
+            "Процент допуска управляется прозрачной политикой GitHub."
+        )
+        self.early_beta_checkbox.toggled.connect(self._save_early_beta)
+        updates.addWidget(self.early_beta_checkbox)
         self.rollback_exe_button = QPushButton("Вернуть предыдущую версию приложения")
         self.rollback_exe_button.clicked.connect(self.rollback_update_requested.emit)
         self.rollback_exe_button.setToolTip(
@@ -221,6 +244,12 @@ class OnlinePage(QWidget):
         self.rollback_button.clicked.connect(self.restore_selected_version)
         self.library.itemSelectionChanged.connect(self.update_rollback_control)
         offline_layout.addWidget(self.rollback_button)
+        self.mod_tools_panel = ModToolsPanel(
+            lambda: self.bridge.user_id,
+            lambda: imported_library(self.bridge.user_id),
+            self.refresh_profile_controls,
+        )
+        offline_layout.addWidget(self.mod_tools_panel)
         self.tabs.addTab(offline_tab, "Мои моды")
 
         # 2. The public catalogue retains its own search and actions.
@@ -286,6 +315,9 @@ class OnlinePage(QWidget):
         self.diagnostic_copy = QPushButton("Копировать результат")
         self.diagnostic_copy.clicked.connect(self.copy_diagnostics)
         diagnostic_actions.addWidget(self.diagnostic_copy)
+        self.diagnostic_repair = QPushButton("Исправить безопасные проблемы")
+        self.diagnostic_repair.clicked.connect(self.repair_diagnostic_folders)
+        diagnostic_actions.addWidget(self.diagnostic_repair)
         diagnostic_layout.addLayout(diagnostic_actions)
         self.trust_panel = TrustPanel()
         diagnostic_layout.addWidget(self.trust_panel)
@@ -306,11 +338,61 @@ class OnlinePage(QWidget):
         self.refresh_library()
         self.refresh_profile_controls()
         self._refresh_account_actions()
+        self._refresh_offline_controls()
         self.profile_picker.currentIndexChanged.connect(
             lambda _: self.profile_delete.setEnabled(
                 bool(self.bridge.user_id and self.profile_picker.currentData())
             )
         )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "_header_grid"):
+            compact = self.width() < 810
+            if compact != self._compact_header:
+                self._compact_header = compact
+                self._header_grid.removeWidget(self._account_card)
+                self._header_grid.removeWidget(self._updates_card)
+                self._header_grid.addWidget(self._account_card, 0, 0)
+                self._header_grid.addWidget(
+                    self._updates_card, 1 if compact else 0,
+                    0 if compact else 1
+                )
+                self._header_grid.setColumnStretch(1, 0 if compact else 1)
+
+    def set_offline_mode(self, checked):
+        try:
+            set_offline(bool(checked))
+            self._refresh_offline_controls()
+        except (OSError, ValueError):
+            QMessageBox.warning(self, "WT Offline Mode",
+                                "Не удалось сохранить настройку офлайн-режима.")
+            self.offline_switch.blockSignals(True)
+            self.offline_switch.setChecked(is_offline())
+            self.offline_switch.blockSignals(False)
+
+    def _refresh_offline_controls(self):
+        offline = is_offline()
+        for button in (
+            self.link_button, self.refresh_button, self.unlink_button,
+            self.update_button, self.catalog_refresh, self.notices_refresh,
+            self.catalog_open, self.community_open
+        ):
+            button.setEnabled(not offline)
+        if offline:
+            self.status.setText(
+                "WT Offline Mode активен. Локальная библиотека и настройки "
+                "доступны, сетевые действия приостановлены."
+            )
+
+    def _save_early_beta(self, enabled):
+        try:
+            set_early_access(bool(enabled))
+        except (ValueError, OSError):
+            self.early_beta_checkbox.blockSignals(True)
+            self.early_beta_checkbox.setChecked(early_access())
+            self.early_beta_checkbox.blockSignals(False)
+            QMessageBox.warning(self, "Beta", "Не удалось сохранить ранний доступ.")
 
     def _save_channel(self, _index):
         selected = self.channel_picker.currentData()
@@ -389,6 +471,27 @@ class OnlinePage(QWidget):
                       "Скопируй код D000 для технической поддержки.")
         self.diagnostic_output.setPlainText(result + "\n" +
                                             latest_report_summary())
+
+    def repair_diagnostic_folders(self):
+        choice = QMessageBox.question(
+            self, "WT Diagnostics Pro",
+            "Создать только отсутствующие папки локальной библиотеки? "
+            "Программа не изменит игру, настройки и существующие файлы.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            created = repair_safe_folders()
+            self.run_diagnostics()
+            QMessageBox.information(
+                self, "WT Diagnostics Pro",
+                "Создано новых папок: " + str(len(created)) +
+                ". Другие файлы не изменялись."
+            )
+        except OSError as error:
+            QMessageBox.warning(self, "WT Diagnostics Pro", str(error))
 
     def copy_diagnostics(self):
         result = self.diagnostic_output.toPlainText()
@@ -635,6 +738,13 @@ class OnlinePage(QWidget):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
 
     def disconnect_account(self):
+        if is_offline():
+            QMessageBox.information(
+                self, "WT Offline Mode",
+                "Чтобы безопасно отключить устройство от сервера, "
+                "сначала выключи офлайн-режим и повтори действие."
+            )
+            return
         choice = QMessageBox.question(
             self, "Отключить аккаунт",
             "Отключить синхронизацию? Локальные и ранее скачанные файлы сохранятся."
