@@ -842,6 +842,18 @@ async function init() {
         isAdmin = await getAdminStatus();
         $("moderationTab").hidden = !isAdmin;
         await refresh();
+        // Lightweight status updates only while the user is viewing pending
+        // submissions. Hidden tabs and published catalogues do not poll.
+        setInterval(() => {
+            const relevant = currentView === "mine" ||
+                (currentView === "moderation" && isAdmin);
+            if (document.visibilityState !== "visible" || !relevant) return;
+            if (!records.some(row => row.status === "pending" &&
+                ["queued", "scanning", "error"].includes(row.triage_status)))
+                return;
+            if ($("modDetailsDialog").open || sending || loadingMoreMods) return;
+            refresh().catch(() => { /* Background refresh is best effort. */ });
+        }, 45000);
         const selectedMod = new URLSearchParams(location.search).get("mod");
         if (selectedMod && /^[0-9a-f-]{36}$/i.test(selectedMod)) {
             let item=records.find(mod=>mod.id===selectedMod && mod.status==="approved");
