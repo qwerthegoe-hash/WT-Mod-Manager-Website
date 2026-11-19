@@ -37,7 +37,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.8
+      WTMM_VERSION: 1.3.0-beta.9
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -155,8 +155,19 @@ jobs:
           $p = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Silent installation failed" }
           if (-not (Test-Path "$target\WTModManager.exe")) { throw "Installed EXE missing" }
-          if (-not (Test-Path "$target\_internal")) { throw "Qt runtime folder missing" }
+          if ((Get-Item "$target\WTModManager.exe").Length -lt 1048576) { throw "Single-file app unexpectedly small" }
+          if (Test-Path "$target\_internal") { throw "Old unprotected _internal payload should not exist" }
+          if (Test-Path "$target\assets") { throw "Assets must be embedded in EXE" }
+          if (Test-Path "$target\config") { throw "Public config must be embedded in EXE" }
           if (-not (Test-Path "$target\wtmm.installed")) { throw "Installed marker missing" }
+          # Simulate a beta.8 onedir installation being upgraded in place.
+          $oldRuntime = Join-Path $target "_internal"
+          New-Item -ItemType Directory -Path $oldRuntime -Force | Out-Null
+          Set-Content (Join-Path $oldRuntime "old-runtime.txt") "generated old runtime"
+          $upgrade = Start-Process -FilePath $setup -ArgumentList $args -Wait -PassThru
+          if ($upgrade.ExitCode -ne 0) { throw "In-place upgrade failed" }
+          if (Test-Path $oldRuntime) { throw "Legacy runtime directory not cleaned on upgrade" }
+          if (-not (Test-Path "$target\WTModManager.exe")) { throw "Onefile app missing after upgrade" }
           $uninstaller = (Get-ChildItem "$target\unins*.exe" | Select-Object -First 1).FullName
           if (-not $uninstaller) { throw "Windows uninstaller missing" }
           $app = Start-Process -FilePath "$target\WTModManager.exe" -ArgumentList "--updated" -PassThru
@@ -208,10 +219,14 @@ jobs:
           @'
           WT Mod Manager Windows Installer (Test Beta)
           Recommended: download WTModManager-Setup.exe.
+          One EXE with PyInstaller-embedded Qt, icons, and public config;
+          no visible _internal, assets, config or Python extension folders.
+          Bundling is not strong encryption: runtime data is extracted in
+          the user's temp folder while running.
           Own project logo, dark setup wizard, install-folder selection,
           Start menu shortcut, optional desktop/startup shortcuts and taskbar pin
           request via Windows user confirmation, run-on-finish option, update\n          channel selection, upgrade/repair and full uninstaller.
-          The installer includes all Qt dependencies in its onedir payload.
+          The single EXE includes Python, Qt, assets and public config.
           Personal settings and mods remain in %LOCALAPPDATA%\WTModManager.
           Legacy users may still download portable WTModManager.exe.
           Installed users get verified setup updates in later versions.
