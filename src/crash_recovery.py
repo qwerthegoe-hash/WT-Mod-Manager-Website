@@ -126,6 +126,18 @@ def latest_report_summary() -> str:
     return "Локальных отчётов об ошибках нет."
 
 
+def latest_safe_report() -> str:
+    """Return user-copyable redacted JSON; no automatic uploads."""
+    try:
+        for file in reversed(sorted(CRASH_DIR.glob("crash-*.json"))):
+            report = _read_json(file)
+            if report.get("schema") == 1 and report.get("type"):
+                return json.dumps(report, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+    return ""
+
+
 def clean_exit() -> None:
     try:
         existing = _read_json(SESSION_FILE)
