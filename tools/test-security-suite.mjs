@@ -41,5 +41,6 @@ assert.ok(!backups.includes("database.sql") && !backups.includes("database.dump"
   "Do not upload plaintext backup artifacts");
 assert.ok(releases.includes("release:") && releases.includes("types: [published]"));
 assert.ok(releases.includes("sha256sum --check") && releases.includes("SHA256SUMS.txt"));
-assert.ok(releases.includes("gh release upload"));
+assert.ok(!releases.includes("gh release upload"), "Published checksums must never be overwritten");
+assert.ok(releases.includes("contents: read"), "Audit workflow must be read-only");
 console.log("PASS: protected account operations, abuse throttles, encrypted backup and release integrity");
