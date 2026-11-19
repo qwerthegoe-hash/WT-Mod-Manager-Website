@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QSystemTrayIcon,
     QMenu,
     QStyle,
+    QMessageBox,
 )
 
 ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
@@ -22,6 +23,7 @@ from src.settings_store import load_settings
 from ui.i18n import translate_ui
 from ui.update_ui import UpdateController
 from src.update_notifications import consume_install_status
+from src.taskbar_pin import request_taskbar_pin, fallback_instructions
 
 
 # ==========================================
@@ -397,6 +399,34 @@ class WTManagerApp:
         self.manager.raise_()
         self.manager.activateWindow()
 
+    def offer_taskbar_pin(self):
+        """Ask only after the user selected the finishing checkbox.
+
+        The actual WinRT request runs from a second explicit button click
+        while the manager window is in the foreground. Windows may also ask
+        for its own approval; we do not force-pin or modify Explorer policies.
+        """
+        self.open_manager()
+        answer = QMessageBox.question(
+            self.manager,
+            "Закрепить WT Mod Manager",
+            "Установщик запомнил твой выбор: закрепить WT Mod Manager "
+            "на панели задач. Отправить официальный запрос Windows? "
+            "Windows может попросить дополнительное подтверждение.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self.manager.raise_()
+        self.manager.activateWindow()
+        ok, message = request_taskbar_pin()
+        if not ok:
+            QMessageBox.information(
+                self.manager, "Закрепление на панели задач",
+                message + "\n\n" + fallback_instructions()
+            )
+
     # ======================================
     # HIDE MAIN WINDOW
     # ======================================
@@ -445,8 +475,10 @@ def main():
 
     # After a verified update, reopen the manager rather than remaining
     # hidden in the tray. The startup status is added to the inbox.
-    if "--updated" in sys.argv:
+    if "--updated" in sys.argv or "--offer-taskbar-pin" in sys.argv:
         QTimer.singleShot(250, controller.open_manager)
+    if "--offer-taskbar-pin" in sys.argv:
+        QTimer.singleShot(1100, controller.offer_taskbar_pin)
 
     # Demonstration mode
     if "--demo" in sys.argv:
