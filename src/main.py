@@ -526,7 +526,11 @@ def main():
     if "--updated" in sys.argv or "--offer-taskbar-pin" in sys.argv:
         QTimer.singleShot(250, controller.open_manager)
     elif "--demo" not in sys.argv and not (DATA_DIR / ".first-window-open-v1").exists():
-        QTimer.singleShot(350, controller.open_manager)
+        def first_run_window():
+            # Do not overlap the existing game-detected launch prompt.
+            if controller.prompt is None:
+                controller.open_manager()
+        QTimer.singleShot(350, first_run_window)
     if "--offer-taskbar-pin" in sys.argv:
         QTimer.singleShot(1100, controller.offer_taskbar_pin)
 
