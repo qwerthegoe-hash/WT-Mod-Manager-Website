@@ -77,6 +77,23 @@ def update_channel():
     return value if value in ("stable", "beta") else "stable"
 
 
+def set_update_channel(channel: str) -> str:
+    """Save the selected update channel for this Windows user atomically."""
+    if channel not in ("stable", "beta"):
+        raise ValueError("Unknown update channel.")
+    preference = DATA_DIR / "update-channel.json"
+    preference.parent.mkdir(parents=True, exist_ok=True)
+    if preference.is_symlink():
+        raise ValueError("Update channel settings cannot be a symlink.")
+    temporary = preference.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps({"channel": channel}), encoding="utf-8")
+        temporary.replace(preference)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return channel
+
+
 def _api_json(url):
     request = urllib.request.Request(url, headers={
         "User-Agent": "WTModManager/1.3 Portable Updater",
