@@ -5,6 +5,7 @@ setupSiteLanguage();
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { COMMUNITY_CONFIG as config } from "../js/community-config.js";
 import { validateModZip } from "../js/mod-zip-validator.mjs";
+import { reportForMod } from "../js/scan-report.mjs";
 import { modReviewReady } from "../js/mod-review-policy.mjs";
 import { ensureAuthenticatedUser } from "../js/supabase-session.mjs";
 import { mapWithConcurrency } from "../js/async-pool.mjs";
@@ -119,7 +120,7 @@ async function fetchDownloadedModPage(offset) {
     if (!saved?.length) return [];
     const ids = saved.map(item => item.mod_id);
     const response = await db.from("wtmm_mods")
-        .select("id,owner_id,title,description,category,version,status,file_path,cover_path,rejection_reason,created_at")
+        .select("id,owner_id,title,description,category,version,game_version,status,file_path,cover_path,rejection_reason,created_at")
         .in("id", ids).eq("status","approved");
     if (response.error) throw response.error;
     const found = new Map((response.data || []).map(item => [item.id,item]));
@@ -186,7 +187,7 @@ async function fetchModPage(offset, query = getModQuery()) {
     if (error.code !== "PGRST202" && error.code !== "42883") throw error;
     console.warn("Global catalog search RPC missing; using legacy listing", error.message);
     const fallback = await db.from("wtmm_mods")
-        .select("id,owner_id,title,description,category,version,status,file_path,cover_path,rejection_reason,created_at")
+        .select("id,owner_id,title,description,category,version,game_version,status,file_path,cover_path,rejection_reason,created_at")
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(offset, offset + MOD_PAGE_SIZE - 1);
@@ -481,6 +482,21 @@ async function showModDetails(id) {
         node("span", "", authorName(row)));
     content.append(info);
     content.append(node("p", "mod-details-text", row.description || "Описание отсутствует."));
+    if(row.game_version)
+        content.append(node("p","mods-review-note",
+            "Версия игры по заявлению автора: "+row.game_version+
+            ". Это не автоматическая проверка совместимости."));
+    const scanReport=node("section","mod-scan-report");
+    scanReport.setAttribute("aria-label","Результаты проверок WT Mod Scanner");
+    scanReport.append(node("h3","","WT Scanner Reports 2.0"));
+    const summary=node("ul","mod-scan-report-list");
+    for(const part of reportForMod(row)){
+        const item=node("li","mod-scan-report-"+part.status);
+        item.append(node("strong","",part.name+": "),node("span","",part.detail));
+        summary.append(item);
+    }
+    scanReport.append(summary);
+    content.append(scanReport);
     if (row.status === "approved") {
         // Lightweight history: existing approved submissions by this author
         // with the exact same title. No new table or weaker RLS required.
@@ -729,6 +745,11 @@ async function uploadMod(event) {
     const description = form.elements.description.value.trim();
     const category = form.elements.category.value;
     const version = form.elements.version.value.trim();
+    const gameVersion = form.elements.game_version.value.trim();
+    if(gameVersion && !/^[0-9]+([.][0-9]+){1,3}$/.test(gameVersion)){
+        say("Версия War Thunder должна содержать только цифры и точки.",
+            true,"submitNotice");return;
+    }
     const pack = form.elements.package.files[0];
     const cover = form.elements.cover.files[0];
     const beforeFile=form.elements.before.files[0];
@@ -796,6 +817,7 @@ async function uploadMod(event) {
         }
         const { error: dbError } = await db.from("wtmm_mods").insert({
             id, owner_id: user.id, title, description, category, version,
+            game_version: gameVersion || null,
             status: "pending", file_path: path, cover_path: coverPath,
             before_image_path:beforePath,after_image_path:afterPath
         });
@@ -813,7 +835,39 @@ async function uploadMod(event) {
         $("submitModButton").disabled = false;
     }
 }
+async function previewCreatorStudio(){
+    const form=$("modSubmitForm");
+    const preview=$("creatorPreview");
+    const file=form.elements.package.files[0];
+    const title=form.elements.title.value.trim();
+    const version=form.elements.version.value.trim();
+    const declared=form.elements.game_version.value.trim();
+    preview.textContent="Проверяем ZIP локально, без отправки файлов…";
+    if(!file){
+        preview.textContent="Выбери ZIP-архив для проверки.";return;
+    }
+    if(file.size>FILE_LIMIT||file.size<22||!file.name.toLowerCase().endsWith(".zip")){
+        preview.textContent="Файл не подходит: ZIP до 20 МБ.";return;
+    }
+    try{
+        const check=await validateModZip(file);
+        preview.textContent=[
+            "Предпросмотр: "+(title||"Без названия")+" · "+(version||"Без версии"),
+            "Файлов в ZIP: "+check.files,
+            "Распакованный размер: "+(check.uncompressedBytes/1048576).toFixed(2)+" МиБ",
+            "Для игры: "+(declared||"не указана"),
+            "Локальная структурная проверка пройдена.",
+            "После загрузки архив повторно проверит сервер и модератор.",
+            "Это НЕ антивирусный сертификат."
+        ].join(" • ");
+    }catch(error){
+        preview.textContent="Локальная проверка не пройдена: "+
+            String(error?.message||"ошибка");
+    }
+}
 function bind() {
+    $("creatorPreviewButton").addEventListener("click",
+        ()=>void previewCreatorStudio());
     document.querySelectorAll(".mods-tab").forEach(button => {
         button.addEventListener("click", async () => {
             if (button.dataset.view === currentView) return;
