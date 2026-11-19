@@ -458,6 +458,16 @@ class WTManagerApp:
 # ==========================================
 
 def main():
+    # Match the Inno Setup Start-menu shortcut AUMID so Windows can
+    # identify this unpackaged desktop app when pinning to the taskbar.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "WTModManager.Desktop"
+            )
+        except (AttributeError, OSError):
+            pass
 
     app = QApplication(sys.argv)
 
