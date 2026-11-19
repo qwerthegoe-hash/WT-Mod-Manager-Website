@@ -18,6 +18,10 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_vehicle_camouflages.py"
+      - "src/vehicle_camouflages.py"
+      - "ui/media_page.py"
+      - "ui/game_install_ui.py"
       - "tests/test_update_notifications.py"
       - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
@@ -43,6 +47,10 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_vehicle_camouflages.py"
+      - "src/vehicle_camouflages.py"
+      - "ui/media_page.py"
+      - "ui/game_install_ui.py"
       - "tests/test_update_notifications.py"
       - "tests/test_installer_integration.py"
       - "src/mod_suite.py"
@@ -110,6 +118,10 @@ jobs:
         run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
       - name: Test WT Mod Suite all twelve safety and offline paths
         run: python -m unittest discover -s tests -p "test_mod_suite.py" -v
+      - name: Test vehicle-bound visual camouflages on synthetic game files
+        run: python -m unittest discover -s tests -p "test_vehicle_camouflages.py" -v
+      - name: Test existing local custom-content backup and rollback
+        run: python -m unittest discover -s tests -p "test_game_mod_installer.py" -v
 
       - name: Test in-app one-click updates, version checks and installed setup validation
         env:
