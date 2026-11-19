@@ -29,6 +29,7 @@ from urllib.request import Request, urlopen
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from src.profile_paths import DATA_DIR
+from src.offline_mode import require_network
 
 API_ROOT = "https://ovvubbwzxikqcnuvvtjb.supabase.co"
 API_KEY = "sb_publishable_NYOePmdOT87GXNFpI9j8OQ_Y8CIyLez"
@@ -100,6 +101,7 @@ def _save_token(token: str) -> None:
 
 
 def _call(action: str, token: str, **payload) -> dict:
+    require_network()
     body = json.dumps({"action": action, "device_token": token, **payload}).encode("utf-8")
     request = Request(BRIDGE, data=body, headers={
         "Content-Type": "application/json", "apikey": API_KEY,
@@ -118,6 +120,7 @@ def _call(action: str, token: str, **payload) -> dict:
 
 
 def _download_zip(url: str) -> bytes:
+    require_network()
     parsed = urlsplit(url)
     if (parsed.scheme != "https" or parsed.hostname != "ovvubbwzxikqcnuvvtjb.supabase.co"
             or parsed.username or parsed.password
