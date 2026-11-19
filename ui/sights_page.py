@@ -156,7 +156,7 @@ class SightsPage(QWidget):
         left_layout.addWidget(self.sight_list, 1)
         left_layout.addLayout(buttons_row)
         game_button = QPushButton("Установить игровой .blk")
-        game_button.setToolTip("PNG используется только для предпросмотра. Для игры требуется .blk.")
+        game_button.setToolTip("PNG — только предпросмотр; для игры нужен .blk. Ctrl+клик — ручной выбор папки.")
         game_button.clicked.connect(lambda: install_sight_dialog(self))
         restore_button = QPushButton("Откатить установку в игре")
         restore_button.clicked.connect(lambda: restore_last_game_install(self))
