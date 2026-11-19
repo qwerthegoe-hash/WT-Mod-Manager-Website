@@ -36,6 +36,6 @@ jobs:
             exit 1
           fi
           cd released
-          sha256sum -c SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
           # NEVER upload/overwrite the original publisher's manifest.
           echo "Published release $tag matches immutable checksums."
