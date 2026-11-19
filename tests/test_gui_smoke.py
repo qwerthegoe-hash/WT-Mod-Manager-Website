@@ -32,7 +32,11 @@ class MainWindowSmokeTest(unittest.TestCase):
             self.assertTrue(hasattr(window.online_page, "rollback_exe_button"))
             self.assertTrue(hasattr(window.online_page, "remote_notifications"))
             self.assertTrue(hasattr(window.online_page, "diagnostic_scan"))
-            self.assertEqual(window.online_page.tabs.count(), 4)
+            self.assertEqual(window.online_page.tabs.count(), 3)
+            self.assertIsNotNone(window.online_page.security_panel)
+            self.assertTrue(hasattr(window.online_page.security_panel, "choose_button"))
+            self.assertIsNotNone(window.online_page.remote_notifications)
+            self.assertIsNotNone(window.online_page.updates_inbox)
         finally:
             window.online_page.bridge.stop()
             window.force_close()
