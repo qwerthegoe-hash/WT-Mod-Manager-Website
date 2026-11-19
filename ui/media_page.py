@@ -165,8 +165,8 @@ class MediaPage(QWidget):
             )
             self.install_selected_image.setEnabled(False)
             self.install_selected_image.setToolTip(
-                "Создать отдельный WT Mod камуфляж №... из масштабируемого слоя. "
-                "Не все шаблоны совместимы."
+                "Создать WT Mod камуфляж №... с выбором цветового слоя, "
+                "обычного изображения или бесшовного узора."
             )
             self.install_selected_image.clicked.connect(
                 lambda: install_camouflage_dialog(self, self.current_file)
