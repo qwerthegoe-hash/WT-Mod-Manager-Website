@@ -196,7 +196,7 @@ async function fetchModPage(offset, query = getModQuery()) {
 async function enrichComparisonPaths(rows) {
     if(!rows.length)return;
     const {data,error}=await db.from("wtmm_mods")
-      .select("id,before_image_path,after_image_path")
+      .select("id,before_image_path,after_image_path,triage_status,triage_note,triage_files")
       .in("id",rows.map(r=>r.id));
     if(error) {
       console.warn("Before/after images unavailable:",error.message);
@@ -349,9 +349,18 @@ async function makeCard(row) {
     const details = node("button", "mod-card-button", "Подробнее");
     details.type = "button";
     details.addEventListener("click", () => showModDetails(row.id));
+    const pendingState = {
+        queued: "В очереди сканера",
+        scanning: "Бот проверяет ZIP",
+        checked: "ZIP проверен · модерация",
+        blocked: "Заблокировано",
+        error: "Ошибка сканирования"
+    };
     const status = node("span", "mod-status " + row.status,
         row.status === "approved" ? "Одобрено" :
-        row.status === "pending" ? "Проверка" : "Отклонено");
+        row.status === "pending" ?
+            (pendingState[row.triage_status] || "В очереди") :
+        row.triage_status === "blocked" ? "Бот отклонил ZIP" : "Отклонено");
     if (currentView === "catalog") {
         end.append(details);
         community2?.addFavoriteButton(row,end);
@@ -501,8 +510,17 @@ async function showModDetails(id) {
         })();
     }
     if (row.status !== "approved") {
-        content.append(node("p", "mod-status " + row.status,
-            row.status === "pending" ? "Ожидает модерации" : "Отклонено"));
+        const current = row.triage_status || "queued";
+        const message = ({
+            queued: "ZIP в автоматической очереди — проверка начнётся по порядку.",
+            scanning: "Бот проверяет состав, размер, CRC и опасные файлы.",
+            checked: "Структура ZIP проверена. Ожидает ручной модерации.",
+            blocked: "ZIP отклонён системой автоматической проверки.",
+            error: "Временная ошибка проверки; система повторит попытку."
+        })[current] || "Ожидает проверки";
+        content.append(node("p", "mod-status " + row.status, message));
+        if (row.triage_note)
+            content.append(node("p", "mods-review-note", row.triage_note));
         if (row.rejection_reason)
             content.append(node("p", "mods-review-note", "Причина: " + row.rejection_reason));
     }
@@ -543,8 +561,12 @@ async function showModDetails(id) {
         }
     }
     if (currentView === "moderation" && isAdmin && row.status === "pending") {
+        const scanPassed = row.triage_status === "checked";
         const warning = node("p", "mods-review-note",
-            "Перед публикацией обязательно проверь архив вручную. Не запускай неизвестные файлы.");
+            scanPassed
+            ? "ZIP прошёл автоматическую структурную проверку. Проверь вручную перед публикацией."
+            : "Автоматическая проверка ZIP ещё не завершена. Одобрение недоступно."
+        );
         content.append(warning);
         const preview = node("button", "mods-secondary", "Сформировать ссылку на ZIP");
         preview.type = "button";
@@ -572,7 +594,7 @@ async function showModDetails(id) {
                 if (file.size > FILE_LIMIT) throw new Error("ZIP превышает 20 МБ.");
                 const result = await validateModZip(file);
                 archiveValidated = true;
-                approve.disabled = !modReviewReady(archiveValidated, manualReviewOpened);
+                approve.disabled = !(scanPassed && modReviewReady(archiveValidated, manualReviewOpened));
                 checkStatus.textContent = "Структура ZIP проверена: " + result.files +
                     " файлов. Это не антивирусная проверка — всё ещё нужна ручная модерация.";
             } catch (error) {
@@ -596,7 +618,7 @@ async function showModDetails(id) {
                 a.target = "_blank"; a.rel = "noopener noreferrer";
                 a.addEventListener("click", () => {
                     manualReviewOpened = true;
-                    approve.disabled = !modReviewReady(archiveValidated, manualReviewOpened);
+                    approve.disabled = !(scanPassed && modReviewReady(archiveValidated, manualReviewOpened));
                 });
                 previewArea.replaceChildren(a);
             } catch (error) {
@@ -604,7 +626,7 @@ async function showModDetails(id) {
             } finally { preview.disabled = false; }
         });
         approve.addEventListener("click", () => {
-            if (!modReviewReady(archiveValidated, manualReviewOpened)) return;
+            if (!scanPassed || !modReviewReady(archiveValidated, manualReviewOpened)) return;
             decideMod(row, "approved");
         });
         reject.addEventListener("click", () => decideMod(row, "rejected"));
@@ -757,7 +779,7 @@ async function uploadMod(event) {
         });
         if (dbError) throw dbError;
         form.reset();
-        say("Мод успешно отправлен на ручную модерацию!", false, "submitNotice");
+        say("Мод добавлен в очередь WT Mod Scanner. Сначала автоматическая проверка, затем ручная модерация.", false, "submitNotice");
         currentView = "mine";
         await refresh();
     } catch (error) {
