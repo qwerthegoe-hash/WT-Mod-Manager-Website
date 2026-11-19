@@ -374,8 +374,9 @@ class OnlinePage(QWidget):
     def _refresh_offline_controls(self):
         offline = is_offline()
         for button in (
-            self.link_button, self.refresh_button, self.update_button,
-            self.catalog_refresh, self.notices_refresh
+            self.link_button, self.refresh_button, self.unlink_button,
+            self.update_button, self.catalog_refresh, self.notices_refresh,
+            self.catalog_open, self.community_open
         ):
             button.setEnabled(not offline)
         if offline:
@@ -737,6 +738,13 @@ class OnlinePage(QWidget):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
 
     def disconnect_account(self):
+        if is_offline():
+            QMessageBox.information(
+                self, "WT Offline Mode",
+                "Чтобы безопасно отключить устройство от сервера, "
+                "сначала выключи офлайн-режим и повтори действие."
+            )
+            return
         choice = QMessageBox.question(
             self, "Отключить аккаунт",
             "Отключить синхронизацию? Локальные и ранее скачанные файлы сохранятся."
