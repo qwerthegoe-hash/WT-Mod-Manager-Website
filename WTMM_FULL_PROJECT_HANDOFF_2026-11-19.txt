@@ -928,6 +928,10 @@ FILE: src/crash_recovery.py
   PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
   GIT_BYTES: 5503
 
+FILE: docs/md/WTMM_AUTOMATION_TIKTOK_ROADMAP_2026-11-19.md
+  PURPOSE: карта файлов, безопасность автоматизации и честные идеи четырёх коротких TikTok демонстраций
+  GIT_BYTES: новый файл в отдельном PR, до релиза
+
 FILE: src/desktop_sync.py
   PURPOSE: привязка Windows-клиента к веб-аккаунту через серверный challenge, DPAPI, фоновая синхронизация и rollback модов
   GIT_BYTES: 23591
@@ -935,6 +939,10 @@ FILE: src/desktop_sync.py
 FILE: src/diagnostics.py
   PURPOSE: локальные тесты путей, настроек, обновлений и профиля с кодами D001-D009 без личных данных
   GIT_BYTES: 5750
+
+FILE: src/game_discovery.py
+  PURPOSE: read-only bounded game discovery from standard Steam paths, libraryfolders.vdf, Documents/OneDrive Saves and existing UserSkins templates
+  GIT_BYTES: новый файл в отдельном PR, до релиза
 
 FILE: src/game_mod_installer.py
   PURPOSE: пользовательское добавление прицелов/камуфляжей/звуков в War Thunder после проверки путей, бэкапы, откат изменений
@@ -1015,6 +1023,10 @@ FILE: tests/test_desktop_sync.py
 FILE: tests/test_diagnostics_and_rollback.py
   PURPOSE: Python unittest по модулю diagnostics and rollback; проверять при изменениях функциональности
   GIT_BYTES: 4338
+
+FILE: tests/test_game_discovery.py
+  PURPOSE: offline regression на Steam libraryfolders.vdf, конфигурацию, документы, OneDrive и шаблоны камуфляжа
+  GIT_BYTES: новый файл в отдельном PR, до релиза
 
 FILE: tests/test_game_mod_installer.py
   PURPOSE: Python unittest по модулю game mod installer; проверять при изменениях функциональности
@@ -1303,6 +1315,45 @@ FILE: tests/test_mod_suite.py
 FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
   PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
   GIT_BYTES: generated
+
+================================================================================
+08B. ПОСЛЕ BETA 13 — АВТОПОИСК И UX ДЛЯ ПЕРВОГО ЗАПУСКА (PR; НЕ ВЫПУЩЕНО)
+================================================================================
+Ветка от main a122abf4f6649e4598c5fa865861aaa53a4c1cc5:
+feature/war-thunder-auto-discovery-20261119.
+Ссылки/версии проверять перед merge. Beta 13 уже опубликована как
+v1.3.0-beta.13; новые изменения в текущий EXE не вошли.
+Детальный план, таблицы всех будущих файлов и 4 честных TikTok-сценария:
+docs/md/WTMM_AUTOMATION_TIKTOK_ROADMAP_2026-11-19.md
+
+В ЭТОЙ ВЕТКЕ РЕАЛИЗОВАНО В КОДЕ:
+- src/game_discovery.py: read-only bounded Steam/native file discovery;
+  только известные папки, Steam libraryfolders.vdf и документы пользователя.
+  Поиск не создаёт файлов и не читает личные файлы вне путей установки.
+- ui/game_install_ui.py: если найден единственный допустимый путь игры,
+  прицела или шаблона — автоматически предлагает его; при нескольких
+  спрашивает; Ctrl+клик разрешает ручной выбор даже при одном результате.
+  Обязательные Install Preview, конфликты, backup/rollback НЕ удалены.
+- ui/main_window.py: локальный статус обнаружения и повторная проверка;
+  корректные подсказки Ctrl+клик на страницах прицелов/аудио/изображений.
+- src/main.py: при первом запуске выводит главное окно; не перекрывает
+  уже открытый prompt обнаружения запущенной игры; marker хранится только
+  в %LOCALAPPDATA%/WTModManager, не в Program Files.
+- tests/test_game_discovery.py: 7 offline тестов стандартной Steam установки,
+  второго Steam library, отсутствия config, большой VDF, Saves, OneDrive
+  и шаблонов. tests/test_gui_smoke.py проверяет новый sidebar.
+- .github/workflows/build-windows-exe.yml: новый тестовый этап до сборки EXE.
+
+НЕ РЕАЛИЗОВАНО В ЭТОМ PR:
+- Drag-and-drop и унифицированный импорт всех файлов, конвертация
+  изображений/аудио в игровые форматы, безопасная проверка ZIP-пакетов,
+  выбор произвольного диска автоматически, сохранение пользовательских
+  путей между запусками и полноразмерный onboarding wizard.
+- Ручные Windows 125/150/200% DPI тесты и реальный Gaijin+Steam E2E.
+- Любые молчаливые записи в игровые каталоги, любые обходы AV.
+Публикации TikTok про автопоиск разрешены как работающий результат
+ТОЛЬКО после CI и новой проверенной сборки; не выдавать незавершённый PR
+за уже доступный релиз. Статус Windows CI/PR уточнить при выпуске.
 
 ================================================================================
 09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ

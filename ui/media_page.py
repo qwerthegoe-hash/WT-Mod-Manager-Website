@@ -154,7 +154,7 @@ class MediaPage(QWidget):
         left_layout.addLayout(buttons)
         if self.folder.name == "camouflages":
             skin_install = QPushButton("Установить камуфляж в War Thunder")
-            skin_install.setToolTip("Нужен набор .blk и текстур, а также созданный в игре шаблон техники.")
+            skin_install.setToolTip("Нужны .blk, текстуры и готовый шаблон игры. Ctrl+клик — ручная папка.")
             skin_install.clicked.connect(lambda: install_camouflage_dialog(self))
             restore_game = QPushButton("Откатить установку в игре")
             restore_game.clicked.connect(lambda: restore_last_game_install(self))

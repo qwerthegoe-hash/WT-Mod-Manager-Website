@@ -5,8 +5,10 @@ import json
 import os
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QInputDialog, QApplication
 from src.profile_paths import DATA_DIR
+from src.game_discovery import find_game_roots, find_sight_folders, find_skin_templates
 from src.mod_suite import preview_install, resolve_conflicts, append_history
 from src.game_mod_installer import (
     InstallError, sight_plan, camouflage_plan, sound_plan,
@@ -24,6 +26,27 @@ def _show_error(parent, error):
     QMessageBox.warning(parent, "Установка в War Thunder", str(error))
 
 
+def _suggested_folder(parent, caption, initial, suggestions):
+    """Skip repeated folder dialogs only for an unambiguous existing target."""
+    # Hold Ctrl when clicking Install to override an automatically found path.
+    if QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
+        return _folder(parent, caption, initial)
+    paths = list(dict.fromkeys(str(p) for p in suggestions))
+    if len(paths) == 1:
+        return paths[0]
+    if len(paths) > 1:
+        manual = "Выбрать другую папку..."
+        choice, ok = QInputDialog.getItem(
+            parent, caption, "Найдено несколько папок. Выберите нужную:",
+            paths + [manual], 0, False,
+        )
+        if not ok:
+            return ""
+        if choice != manual:
+            return choice
+    return _folder(parent, caption, initial)
+
+
 def install_sight_dialog(parent):
     """PNG remains a preview: only user-provided .blk can be a sight."""
     path, _ = QFileDialog.getOpenFileName(
@@ -32,10 +55,11 @@ def install_sight_dialog(parent):
     )
     if not path:
         return
-    folder = _folder(
+    folder = _suggested_folder(
         parent,
         "Выбери production или UserSights в Documents/My Games/WarThunder/Saves",
         Path.home() / "Documents" / "My Games" / "WarThunder" / "Saves",
+        find_sight_folders(),
     )
     if not folder:
         return
@@ -59,10 +83,13 @@ def install_camouflage_dialog(parent):
     )
     if not folder:
         return
-    template = _folder(
+    roots = find_game_roots()
+    templates = [template for root in roots for template in find_skin_templates(root)]
+    template = _suggested_folder(
         parent,
         "Выбери шаблон техники в War Thunder/UserSkins/template_...",
-        Path.home()
+        Path.home(),
+        templates,
     )
     if not template:
         return
@@ -78,9 +105,9 @@ def install_sound_dialog(parent):
     )
     if not folder:
         return
-    root = _folder(
+    root = _suggested_folder(
         parent, "Выбери папку игры War Thunder, где находится config.blk",
-        Path.home()
+        Path.home(), find_game_roots(),
     )
     if not root:
         return

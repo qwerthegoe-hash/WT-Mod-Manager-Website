@@ -65,6 +65,7 @@ from ui.sounds_page import SoundsPage
 from ui.settings_page import SettingsPage
 from ui.online_page import OnlinePage
 from src.update_checker import VERSION as APP_VERSION
+from src.game_discovery import find_game_roots, find_sight_folders
 
 from src.settings_store import (
     load_settings,
@@ -1001,7 +1002,20 @@ class ManagerWindow(QMainWindow):
             self.version
         )
 
-        side_layout.addSpacing(30)
+        # Read-only game discovery runs after initial paint; it never changes
+        # files or scans every drive. Manual folder selection remains available.
+        self.game_status = QLabel("Поиск War Thunder...")
+        self.game_status.setObjectName("Subtitle")
+        self.game_status.setWordWrap(True)
+        self.game_status.setToolTip(
+            "Проверяются только стандартные папки игры и локальные Steam-библиотеки."
+        )
+        self.game_detect_button = QPushButton("Проверить игру")
+        self.game_detect_button.setToolTip("Повторить безопасный поиск установок.")
+        self.game_detect_button.clicked.connect(self.refresh_game_detection)
+        side_layout.addWidget(self.game_status)
+        side_layout.addWidget(self.game_detect_button)
+        side_layout.addSpacing(16)
 
         # ==================================
         # PAGE STACK
@@ -1289,6 +1303,28 @@ class ManagerWindow(QMainWindow):
         self.sounds_page.player.playbackStateChanged.connect(
             self.schedule_translation
         )
+        QTimer.singleShot(0, self.refresh_game_detection)
+
+    def refresh_game_detection(self):
+        """Show a local installation hint; do not modify or launch the game."""
+        try:
+            roots = find_game_roots()
+            profiles = find_sight_folders()
+            if len(roots) == 1:
+                status = "War Thunder найден"
+            elif len(roots) > 1:
+                status = f"Найдено установок War Thunder: {len(roots)}"
+            elif profiles:
+                status = "Найдены сохранения War Thunder"
+            else:
+                status = "Папка игры не найдена"
+            self.game_status.setText(status)
+            self.game_status.setToolTip(
+                "Автопоиск не меняет файлы игры. "
+                "При установке удерживай Ctrl, чтобы выбрать папку вручную."
+            )
+        except OSError:
+            self.game_status.setText("Автопоиск недоступен; выберите папку вручную")
 
     def refresh_online_assets(self, category=None):
         """Refresh only affected lists in one Qt paint transaction, with no window restart."""

@@ -18,6 +18,7 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_game_discovery.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -41,6 +42,7 @@ on:
       - "tests/test_build_sbom.py"
       - "tests/test_recovery_and_trust.py"
       - "tests/test_mod_suite.py"
+      - "tests/test_game_discovery.py"
       - "src/mod_suite.py"
       - "src/offline_mode.py"
       - "src/release_rollout.py"
@@ -106,6 +108,9 @@ jobs:
         run: python -m unittest discover -s tests -p "test_recovery_and_trust.py" -v
       - name: Test WT Mod Suite all twelve safety and offline paths
         run: python -m unittest discover -s tests -p "test_mod_suite.py" -v
+
+      - name: Test read-only War Thunder detection
+        run: python -m unittest discover -s tests -p "test_game_discovery.py" -v
 
       - name: Test new Downloads UI and non-network mod security checks
         env:

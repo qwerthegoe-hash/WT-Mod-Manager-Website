@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT))
 
 from ui.main_window import LaunchPrompt, ManagerWindow
 from src.settings_store import load_settings
+from src.profile_paths import DATA_DIR
 from ui.i18n import translate_ui
 from ui.update_ui import UpdateController
 from src.update_notifications import consume_install_status
@@ -421,6 +422,15 @@ class WTManagerApp:
         self.manager.show()
         self.manager.raise_()
         self.manager.activateWindow()
+        # First launch opens the window so the user sees discovery status.
+        # Only our per-user first-run marker is written, never game files.
+        marker = DATA_DIR / ".first-window-open-v1"
+        if not marker.exists():
+            try:
+                DATA_DIR.mkdir(parents=True, exist_ok=True)
+                marker.write_text("Main window opened.\n", encoding="utf-8")
+            except OSError:
+                pass
 
     def offer_taskbar_pin(self):
         """Ask only after the user selected the finishing checkbox.
@@ -515,6 +525,12 @@ def main():
     # hidden in the tray. The startup status is added to the inbox.
     if "--updated" in sys.argv or "--offer-taskbar-pin" in sys.argv:
         QTimer.singleShot(250, controller.open_manager)
+    elif "--demo" not in sys.argv and not (DATA_DIR / ".first-window-open-v1").exists():
+        def first_run_window():
+            # Do not overlap the existing game-detected launch prompt.
+            if controller.prompt is None:
+                controller.open_manager()
+        QTimer.singleShot(350, first_run_window)
     if "--offer-taskbar-pin" in sys.argv:
         QTimer.singleShot(1100, controller.offer_taskbar_pin)
 
