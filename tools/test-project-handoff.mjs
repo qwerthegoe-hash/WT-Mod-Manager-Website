@@ -34,6 +34,6 @@ for(const path of entries){
 }
 
 assert.ok(text.includes("UNSIGNED"),"Must describe unsigned release limitation");
-assert.ok(text.includes("не автоматическая")||text.includes("НЕ гарантия"),
+assert.ok(/структурная проверка НЕ гарантирует отсутствия вредоноса/i.test(text),
   "Must not represent ZIP structural checks as antivirus approval");
 console.log("PASS: WTMM handoff verified; "+entries.length+" documented files, version "+version);
