@@ -20,6 +20,8 @@ jobs:
           node-version: "22"
       - name: Validate JS, HTML, file references and ZIP checks
         run: node tools/check-site.mjs
+      - name: Check full handoff TXT against actual project source paths
+        run: node tools/test-project-handoff.mjs
       - name: Run Python archive-scanner safety regression tests
         run: python3 -m unittest discover -s tools -p "test_scan_mod_packages.py" -v
       - name: Validate scanner Python syntax
