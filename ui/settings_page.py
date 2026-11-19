@@ -1233,6 +1233,14 @@ class SettingsPage(QWidget):
 
         layout.addWidget(self.page_title)
         layout.addWidget(self.page_subtitle)
+        self.setting_search = QLineEdit()
+        self.setting_search.setPlaceholderText(
+            "Поиск по настройкам: тема, язык, уведомления, звук…"
+        )
+        self.setting_search.setClearButtonEnabled(True)
+        self.setting_search.setAccessibleName("Поиск по настройкам")
+        self.setting_search.textChanged.connect(self.filter_settings)
+        layout.addWidget(self.setting_search)
 
         # ==================================
         # GAME DETECTION
@@ -1483,6 +1491,18 @@ class SettingsPage(QWidget):
         layout.addWidget(
             service_card
         )
+        self._search_sections = (
+            (detection_card, self.detection_title,
+             "игра запуск обнаружение уведомления game"),
+            (interface_card, self.interface_title,
+             "окно интерфейс автозапуск поведение tray"),
+            (personal_card, self.personal_title,
+             "дизайн тема цвета шрифты локализация язык presets"),
+            (sound_card, self.sound_title,
+             "звук громкость audio volume"),
+            (service_card, self.service_title,
+             "сброс восстановление настройки reset")
+        )
 
         layout.addStretch()
 
@@ -1493,6 +1513,21 @@ class SettingsPage(QWidget):
     # ======================================
     # SUBPAGE FACTORY
     # ======================================
+
+    def filter_settings(self, query):
+        """Filter whole cards without losing values or changing settings."""
+        phrase = str(query).casefold().strip()
+        for card, title, aliases in getattr(self, "_search_sections", ()):
+            haystack = " ".join([
+                title.text(), aliases,
+                *(ctrl["checkbox"].text()
+                  for ctrl in self.checkboxes.values())
+            ]).casefold() if not phrase else (
+                title.text() + " " + aliases + " " +
+                " ".join(child.toolTip() for child in
+                         card.findChildren(QCheckBox))
+            ).casefold()
+            card.setVisible(not phrase or phrase in haystack)
 
     def make_subpage(self, page):
         outer = QVBoxLayout(page)
