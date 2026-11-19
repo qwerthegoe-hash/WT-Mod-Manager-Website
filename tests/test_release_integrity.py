@@ -73,7 +73,7 @@ class ReleaseIntegrityTests(unittest.TestCase):
         obj = rel.make_manifest(**self.kwargs)
         rel.write_manifest(self.folder, obj)
         with self.assertRaisesRegex(ValueError, "version mismatch"):
-            rel.verify_manifest(self.folder, "1.3.0-beta.12")
+            rel.verify_manifest(self.folder, "1.3.0-beta.13")
 
     def test_reject_unexpected_binary_type(self):
         (self.folder / rel.ARTIFACTS[1]).write_bytes(
