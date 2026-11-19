@@ -49,7 +49,9 @@ def local_executable_trust(path: Path | None = None) -> dict:
     if size > 350 * 1024 * 1024 or size < 2:
         report["authenticode"] = "Некорректный размер"
         return report
-    if target.read_bytes()[:2] != b"MZ" and sys.platform == "win32":
+    with target.open("rb") as stream:
+        magic = stream.read(2)
+    if magic != b"MZ" and sys.platform == "win32":
         report["authenticode"] = "Файл не является Windows EXE"
         return report
     report["sha256"] = _sha256(target)
