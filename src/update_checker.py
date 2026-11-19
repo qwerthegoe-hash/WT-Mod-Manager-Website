@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 import sys
 import urllib.request
 from pathlib import Path
@@ -17,7 +18,7 @@ from urllib.parse import urlsplit
 
 from src.profile_paths import DATA_DIR
 
-VERSION = "1.3.0-beta.11"
+VERSION = "1.3.0-beta.12"
 PROJECT_ROOT = (Path(sys._MEIPASS) if getattr(sys, "frozen", False)
                 and hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parent.parent)
 CONFIG_FILE = PROJECT_ROOT / "config" / "update_config.json"
@@ -74,6 +75,23 @@ def update_channel():
         pass
     value = _configuration().get("channel", "stable")
     return value if value in ("stable", "beta") else "stable"
+
+
+def set_update_channel(channel: str) -> str:
+    """Save the selected update channel for this Windows user atomically."""
+    if channel not in ("stable", "beta"):
+        raise ValueError("Unknown update channel.")
+    preference = DATA_DIR / "update-channel.json"
+    preference.parent.mkdir(parents=True, exist_ok=True)
+    if preference.is_symlink():
+        raise ValueError("Update channel settings cannot be a symlink.")
+    temporary = preference.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps({"channel": channel}), encoding="utf-8")
+        temporary.replace(preference)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return channel
 
 
 def _api_json(url):
@@ -157,11 +175,22 @@ def download_verified(info):
         raise ValueError("Update manifest failed validation.")
     target_dir = DATA_DIR / "updates"
     target_dir.mkdir(parents=True, exist_ok=True)
+    if target_dir.is_symlink():
+        raise ValueError("Update cache folder must not be a symbolic link.")
     target = target_dir / filename
     temp = target_dir / filename.replace(".exe", ".download")
-    if target.exists() and target.is_file() and target.stat().st_size == info["size"]:
+    if target.exists() and target.is_file() and not target.is_symlink() and target.stat().st_size == info["size"]:
         if _sha256(target) == info["digest"]:
             return target
+    # Reserve space for both the partial download and verified staged copy.
+    # Installed/portable updates never delete personal mods to free space.
+    remaining = shutil.disk_usage(target_dir).free
+    required = info["size"] * 2 + 64 * 1024 * 1024
+    if remaining < required:
+        raise OSError(
+            "Недостаточно места для безопасного обновления. "
+            "Освободи место на диске и повтори загрузку."
+        )
     downloaded = 0
     sha = hashlib.sha256()
     try:

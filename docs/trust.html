@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://api.github.com https://ovvubbwzxikqcnuvvtjb.supabase.co wss://ovvubbwzxikqcnuvvtjb.supabase.co; img-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+<title>WT Trust Center — проверенные релизы WT Mod Manager</title>
+<link rel="icon" href="assets/LogotipProject.png" type="image/png">
+<style>
+:root{color-scheme:dark;font:15px/1.65 system-ui,Segoe UI,Arial,sans-serif;background:#0d1421;color:#eaf3ff}
+*{box-sizing:border-box}body{margin:0}.top{background:#162338;border-bottom:1px solid #344960;padding:18px max(18px,calc((100vw - 1130px)/2));display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:15px}
+a{color:#a9d2ff}.top a{text-decoration:none}.links{display:flex;gap:20px;flex-wrap:wrap}.wrap{max-width:1130px;padding:36px 18px 70px;margin:auto}
+h1{font-size:clamp(25px,4vw,43px);line-height:1.2;margin:12px 0}h2{font-size:21px}h3{font-size:17px;margin:3px 0}
+p{color:#bdcce0}.muted{color:#aabbd2}.eyebrow{color:#97baff;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.card{border:1px solid #354862;border-radius:16px;background:#19263a;padding:20px;min-width:0}
+.card p{margin:8px 0 0}.status{border-left:3px solid #6789b7;padding-left:12px}.releases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.meta{font-size:13px}.hash{font-family:ui-monospace,Consolas,monospace;overflow-wrap:anywhere;background:#0f1d31;border:1px solid #33455c;border-radius:8px;padding:10px;font-size:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.pill{font-size:12px;border:1px solid #687f9d;border-radius:40px;padding:1px 9px}
+button{border:1px solid #618acc;border-radius:9px;background:#274b78;color:white;padding:8px 14px;font:inherit;cursor:pointer}
+button:disabled{opacity:.55}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.actions a{display:inline-block;padding:8px 10px;border:1px solid #526f92;border-radius:9px;text-decoration:none}
+code{color:#e8e5af}pre{overflow-x:auto;background:#101d2e;border:1px solid #34455c;border-radius:12px;padding:16px;font-size:13px}
+@media(max-width:760px){.grid,.releases{grid-template-columns:1fr}.wrap{padding:24px 15px}.top{padding:15px}}
+</style>
+<script src="js/trust-center.js" defer></script>
+</head>
+<body>
+<header class="top"><strong>WT MOD MANAGER · TRUST CENTER</strong><nav class="links"><a href="index.html">Главная</a><a href="updates.html">Обновления</a><a href="mods/mods.html">Каталог модов</a></nav></header>
+<main class="wrap">
+<div class="eyebrow">Прозрачность и безопасность</div>
+<h1>Проверка происхождения WT Mod Manager</h1>
+<p>Здесь можно сверить официальный SHA-256 с GitHub Releases и проверить, какие файлы действительно опубликованы. Проверка происхождения не заменяет антивирус и не отменяет SmartScreen.</p>
+<div class="grid">
+<section class="card"><h2>Целостность</h2><p>Каждый опубликованный EXE должен иметь SHA-256. Сравнивай хеш скачанного файла с официальным релизом.</p></section>
+<section class="card"><h2>Происхождение</h2><p>Для новых выпусков доступна аттестация GitHub Actions. Она подтверждает источник сборки, но не является подписью Windows.</p></section>
+<section class="card"><h2>Подпись издателя</h2><p>Цифровая подпись Authenticode показывается только при подтверждении. Неподписанный файл не называем подписанным.</p></section>
+</div>
+<section style="margin-top:30px" aria-labelledby="releasesTitle">
+<div class="row"><h2 id="releasesTitle">Публичные релизы</h2><button id="refresh" type="button">Обновить</button></div>
+<p id="status" class="status" role="status" aria-live="polite">Проверяем GitHub…</p>
+<div id="releases" class="releases" aria-live="polite"></div>
+</section>
+<section class="card" style="margin-top:28px"><h2>Проверить скачанный EXE</h2>
+<p>В Windows PowerShell получи SHA-256 своего установщика и сравни его с показанным выше.</p>
+<pre>Get-FileHash .\WTModManager-Setup.exe -Algorithm SHA256</pre>
+<p>Для независимой проверки GitHub provenance, если опубликована аттестация:</p>
+<pre>gh attestation verify .\WTModManager-Setup.exe --repo qwerthegoe-hash/WT-Mod-Manager-Website</pre>
+<p>Для цифровой подписи Windows:</p>
+<pre>Get-AuthenticodeSignature .\WTModManager-Setup.exe | Format-List Status,SignerCertificate</pre>
+<p class="muted">Не отключай антивирус или SmartScreen для установки. При предупреждении проверь происхождение, контрольную сумму и результаты анализа файла.</p>
+</section>
+</main>
+</body></html>
