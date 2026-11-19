@@ -353,6 +353,7 @@ async function makeCard(row) {
         queued: "В очереди сканера",
         scanning: "Бот проверяет ZIP",
         checked: "ZIP проверен · модерация",
+        review: "Нужен ручной разбор",
         blocked: "Заблокировано",
         error: "Ошибка сканирования"
     };
@@ -515,7 +516,8 @@ async function showModDetails(id) {
             queued: "ZIP в автоматической очереди — проверка начнётся по порядку.",
             scanning: "Бот проверяет состав, размер, CRC и опасные файлы.",
             checked: "Структура ZIP проверена. Ожидает ручной модерации.",
-            blocked: "ZIP отклонён системой автоматической проверки.",
+            review: "ZIP не повреждён, но есть неоднозначные признаки. Это не означает вирус — нужен ручной разбор.",
+            blocked: "ZIP не соответствует требованиям безопасности каталога.",
             error: "Ошибка сканирования. Автоматически выполняется до трёх попыток."
         })[current] || "Ожидает проверки";
         content.append(node("p", "mod-status " + row.status, message));
@@ -523,7 +525,7 @@ async function showModDetails(id) {
             content.append(node("p", "mods-review-note", row.triage_note));
         if (row.scan_status === "blocked")
             content.append(node("p", "mods-review-note",
-                "Антивирусная проверка пометила ZIP как опасный. Публикация запрещена."));
+                "Антивирус обнаружил потенциальную угрозу. Публикация запрещена до расследования возможного ложного срабатывания."));
         if (row.rejection_reason)
             content.append(node("p", "mods-review-note", "Причина: " + row.rejection_reason));
     }
@@ -564,10 +566,14 @@ async function showModDetails(id) {
         }
     }
     if (currentView === "moderation" && isAdmin && row.status === "pending") {
-        const scanPassed = row.triage_status === "checked" && row.scan_status !== "blocked";
+        const manualReview = row.triage_status === "review";
+        const scanPassed = ["checked","review"].includes(row.triage_status) &&
+            row.scan_status !== "blocked";
         const warning = node("p", "mods-review-note",
-            scanPassed
-            ? "ZIP прошёл автоматическую структурную проверку. Проверь вручную перед публикацией."
+            manualReview
+            ? "Бот обнаружил неоднозначные признаки, но не доказал опасность. Проверь ZIP вручную; решение принимает администратор."
+            : scanPassed
+            ? "ZIP прошёл структурную проверку. Проверь вручную перед публикацией."
             : "Автоматическая проверка ZIP ещё не завершена. Одобрение недоступно."
         );
         content.append(warning);
@@ -653,6 +659,8 @@ async function showModDetails(id) {
 }
 async function decideMod(row, status) {
     if (!isAdmin || !user || row.status !== "pending") return;
+    if (status === "approved" && row.triage_status === "review" &&
+        !confirm("Внимание: сканер отправил ZIP на дополнительную проверку. Ты лично проверил все неоднозначные файлы и принимаешь решение о публикации?")) return;
     if (status === "approved" && !confirm("Архив проверен вручную? Опубликовать мод?")) return;
     if (status === "rejected" && !confirm("Отклонить эту заявку?")) return;
     const reason = status === "rejected" ? "Отклонено администратором" : null;
