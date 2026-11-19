@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory=$true)]
-  [ValidateSet("payload", "installer")]
+  [ValidateSet("native", "payload", "installer")]
   [string]$Stage
 )
 $ErrorActionPreference = "Stop"
@@ -30,12 +30,10 @@ if (-not $exe) { throw "Windows SDK SignTool was not found." }
 $privateKeyPath = Join-Path $env:RUNNER_TEMP ([Guid]::NewGuid().ToString() + ".pfx")
 try {
   [IO.File]::WriteAllBytes($privateKeyPath, [Convert]::FromBase64String($encoded))
-  if ($Stage -eq "payload") {
-    $paths = @(
-      "build\wtmm_taskbar.dll",
-      "dist\WTModManager.exe",
-      "dist\WTModManager\WTModManager.exe"
-    )
+  if ($Stage -eq "native") {
+    $paths = @("build\wtmm_taskbar.dll")
+  } elseif ($Stage -eq "payload") {
+    $paths = @("dist\WTModManager.exe", "dist\WTModManager\WTModManager.exe")
   } else {
     $paths = @("dist\WTModManager-Setup.exe")
   }
