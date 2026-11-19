@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 import sys
 import urllib.request
 from pathlib import Path
@@ -157,11 +158,22 @@ def download_verified(info):
         raise ValueError("Update manifest failed validation.")
     target_dir = DATA_DIR / "updates"
     target_dir.mkdir(parents=True, exist_ok=True)
+    if target_dir.is_symlink():
+        raise ValueError("Update cache folder must not be a symbolic link.")
     target = target_dir / filename
     temp = target_dir / filename.replace(".exe", ".download")
-    if target.exists() and target.is_file() and target.stat().st_size == info["size"]:
+    if target.exists() and target.is_file() and not target.is_symlink() and target.stat().st_size == info["size"]:
         if _sha256(target) == info["digest"]:
             return target
+    # Reserve space for both the partial download and verified staged copy.
+    # Installed/portable updates never delete personal mods to free space.
+    remaining = shutil.disk_usage(target_dir).free
+    required = info["size"] * 2 + 64 * 1024 * 1024
+    if remaining < required:
+        raise OSError(
+            "Недостаточно места для безопасного обновления. "
+            "Освободи место на диске и повтори загрузку."
+        )
     downloaded = 0
     sha = hashlib.sha256()
     try:
