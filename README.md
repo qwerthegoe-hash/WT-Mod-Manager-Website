@@ -18,7 +18,7 @@
 - Сайт GitHub Pages: `docs/index.html`; центр доверия: `docs/trust.html`.
 - Серверная проверка модов: `supabase/functions/wtmm-mod-scan/index.ts` и `zip.ts`.
 - Windows-сборка и релизы: `.github/workflows/build-windows-exe.yml`.
-- Текущие выпуски: [GitHub Releases](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases). На дату создания досье последним опубликованным выпуском была v1.3.0-beta.13; обновления в один клик и визуальные пресеты подготовлены для v1.3.0-beta.14 (публикация только после успешных проверок).
+- Текущие выпуски: [GitHub Releases](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases). Подтверждённый опубликованный выпуск — [v1.3.0-beta.14](https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.14) (19 ноября 2026, проверка Windows CI успешно завершена). Содержит обновления установленного приложения из его интерфейса и локальные номерные камуфляжи по технике. После первой установки следующие версии можно получать без ручного скачивания установщика. Обычные пользовательские камуфляжи видны только владельцу; реальное отображение конкретной текстуры в игре требует отдельной проверки.
 - План обновлений: [WTMM_ONE_CLICK_UPDATES_2026-11-19.md](docs/md/WTMM_ONE_CLICK_UPDATES_2026-11-19.md).
 - Новые локальные камуфляжи: [WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md](docs/md/WTMM_VEHICLE_CAMOUFLAGES_AND_UPDATES_2026-11-19.md).
 
