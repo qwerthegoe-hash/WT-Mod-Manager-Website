@@ -80,10 +80,19 @@ jobs:
           if (-not (Test-Path $dll)) { throw "Native TaskbarManager DLL missing" }
           Copy-Item $dll build/wtmm_taskbar.dll -Force
 
+      - name: Sign taskbar DLL before EXE packaging (trusted main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
+          WTMM_SIGN_PFX_PASSWORD: ${{ secrets.WTMM_SIGN_PFX_PASSWORD }}
+        run: .\tools\sign_windows_release.ps1 -Stage native
+
       - name: Build portable and installed application
         run: python tools/build_windows_exe.py
 
-      - name: Sign desktop EXEs and taskbar helper when owner cert is configured
+      - name: Sign desktop EXEs when owner cert is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
@@ -116,6 +125,7 @@ jobs:
           if ((Get-Item "dist\WTModManager-Setup.exe").Length -lt 1048576) { throw "Installer unexpectedly small" }
 
       - name: Sign installer when owner cert is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
