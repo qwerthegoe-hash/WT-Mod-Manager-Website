@@ -69,6 +69,18 @@ jobs:
           python -m unittest discover -s tests -p "test_mod_security.py" -v
           python -m unittest discover -s tests -p "test_gui_smoke.py" -v
 
+      - name: Validate optional signing script syntax (no secrets)
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $path = (Resolve-Path 'tools/sign_windows_release.ps1').Path
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List | Out-String | Write-Output
+            throw "Invalid signing script syntax"
+          }
+
       - name: Compile official Windows taskbar helper
         shell: pwsh
         run: |
