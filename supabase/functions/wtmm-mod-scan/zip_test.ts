@@ -39,6 +39,8 @@ Deno.test("accept valid text mod and compute SHA-256", async()=>{
   const report=await inspectZip(zip);
   assertEquals(report.files,1);
   assertEquals(report.sha256.length,64);
+  assertEquals(report.verdict,"checked");
+  assertEquals(report.reviewReasons.length,0);
 });
 Deno.test("reject parent-directory traversal", async()=>{
   const zip=sampleZip("../outside.txt",new TextEncoder().encode("unsafe"));
@@ -48,8 +50,18 @@ Deno.test("reject executable mod content type", async()=>{
   const zip=sampleZip("config/autorun.bat",new TextEncoder().encode("not allowed"));
   await assertRejects(()=>inspectZip(zip),ScanReject);
 });
-Deno.test("reject disguised Windows executable magic", async()=>{
+Deno.test("short MZ header is not enough to declare executable", async()=>{
   const zip=sampleZip("textures/fake.png",new Uint8Array([77,90,0,0,0]));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"review");
+});
+Deno.test("real Windows PE header concealed in PNG gets rejected", async()=>{
+  const payload=new Uint8Array(160);
+  payload[0]=77;payload[1]=90; // DOS MZ signature
+  payload[0x3c]=0x80;         // e_lfanew -> full PE header
+  payload[0x80]=80; payload[0x81]=69;
+  payload[0x82]=0; payload[0x83]=0;
+  const zip=sampleZip("textures/fake.png",payload);
   await assertRejects(()=>inspectZip(zip),ScanReject);
 });
 Deno.test("reject corrupted CRC", async()=>{
@@ -75,4 +87,34 @@ Deno.test("reject suspicious compression expansion before decompression", async(
     ()=>inspectZip(sampleZip("readme.txt",payload,false,8,new Uint8Array([1]))),
     ScanReject
   );
+});
+
+Deno.test("allow typical harmless INI config", async()=>{
+  const zip=sampleZip("settings/game.ini",new TextEncoder().encode("[game]\\nquality=high\\n"));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"checked");
+});
+Deno.test("unfamiliar but non-executable file is review, not virus", async()=>{
+  const zip=sampleZip("materials/model.mtl",new TextEncoder().encode("newmtl mat"));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"review");
+  assertEquals(report.reviewReasons.length,1);
+});
+Deno.test("ambiguous MZ text header does not trigger automatic rejection", async()=>{
+  const zip=sampleZip("readme.txt",new TextEncoder().encode("MZ texture design note"));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"review");
+});
+Deno.test("shebang-prefixed text requires manual review, not automatic rejection", async()=>{
+  const zip=sampleZip("readme.txt",new TextEncoder().encode("#! documentation example"));
+  const report=await inspectZip(zip);
+  assertEquals(report.verdict,"review");
+});
+Deno.test("executable file extension remains prohibited", async()=>{
+  const zip=sampleZip("install/setup.exe",new Uint8Array([77,90,0,0]));
+  await assertRejects(()=>inspectZip(zip),ScanReject);
+});
+Deno.test("unknown extension with broken CRC cannot pass via review", async()=>{
+  const zip=sampleZip("model.custom",new Uint8Array([1,2,3]),true);
+  await assertRejects(()=>inspectZip(zip),ScanReject);
 });

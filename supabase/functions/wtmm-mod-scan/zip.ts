@@ -17,10 +17,17 @@ const MAX_RATIO = 200;
 const MAGIC_CEN = 0x02014b50;
 const MAGIC_LOC = 0x04034b50;
 const MAGIC_EOCD = 0x06054b50;
+// These are ordinary non-executable data files used by game mods.
 const ALLOWED = new Set([
   ".png",".jpg",".jpeg",".webp",".dds",".tga",".bmp",
   ".wav",".ogg",".mp3",".flac",
-  ".blk",".cfg",".json",".xml",".txt"
+  ".blk",".cfg",".json",".xml",".txt",".ini",".csv",".yaml",".yml"
+]);
+// Executable content is prohibited by catalogue policy, not labelled "a virus".
+const PROHIBITED = new Set([
+  ".exe",".dll",".sys",".com",".scr",".msi",".msp",
+  ".bat",".cmd",".ps1",".psm1",".vbs",".vbe",".wsf",
+  ".js",".jse",".jar",".hta",".sh",".py",".lnk"
 ]);
 
 type Entry = {
@@ -42,15 +49,27 @@ function updateCrc(crc: number, chunk: Uint8Array): number {
   for (let i=0; i<chunk.length; i++) c=table[(c ^ chunk[i]) & 255] ^ (c >>> 8);
   return c>>>0;
 }
-function disallowedMagic(chunk: Uint8Array): boolean {
-  return (chunk.length>=2 && chunk[0]===77 && chunk[1]===90) || // Windows PE
-    (chunk.length>=4 && chunk[0]===127 && chunk[1]===69 &&
-      chunk[2]===76 && chunk[3]===70) || // ELF
-    (chunk.length>=2 && chunk[0]===35 && chunk[1]===33) || // scripts
-    (chunk.length>=4 && chunk[0]===80 && chunk[1]===75 &&
-      chunk[2]===3 && chunk[3]===4); // nested archives
+// Only strongly recognizable dangerous containers are rejected automatically.
+// Short "MZ" / "#!" prefixes may be legitimate text and need a human verdict.
+function inspectMagic(chunk: Uint8Array): "block"|"review"|null {
+  // Inspect PE's full DOS->PE header pointer, not just the short "MZ" prefix.
+  // A plain text file starting "MZ" isn't automatically a Windows executable.
+  if(chunk.length>=64 && chunk[0]===77 && chunk[1]===90) {
+    const peAt=(chunk[0x3c] | (chunk[0x3d]<<8) |
+      (chunk[0x3e]<<16) | (chunk[0x3f]<<24))>>>0;
+    if(peAt>=64 && peAt+4<=chunk.length &&
+       chunk[peAt]===80 && chunk[peAt+1]===69 &&
+       chunk[peAt+2]===0 && chunk[peAt+3]===0) return "block";
+  }
+  if(chunk.length>=4 && chunk[0]===127 && chunk[1]===69 &&
+      chunk[2]===76 && chunk[3]===70) return "block"; // ELF
+  if(chunk.length>=4 && chunk[0]===80 && chunk[1]===75 &&
+      chunk[2]===3 && chunk[3]===4) return "block"; // nested ZIP
+  if(chunk.length>=2 && ((chunk[0]===77 && chunk[1]===90) ||
+      (chunk[0]===35 && chunk[1]===33))) return "review";
+  return null;
 }
-function checkName(raw: string, isDir: boolean) {
+function checkName(raw: string, isDir: boolean, review: Set<string>) {
   const name=raw.normalize("NFC");
   guard(name.length>0 && name.length<=240 &&
     !name.startsWith("/") && !name.includes("\\") && !name.includes(":") &&
@@ -59,12 +78,15 @@ function checkName(raw: string, isDir: boolean) {
   guard(parts.every((part,i) => (isDir && i===parts.length-1 && part==="") ||
     (part!=="" && part!=="." && part!=="..")), "Опасный относительный путь");
   if (!isDir) {
-    const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
-    guard(ALLOWED.has(ext), "Недопустимый тип файла внутри ZIP");
+    const dot=name.lastIndexOf(".");
+    const ext=dot<0 ? "" : name.slice(dot).toLowerCase();
+    guard(!PROHIBITED.has(ext),
+      "Исполняемый файл запрещён правилами каталога: " + ext);
+    if(!ALLOWED.has(ext)) review.add("Неизвестное расширение — нужна ручная проверка");
   }
   return name;
 }
-function parseEntries(bytes: Uint8Array): Entry[] {
+function parseEntries(bytes: Uint8Array, review: Set<string>): Entry[] {
   guard(bytes.length>=22 && bytes.length<=MAX_ZIP_BYTES,"Некорректный размер ZIP");
   const data=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
   const u16=(n:number)=>data.getUint16(n,true);
@@ -108,7 +130,7 @@ function parseEntries(bytes: Uint8Array): Entry[] {
     try { name=utf8.decode(bytes.subarray(at+46,at+46+filenameLen)); }
     catch { throw new ScanReject("Некорректное UTF-8 имя ZIP"); }
     const isDir=name.endsWith("/");
-    checkName(name,isDir);
+    checkName(name,isDir,review);
     const folded=name.normalize("NFC").toLowerCase();
     guard(!seen.has(folded),"Повторяющиеся имена в ZIP");
     seen.add(folded);
@@ -142,7 +164,7 @@ function parseEntries(bytes: Uint8Array): Entry[] {
     guard(spans[i][0]>=spans[i-1][1],"Пересекающиеся файлы ZIP");
   return entries;
 }
-async function checkOne(bytes: Uint8Array, entry: Entry): Promise<void> {
+async function checkOne(bytes: Uint8Array, entry: Entry, review: Set<string>): Promise<void> {
   if (entry.isDir) return;
   let seen=0, crc=0xFFFFFFFF, prefix=new Uint8Array();
   const consume=(chunk:Uint8Array)=>{
@@ -150,13 +172,16 @@ async function checkOne(bytes: Uint8Array, entry: Entry): Promise<void> {
     guard(seen<=entry.unpacked && seen<=MAX_SINGLE_FILE,
       "Файл больше заявленного размера");
     crc=updateCrc(crc,chunk);
-    if (prefix.length<8) {
-      const joined=new Uint8Array(Math.min(8,prefix.length+chunk.length));
+    if (prefix.length<256) {
+      const joined=new Uint8Array(Math.min(256,prefix.length+chunk.length));
       joined.set(prefix);
       joined.set(chunk.subarray(0,joined.length-prefix.length),prefix.length);
       prefix=joined;
     }
-    guard(!disallowedMagic(prefix),"Обнаружено исполняемое содержимое");
+    const magic=inspectMagic(prefix);
+    guard(magic!=="block","Недопустимое исполняемое или вложенное содержимое");
+    if(magic==="review")
+      review.add("Неоднозначная сигнатура содержимого — нужна ручная проверка");
   };
   if (entry.method===0) {
     const raw=bytes.subarray(entry.start,entry.end);
@@ -184,9 +209,15 @@ async function checkOne(bytes: Uint8Array, entry: Entry): Promise<void> {
   guard(((crc^0xFFFFFFFF)>>>0)===entry.crc,"Ошибка CRC файла");
 }
 export async function inspectZip(bytes:Uint8Array) {
-  const entries=parseEntries(bytes);
-  for(const entry of entries) await checkOne(bytes,entry);
+  const review = new Set<string>();
+  const entries=parseEntries(bytes,review);
+  // Even questionable entries must pass *all* structural and CRC checks.
+  for(const entry of entries) await checkOne(bytes,entry,review);
   const hash=await crypto.subtle.digest("SHA-256",new Uint8Array(bytes).buffer);
   const sha256=Array.from(new Uint8Array(hash),n=>n.toString(16).padStart(2,"0")).join("");
-  return {sha256,files:entries.filter(x=>!x.isDir).length};
+  return {
+    sha256,files:entries.filter(x=>!x.isDir).length,
+    verdict:review.size>0 ? "review" as const : "checked" as const,
+    reviewReasons:[...review]
+  };
 }

@@ -45,7 +45,7 @@ Deno.serve(async req=>{
       typeof job.started_at!=="string")
     return result({error:"invalid_queue_record"},503);
 
-  let stage:"checked"|"blocked"|"error"="error";
+  let stage:"checked"|"review"|"blocked"|"error"="error";
   let note="Temporary scanner error";
   let sha256:string|null=null;
   let files:number|null=null;
@@ -58,8 +58,11 @@ Deno.serve(async req=>{
     const raw=new Uint8Array(await file.arrayBuffer());
     const report=await inspectZip(raw);
     sha256=report.sha256; files=report.files;
-    stage="checked";
-    note="Структура ZIP и CRC проверены. Требуется ручная модерация.";
+    stage=report.verdict;
+    note=stage==="review"
+      ? "Структура ZIP и CRC верны, нужна дополнительная проверка: " +
+        report.reviewReasons.slice(0,2).join("; ").slice(0,110)
+      : "Структура ZIP и CRC проверены. Требуется ручная модерация.";
   } catch(e) {
     if(e instanceof ScanReject) {
       stage="blocked"; note=e.message.slice(0,160);
