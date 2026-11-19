@@ -64,6 +64,7 @@ from ui.camouflages_page import CamouflagesPage
 from ui.sounds_page import SoundsPage
 from ui.settings_page import SettingsPage
 from ui.online_page import OnlinePage
+from src.update_checker import VERSION as APP_VERSION
 
 from src.settings_store import (
     load_settings,
@@ -802,7 +803,7 @@ class ManagerWindow(QMainWindow):
         # ==================================
 
         self.setWindowTitle(
-            "WT Mod Manager 1.3.6"
+            "WT Mod Manager " + APP_VERSION
         )
 
         self.setWindowIcon(application_logo_icon())
@@ -949,7 +950,7 @@ class ManagerWindow(QMainWindow):
         self.logo.setWordWrap(True)
 
         self.version = QLabel(
-            "VERSION BETA 1.3.6"
+            "VERSION " + APP_VERSION.upper()
         )
 
         self.version.setObjectName(

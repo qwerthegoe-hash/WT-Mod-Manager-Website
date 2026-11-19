@@ -11,6 +11,7 @@ on:
       - "installer/**"
       - "tools/build_windows_exe.py"
       - "tools/build_installer_assets.py"
+      - "tools/sign_windows_release.ps1"
       - "requirements-build.txt"
       - ".github/workflows/build-windows-exe.yml"
   push:
@@ -23,6 +24,7 @@ on:
       - "installer/**"
       - "tools/build_windows_exe.py"
       - "tools/build_installer_assets.py"
+      - "tools/sign_windows_release.ps1"
       - "requirements-build.txt"
       - ".github/workflows/build-windows-exe.yml"
 
@@ -35,7 +37,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 55
     env:
-      WTMM_VERSION: 1.3.0-beta.7
+      WTMM_VERSION: 1.3.0-beta.8
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -60,6 +62,25 @@ jobs:
           python -m compileall -q src ui tools tests
           python -c "import src.main; import ui.main_window; print('Python and Qt imports OK')"
 
+      - name: Test new Downloads UI and non-network mod security checks
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p "test_mod_security.py" -v
+          python -m unittest discover -s tests -p "test_gui_smoke.py" -v
+
+      - name: Validate optional signing script syntax (no secrets)
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $path = (Resolve-Path 'tools/sign_windows_release.ps1').Path
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List | Out-String | Write-Output
+            throw "Invalid signing script syntax"
+          }
+
       - name: Compile official Windows taskbar helper
         shell: pwsh
         run: |
@@ -71,8 +92,24 @@ jobs:
           if (-not (Test-Path $dll)) { throw "Native TaskbarManager DLL missing" }
           Copy-Item $dll build/wtmm_taskbar.dll -Force
 
+      - name: Sign taskbar DLL before EXE packaging (trusted main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
+          WTMM_SIGN_PFX_PASSWORD: ${{ secrets.WTMM_SIGN_PFX_PASSWORD }}
+        run: .\tools\sign_windows_release.ps1 -Stage native
+
       - name: Build portable and installed application
         run: python tools/build_windows_exe.py
+
+      - name: Sign desktop EXEs when owner cert is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
+          WTMM_SIGN_PFX_PASSWORD: ${{ secrets.WTMM_SIGN_PFX_PASSWORD }}
+        run: .\tools\sign_windows_release.ps1 -Stage payload
 
       - name: Generate branded wizard art from official logo
         run: python tools/build_installer_assets.py
@@ -98,6 +135,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed" }
           if (-not (Test-Path "dist\WTModManager-Setup.exe")) { throw "Setup EXE missing" }
           if ((Get-Item "dist\WTModManager-Setup.exe").Length -lt 1048576) { throw "Installer unexpectedly small" }
+
+      - name: Sign installer when owner cert is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          WTMM_SIGN_PFX_BASE64: ${{ secrets.WTMM_SIGN_PFX_BASE64 }}
+          WTMM_SIGN_PFX_PASSWORD: ${{ secrets.WTMM_SIGN_PFX_PASSWORD }}
+        run: .\tools\sign_windows_release.ps1 -Stage installer
 
       - name: Windows smoke test install, run and uninstall
         shell: pwsh
@@ -170,6 +215,11 @@ jobs:
           Personal settings and mods remain in %LOCALAPPDATA%\WTModManager.
           Legacy users may still download portable WTModManager.exe.
           Installed users get verified setup updates in later versions.
+          Beta 8: compact Downloads UI; safer ZIP checks; opt-in VirusTotal
+          hash lookup using a personal, Windows-DPAPI-protected key.
+          No files are uploaded to VirusTotal. Free API has limits.
+          Authenticode is used only if the publisher has configured a real
+          signing certificate, otherwise the build is explicitly unsigned.
           This is a TEST BETA; verify it before replacing the public download.
           Independent fan project, not affiliated with Gaijin Entertainment.
           '@ | Set-Content release-notes.md -Encoding utf8
