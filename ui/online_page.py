@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 from src.desktop_sync import DesktopSync, imported_library, restore_previous_mod, PackageError, UUID
 from src.update_notifications import load_notifications, mark_all_read
-from src.diagnostics import inspect_local, format_report
+from src.diagnostics import inspect_local, format_report, repair_safe_folders
 from src.update_checker import VERSION, is_installed_app, update_channel, set_update_channel
 from src.portable_updater import previous_exe_available
 from ui.security_panel import SecurityPanel
@@ -311,6 +311,9 @@ class OnlinePage(QWidget):
         self.diagnostic_copy = QPushButton("Копировать результат")
         self.diagnostic_copy.clicked.connect(self.copy_diagnostics)
         diagnostic_actions.addWidget(self.diagnostic_copy)
+        self.diagnostic_repair = QPushButton("Исправить безопасные проблемы")
+        self.diagnostic_repair.clicked.connect(self.repair_diagnostic_folders)
+        diagnostic_actions.addWidget(self.diagnostic_repair)
         diagnostic_layout.addLayout(diagnostic_actions)
         self.trust_panel = TrustPanel()
         diagnostic_layout.addWidget(self.trust_panel)
@@ -448,6 +451,27 @@ class OnlinePage(QWidget):
                       "Скопируй код D000 для технической поддержки.")
         self.diagnostic_output.setPlainText(result + "\n" +
                                             latest_report_summary())
+
+    def repair_diagnostic_folders(self):
+        choice = QMessageBox.question(
+            self, "WT Diagnostics Pro",
+            "Создать только отсутствующие папки локальной библиотеки? "
+            "Программа не изменит игру, настройки и существующие файлы.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if choice != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            created = repair_safe_folders()
+            self.run_diagnostics()
+            QMessageBox.information(
+                self, "WT Diagnostics Pro",
+                "Создано новых папок: " + str(len(created)) +
+                ". Другие файлы не изменялись."
+            )
+        except OSError as error:
+            QMessageBox.warning(self, "WT Diagnostics Pro", str(error))
 
     def copy_diagnostics(self):
         result = self.diagnostic_output.toPlainText()
