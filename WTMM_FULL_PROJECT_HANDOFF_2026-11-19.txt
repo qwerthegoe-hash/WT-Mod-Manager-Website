@@ -164,6 +164,16 @@ E5. Личные пользовательские данные и моды со�
 ================================================================================
 03. ПРОВЕРЕННЫЙ РЕЛИЗ / ИСТОРИЯ И КАК ПРОВЕРИТЬ
 ================================================================================
+ТЕКУЩИЙ ОПУБЛИКОВАННЫЙ: v1.3.0-beta.13 (2026-11-19 14:29 UTC).
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.13
+Исходный commit и tag: a122abf4f6649e4598c5fa865861aaa53a4c1cc5
+Windows CI: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44543556869
+Есть пять ассетов: setup, portable, SHA256SUMS.txt, build-info.json, sbom.cdx.json.
+Актуальные хеши Beta 13 брать ТОЛЬКО из её SHA256SUMS.txt, не из
+исторических значений Beta 12 ниже. Наличие отчёта о происхождении
+не является заменой Authenticode и ручного Windows/AV теста.
+
+АРХИВНЫЙ ПРОВЕРЕННЫЙ РЕЛИЗ Beta 12 (хеши ТОЛЬКО для этого тега):
 Tag: v1.3.0-beta.12
 Released: 2026-11-19
 CI успешен: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
@@ -185,14 +195,14 @@ PowerShell на Windows:
 GitHub CLI:
   gh attestation verify .\WTModManager-Setup.exe --repo qwerthegoe-hash/WT-Mod-Manager-Website
 
-IMPORTANT: GitHub Release сообщает оба EXE UNSIGNED, пока нет настоящего сертификата издателя. SmartScreen может предупреждать. Не внедрять обходы, исключения Defender, подмену подписи, чужие сертификаты или скрытое закрепление на панели задач.
+IMPORTANT: Исторический GitHub Release Beta 12 сообщает оба EXE UNSIGNED, пока нет настоящего сертификата издателя. SmartScreen может предупреждать. Не внедрять обходы, исключения Defender, подмену подписи, чужие сертификаты или скрытое закрепление на панели задач.
 
 Публикация следующей Beta: повысить VERSION в src/update_checker.py, MyAppVersion и VersionInfoVersion в installer/WTModManager.iss, WTMM_VERSION в обоих jobs workflow, release-notes.txt и тест test_release_integrity.py. Создать PR, проверить Windows install/smoke и website tests. Публикация через CI main после успешного PR/merge; не перезаписывать прошлый tag/файлы.
 
 ================================================================================
 04. СТАТУСЫ: ЧТО ПОДТВЕРЖДЕНО, ЧТО НЕ ОБЕЩАТЬ
 ================================================================================
-ПОДТВЕРЖДЕНО НА 2026-11-19:
+ИСТОРИЧЕСКИЙ СРЕЗ BETA 12 НА 2026-11-19 (см. обновление Beta 13 выше):
   [+] GitHub Release Beta 12 доступен с 5 ассетами и проверяемым commit.
   [+] CI Windows build/install/run/uninstall зелёный для Beta 12.
   [+] CI Python trust/recovery/UI/installer/release integrity/sbom тесты зелёные.
@@ -1313,7 +1323,11 @@ FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
 ================================================================================
 Исходная основа: main a122abf4f6649e4598c5fa865861aaa53a4c1cc5 / v1.3.0-beta.13.
 Рабочая ветка: fix/settings-backup-atomic-migration-20261119.
+Pull Request: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/pull/56
 Статус: код предложен на ревью; НЕ установлен в опубликованные EXE Beta 13.
+CI: новые settings recovery тесты завершились успешно в Windows job PR #56
+(первая проверка), Website security/handoff тоже успешно; полный Windows
+installer CI/повторные запуски проверять по текущему HEAD перед merge.
 Изменения:
 - src/settings_store.py: перед заменой валидного settings.json создаётся атомарная
   резервная копия settings.json.bak с предыдущими значениями. При сбое чтения
