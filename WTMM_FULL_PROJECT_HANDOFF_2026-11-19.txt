@@ -1,0 +1,1318 @@
+WT MOD MANAGER — ПОЛНОЕ ТЕХНИЧЕСКОЕ ДОСЬЕ И ПЕРЕДАЧА КОНТЕКСТА ДРУГОМУ ЧАТУ
+================================================================================
+Срез состояния: 19 ноября 2026 (Europe/Kyiv).
+Основной проект: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website
+Основная ветка: main
+Проверенный релиз: v1.3.0-beta.12
+Релиз: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/releases/tag/v1.3.0-beta.12
+Commit выпущенной версии: 95a38e292b4e1e70c37bdef9a7dd16c28a58b486
+GitHub Actions выпуска: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
+Сайт: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/
+Trust Center: https://qwerthegoe-hash.github.io/WT-Mod-Manager-Website/trust.html
+GitHub Pages: исходники лежат в docs/, не путать с Python desktop.
+Файл-досье: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt (корень репозитория).
+
+ВНИМАНИЕ: это документ-«снимок», а не автоматический синхронизатор будущих изменений. Перед любыми новыми изменениями проверить актуальную ветку и последнюю версию. Здесь различаются ПОДТВЕРЖДЕНО, РЕАЛИЗОВАНО, ОПЦИОНАЛЬНО/НЕ НАСТРОЕНО и ТРЕБУЕТ ПРОВЕРКИ. Не приписывать проекту то, чего CI или живой сервер не доказывают.
+
+================================================================================
+00. БЫСТРАЯ ПЕРЕДАЧА НОВОМУ ЧАТУ — ПРОЧИТАЙ В ПЕРВУЮ ОЧЕРЕДЬ
+================================================================================
+Пользователь разрабатывает WT Mod Manager для Windows: Python 3.12, PySide6, PyInstaller --onefile, установщик Inno Setup. Есть сопутствующий сайт GitHub Pages (docs/) и Supabase backend для аккаунтов, медиа, модов и ZIP-сканирования. Цель — стабильная, проверяемая, безопасная программа и красивый интерфейс без удаления существующих функций. Код живёт в GitHub, не нужно присылать вручную ZIP, когда доступен GitHub connector.
+
+Главное пожелание: перед каждым изменением читать АКТУАЛЬНЫЕ файлы проекта; менять точечно, не сокращать UI и не удалять функции; работать через новую ветку + PR + CI; проверять безопасность секретов; выпускать версию только после успешной Windows-сборки. Все релизные номера согласовывать между src/update_checker.py, installer/WTModManager.iss, installer/release-notes.txt и .github/workflows/build-windows-exe.yml, а также тестами.
+
+Последнее проверенное: Beta 12 в GitHub Releases, 5 ассетов (portable, setup, SHA256SUMS, build-info, sbom). CI Windows установка/запуск/удаление, тесты восстановления и trust, SBOM, Sigstore-проверка — зелёные. В последующем документальном улучшении удалены только кэш-файлы *.pyc из Git (исходники сохранены). Это НЕ новый desktop релиз: версия остаётся beta.12.
+
+КРИТИЧНО: текущий публичный релиз помечен UNSIGNED. Sigstore attestation != Authenticode, SHA-256 != цифровая подпись, код проекта не может легально «заставить» Windows доверять новой программе. Нет гарантии убрать SmartScreen без настоящего доверенного сертификата и репутации издателя.
+
+Моды: Supabase Edge wtmm-mod-scan работает с 1 ZIP за выполнение и приватной очередью, защищённой Vault token. Сканирует структуру и CRC, ограничивает ZIP-бомбы, сомнительное ведёт на manual review. Кэш SHA структурной проверки на 30 дней не означает AV clean. Автоматически одобрять не следует. Отдельный ClamAV/GitHub Actions pipeline требует индивидуальной активации и секретов.
+
+Не встраивать ни VirusTotal private API key, ни service_role, ни GitHub signing PFX в клиентский JS/EXE/репозиторий. VT запросы — через server Edge function или локально в DPAPI (личный ключ); если ранее опубликованный ключ раскрывался в чате — считать раскрытым и перевыпустить на стороне провайдера.
+
+================================================================================
+01. АРХИТЕКТУРА В ОДНОЙ СХЕМЕ
+================================================================================
+Windows user
+  -> src/main.py (QApplication, трей, WTManagerApp, Recovery)
+      -> ui/main_window.py (ManagerWindow, навигация)
+          -> ui/sights_page.py, ui/sounds_page.py, ui/media_page.py
+          -> ui/settings_page.py -> src/settings_store.py
+          -> ui/online_page.py -> ui/update_ui.py
+              -> src/update_checker.py (GitHub Releases, хеши, channel)
+              -> src/portable_updater.py ИЛИ src/installed_updater.py
+              -> ui/trust_panel.py -> src/trust_center.py
+              -> ui/security_panel.py -> src/mod_security.py / src/vt_backend.py
+              -> src/desktop_sync.py -> Supabase Edge desktop bridge
+              -> src/diagnostics.py / src/crash_recovery.py
+          -> ui/game_install_ui.py -> src/game_mod_installer.py
+      -> src/profile_paths.py -> %LOCALAPPDATA%/WTModManager (пользовательские данные)
+
+Website (https GitHub Pages)
+  docs/index.html -> docs/app.js, styles.css, home-refresh.css
+  docs/trust.html -> docs/js/trust-center.js -> public GitHub Releases API
+  docs/updates.html -> docs/js/updates-center.mjs -> GitHub Releases + user notifications
+  docs/mods/mods.html -> docs/mods/mods.js -> Supabase Storage / moderation
+  docs/community/... -> Community 2.0 JS -> Supabase Auth/DB
+  docs/profile/... -> profile JavaScript / MFA UI / Supabase
+  docs/support/... & docs/contact/... -> support endpoints
+
+Server
+  Supabase Auth / Postgres RLS / private.wtmm_mod_scan_queue
+  pg_cron -> Supabase Edge wtmm-mod-scan/index.ts
+    -> server-only wtmm_scan_claim() -> private ZIP Storage download
+    -> SHA cache (private.wtmm_scan_cache, same scan engine version)
+    -> zip.ts (ZIP structure/CRC/rules) -> wtmm_scan_finish()
+    -> status checked/review/blocked/error -> manual moderator approval
+  Supabase Edge wtmm-vt-lookup/index.ts -> VirusTotal hash API via server secret
+  Supabase Edge wtmm-desktop-bridge/index.ts -> paired desktop device
+
+CI / Publishing
+  pull_request -> website-checks, desktop-sync-tests, dependency-health,
+                  build-windows-exe Windows smoke
+  main commit -> build-windows-exe:
+    Python 3.12 pinned deps -> unit/UI/installer tests -> PyInstaller
+    -> Inno Setup -> Windows install/run/uninstall smoke -> Authenticode status
+    -> SHA256SUMS.txt + build-info.json + CycloneDX sbom.cdx.json
+    -> GitHub actions/attest Sigstore -> gh attestation verify
+    -> upload artifacts -> separate privileged publish job
+    -> re-verify hashes/attestation -> GitHub Release (immutable by tag)
+  release event -> release-checksums.yml (только чтение, без --clobber)
+
+================================================================================
+02. ИСТОРИЯ И ЗАДАЧИ ПО СИСТЕМАМ — ЧТО СДЕЛАНО
+================================================================================
+A. РАННИЕ БЕТЫ И UI
+A1. Централизованный UI на PySide6. Главное окно, трей, автоматическое распознавание запуска War Thunder, меню и переходы. Ответственность: src/main.py, ui/main_window.py.
+A2. Персонализация: темы Dark/Light/System, акцент, шрифты, плавность, набор сохранённых пресетов, пользовательские цвета. Ответственность: ui/settings_page.py, ui/theme_engine.py, ui/appearance.py, ui/personalization_panels.py, src/settings_store.py.
+A3. Иконки в assets/icons/Black и assets/icons/White; логотип assets/icons/Logotip/LogotipProject.png; выбирать корректные ресурсы для текущей темы. Ответственность: ui/icon_assets.py.
+A4. Моды прицелов, звуков, камуфляжей, локальный просмотр/плейер и WAV waveform. Ответственность: ui/sights_page.py, ui/sounds_page.py, ui/media_page.py, ui/audio_waveform.py, src/audio_analysis.py.
+A5. Импорт в War Thunder только при подтверждении и проверке допустимых путей, когда игра закрыта; резервная копия и возможность ручного rollback. Ответственность: src/game_mod_installer.py и ui/game_install_ui.py.
+A6. Локальные настройки и моды отдельно для каждого пользователя Windows: %LOCALAPPDATA%/WTModManager; не писать в Program Files. Ответственность: src/profile_paths.py, src/settings_store.py.
+A7. В Windows установленная версия и portable отличаются файлом installer/wtmm.installed и механизмом is_installed_app(); не путать пути двух режимов.
+
+B. УСТАНОВЩИК И ОБНОВЛЕНИЯ (исторические Beta 9-10, последующий Beta 11)
+B1. Единый PyInstaller --onefile EXE; основные ресурсы входят в EXE, старую папку _internal при upgrade можно убрать контролируемо. Ответственность: tools/build_windows_exe.py, installer/WTModManager.iss.
+B2. Inno Setup с брендированными иллюстрациями, совместимостью upgrade, ярлыками, импортом portable, режимом расширенной установки, выбором Stable/Beta; удаление по умолчанию сохраняет пользовательские моды и настройки. Ответственность: installer/WTModManager.iss, tools/build_installer_assets.py.
+B3. Скруглённое изображение мастера готовится как asset без некрасивых прозрачных чёрных углов: исходник — assets/icons/Logotip/LogotipProject.png, генератор tools/build_installer_assets.py; реальный результат проверять визуально на Windows.
+B4. Закрепление на панели задач не делается скрытым Explorer hack из установщика. На поддерживаемых Windows официальный запрос из запущенного приложения с участием пользователя; при недоступности — инструкция. Ответственность: src/taskbar_pin.py, tools/taskbar/taskbar_pin.cpp, src/main.py, installer/WTModManager.iss.
+B5. Проверка релиза через официальный GitHub API и digest SHA-256, лимит размера, HTTPs, контроль редиректов, проверка MZ, ограниченное скачивание и запуск только после согласия. Ответственность: src/update_checker.py, ui/update_ui.py.
+B6. Portable обновление: отдельный updater-процесс дожидается завершения старого EXE, копирует backup, проверяет SHA-256, атомарно заменяет. Ручной rollback после повторной проверки backup. Ответственность: src/portable_updater.py.
+B7. Installed обновление: проверенный WTModManager-Setup.exe запускает обычный Inno Setup мастер; не пытаться самовольно переписать установленный EXE. Ответственность: src/installed_updater.py.
+B8. Автоматическая проверка наличия обновлений — каждые 10 минут при включённой опции; сама установка не происходит без согласия. Локальные уведомления сохраняются отдельно. Ответственность: ui/update_ui.py, src/update_notifications.py.
+B9. Согласование версии по всем файлам и запрет повреждённого релиза. В .github/workflows/build-windows-exe.yml сборка и публикация разделены на два job; публикация разрешена из main после всех проверок.
+B10. Сертификат: tools/sign_windows_release.ps1 применяет Authenticode при наличии доверенного PFX и GitHub Secrets. Если сертификата нет — публикуемый EXE честно unsigned. Не смешивать название релиза 'Verified' с наличием сертификата.
+B11. Созданы SHA256SUMS.txt, build-info.json (SHA, commit, version, workflow URL, signed flag), проверка их целостности tools/release_integrity.py; отдельно GitHub attestation/Sigstore подтверждает происхождение.
+B12. Workflow .github/workflows/release-checksums.yml больше НЕ перезаписывает SHA256SUMS после публикации: только скачивает, проверяет sha256sum --check. Это снижает риск поменять историю хешей.
+B13. Дополнительная упаковка UPX отключена; делать прозрачно проверяемые бинарные файлы, а не пытаться скрывать сигнатуры от антивирусов.
+
+C. BETA 12 — НАДЁЖНОСТЬ И TRUST
+C1. src/crash_recovery.py создаёт marker текущего сеанса, замечает unexpected shutdown и локально хранит до 8 санитизированных отчётов. Тип ошибки, имя функции и номер строки; исключены exception messages, локальные пути и токены.
+C2. src/main.py вызывает start_session(), встраивает sys/thread exception hooks, при нормальном выходе отмечает clean_exit; после неожиданного выхода показывает предложение диагностики, особенно после --updated.
+C3. ui/trust_panel.py показывает отдельный WT Trust Center; SHA-256 и PowerShell Get-AuthenticodeSignature идут через src/trust_center.py в background thread, не грузят GUI.
+C4. В UI есть ручное копирование очищенного crash report; отчёт никуда не отправляется автоматически.
+C5. src/update_checker.py проверяет свободное место под скачивание + резервный запас и отсутствие symlink для updates cache; нехватка места останавливает скачивание, не удаляя моды.
+C6. ui/online_page.py позволяет выбрать Stable или Beta после установки. Канал хранится в пользовательском update-channel.json; Stable не означает автоматического выпуска Beta как Stable.
+C7. docs/trust.html + docs/js/trust-center.js показывают релизы с публичными Github digest, ссылками на checksum и build-info; подтверждение Authenticode локально, а не «галочка по названию файла».
+C8. tools/build_sbom.py создаёт sbom.cdx.json (CycloneDX, Python dependencies, не список всех нативных компонентов); публикуется вместе с остальными 4 ассетами, проверяется в CI.
+C9. .github/dependabot.yml — автоматические предложения обновления pinned Python deps/GitHub Actions; .github/workflows/dependency-health.yml — еженедельный pip-audit. Не применять Dependabot PR без CI и ревью.
+C10. Версия Beta 12 прошла Windows CI тесты установки/удаления, файловой подписи/метаданных, SBOM, SHA/Sigstore и опубликована. Пример ссылки выше.
+
+D. СЕРВЕРНЫЙ СКАНЕР ZIP-МОДОВ
+D1. Пользователь загружает ZIP через docs/mods/mods.js в закрытый Supabase Storage; серверная запись попадает в private.wtmm_mod_scan_queue.
+D2. Cron wtmm-mod-scan-serial вызывает Edge worker с приватным токеном Vault (не в браузере). PostgreSQL advisory lock + atomic claim предотвращают параллельную выдачу нескольких заданий.
+D3. Один запуск worker обрабатывает один ZIP. При 5 заявках они идут последовательно. Статусы queued / scanning / checked / review / blocked / error.
+D4. zip.ts проверяет структуру центрального каталога/локальные заголовки/CRC, опасные пути, symlink, лимиты распаковки и расширений, вложенные ZIP и исполняемые сигнатуры. По документации: 20 MiB ZIP, максимум 250 элементов, 80 MiB декомпрессии.
+D5. Ложные срабатывания: неизвестные безобидные расширения, короткие 'MZ' или '#!' не приравниваются автоматически к вирусам. При неоднозначности stage=review, после полной CRC проверки. Реальный Windows PE-header или запрещённый executable блокируется.
+D6. Нельзя публиковать без ручного решения администратора. Для review нужен администратор с MFA и дополнительным подтверждением; scan_status blocked блокирует публикацию.
+D7. private.wtmm_scan_cache на 30 дней хранит только SHA-256+scanner engine version и структурные verdict checked/review, не VirusTotal clean. При изменении правил обязательно менять SCANNER_VERSION.
+D8. private очередь имеет server-only priority (0..2) с бонусом возраста, не позволяя свежим приоритетным заданиям вечно обгонять старые.
+D9. Временные ошибки повторяются с backoff и максимум 3 попытками; живой Edge server отвечает 200/processed:0/reason:idle на пустую очередь.
+D10. docs/mods/mods.js показывает файловое количество, статус CRC/структуры и отдельно антивирусные ограничения; структурная проверка НЕ гарантирует отсутствия вредоноса.
+D11. Отдельный workflow ClamAV / scan-mod-packages.yml — опциональный, требуются secrets и запуск. Не выдавать наличие кода за работающее постоянное антивирусное сканирование.
+D12. VirusTotal интеграция — lookup ПО ХЕШУ через сервер/DPAPI; не все detection являются true positive. Не отправлять файлы на публичные сторонние сервисы без согласия. Не встроить раскрытый API key в JS/EXE.
+
+E. САЙТ / СООБЩЕСТВО / АККАУНТЫ
+E1. GitHub Pages docs/ публикует сайт, страница загрузки связывается с GitHub Releases.
+E2. Account, profile, community, support, contact и mod catalogue реализованы через JS frontend + Supabase auth/database/Edge. Обычный пользователь не получает admin rights из localStorage/client claims.
+E3. RLS, rate limits, MFA authorization, Guardian модерация оформлены SQL файлами docs/database/. Применение каждого файла в repo НЕ означает что он автоматически запущен на сервере.
+E4. Windows desktop связка: Supabase Edge desktop bridge + токен пары под Windows DPAPI, не повторное использование веб-токена.
+E5. Личные пользовательские данные и моды сохраняются вне установленного EXE. Нельзя публиковать серверные секреты в docs/js/community-config.js; там может быть только publishable key.
+
+================================================================================
+03. ТЕКУЩИЙ ПРОВЕРЕННЫЙ РЕЛИЗ И КАК ПРОВЕРИТЬ
+================================================================================
+Tag: v1.3.0-beta.12
+Released: 2026-11-19
+CI успешен: https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website/actions/runs/44530605062
+Исходный commit: 95a38e292b4e1e70c37bdef9a7dd16c28a58b486
+Ассеты (ИМЕНА ПРОВЕРЕНЫ В GITHUB):
+  WTModManager-Setup.exe   — установщик Windows Inno Setup
+  WTModManager.exe         — portable onefile Windows EXE
+  SHA256SUMS.txt           — SHA-256 контрольные суммы установщика и portable
+  build-info.json          — commit, version, подпись, hashes, build source
+  sbom.cdx.json            — CycloneDX Python package inventory
+
+SHA-256 из публичного GitHub Releases:
+  WTModManager-Setup.exe = 31d978e467e95b09ecabdba4015912fd8b0c0de46e0ffffa1c1d7d5d34ff9c0b
+  WTModManager.exe       = e46b8699608a64cd6a970cc0fc6c9b5ca963a18114d06ca1722d9f28e9dbc220
+
+PowerShell на Windows:
+  Get-FileHash .\WTModManager-Setup.exe -Algorithm SHA256
+  Get-AuthenticodeSignature .\WTModManager-Setup.exe | Format-List Status,SignerCertificate
+GitHub CLI:
+  gh attestation verify .\WTModManager-Setup.exe --repo qwerthegoe-hash/WT-Mod-Manager-Website
+
+IMPORTANT: GitHub Release сообщает оба EXE UNSIGNED, пока нет настоящего сертификата издателя. SmartScreen может предупреждать. Не внедрять обходы, исключения Defender, подмену подписи, чужие сертификаты или скрытое закрепление на панели задач.
+
+Публикация следующей Beta: повысить VERSION в src/update_checker.py, MyAppVersion и VersionInfoVersion в installer/WTModManager.iss, WTMM_VERSION в обоих jobs workflow, release-notes.txt и тест test_release_integrity.py. Создать PR, проверить Windows install/smoke и website tests. Публикация через CI main после успешного PR/merge; не перезаписывать прошлый tag/файлы.
+
+================================================================================
+04. СТАТУСЫ: ЧТО ПОДТВЕРЖДЕНО, ЧТО НЕ ОБЕЩАТЬ
+================================================================================
+ПОДТВЕРЖДЕНО НА 2026-11-19:
+  [+] GitHub Release Beta 12 доступен с 5 ассетами и проверяемым commit.
+  [+] CI Windows build/install/run/uninstall зелёный для Beta 12.
+  [+] CI Python trust/recovery/UI/installer/release integrity/sbom тесты зелёные.
+  [+] GitHub Sigstore attestation создана и проверена в workflow main.
+  [+] GitHub Pages сайт и Trust Center развернуты.
+  [+] Supabase Edge wtmm-mod-scan задеплоен; Cron работает, пустая очередь HTTP 200 idle.
+  [+] Проверка server RPC private cache: anon false, authenticated write false, service_role true.
+  [+] Weekly pip-audit выполнялся и проходил для закреплённых зависимостей.
+
+НАСТРОЙКА/РУЧНАЯ ПРОВЕРКА НУЖНЫ:
+  [ ] Реальный издательский Authenticode certificate (OV/соответствующая программа подписи).
+  [ ] Действительное устранение SmartScreen предупреждений: нельзя обещать мгновенно.
+  [ ] Полный end-to-end тест настоящей новой пользовательской ZIP-загрузки/модерации.
+  [ ] Проверить, активирован ли опциональный ClamAV workflow, его secrets и approvals gate.
+  [ ] Ручной UX тест UI на малом дисплее Windows, нескольких DPI и светлой/тёмной теме.
+  [ ] Полный rollback сценарий повреждённого exe на тестовой машине, не только unit tests.
+  [ ] Проверить резервные копии БД, процедуру восстановления, Vault, токены и мониторинг.
+  [ ] Настроить и протестировать Windows publisher certificate и timestamping.
+  [ ] Проверить текущий статус Supabase Auth leaked password protection.
+  [ ] При входе новых участников повторно аудировать RLS/политики по живой БД.
+  [ ] Оценить жизнеспособность подписи через Microsoft Store/MSIX отдельно, это иной формат распространения.
+
+ИСТОРИЧЕСКИЕ ДОКУМЕНТЫ могут противоречить новому статусу:
+  docs/md/FINAL_RELEASE_CHECKLIST.md создавался раньше Beta 12;
+  docs/WTMM_MOD_SCANNER.md создавался до SHA-кэша и priority миграции.
+Нужно сверять фактическое состояние сервера с текущими SQL/RPC и GitHub Actions, а не копировать старую фразу «не развёрнуто».
+
+РИСКИ И ГРАНИЦЫ:
+  SHA-256 доказывает идентичность с опубликованным значением, но не безвредность.
+  Sigstore attestation доказывает origin сборки, но не Authenticode и не «чистоту».
+  Один антивирусный детект не абсолютный приговор, ноль детектов не гарантия.
+  Встроить приватный ключ VT в публичный EXE/JS нельзя; раскрытый ключ нужно заменить.
+  Безопаснее остановить сомнительный релиз и расследовать, чем оптимизировать «чтобы не ругалась Windows».
+  Политики Windows Taskbar Pin API нельзя обходить скрытым Explorer вмешательством.
+
+================================================================================
+05. ПОШАГОВЫЙ ПРОЦЕСС РАБОТЫ ДРУГОГО ЧАТА
+================================================================================
+01. Открыть именно https://github.com/qwerthegoe-hash/WT-Mod-Manager-Website через подключённый GitHub инструмент.
+02. Прочитать README.md и этот файл WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt.
+03. Считать из main реальную текущую git tree и последнюю GitHub Release. Версия в этом TXT — только снимок от 2026-11-19.
+04. Определить затрагиваемую систему (Windows app, сайт, сервер, CI) и прочитать исходники И тесты по ней.
+05. Если нужная часть уже реализована, улучшать её, а не создавать дубликаты; учитывать совместимость и старые данные.
+06. Создать новую ветку от актуального main, не менять историю прошлых релизов.
+07. Для изменений в Supabase читать текущий SQL + реальную схему/права, использовать новую additive migration; не удалять пользовательские данные.
+08. Для Edge scanner обязательно SQL migration прежде новой Edge функции. Новые правила ZIP -> новая SCANNER_VERSION, а кеш не должен стать «AV clean».
+09. Никогда не выводить в чат ключи service_role, VirusTotal, signing PFX, DB credentials или полный приватный .env.
+10. При изменениях Windows EXE включать unit/UI tests, compileall, installer smoke на GitHub Actions.
+11. При веб-изменениях проверять CSP, JS, ссылки, переводы, мобильный layout, RLS, MFA, bundle-тесты tools/check-site.mjs.
+12. Не считать один зелёный workflow доказательством реальной usability: отдельно GUI ручные и end-to-end тесты.
+13. Сначала PR, дождаться проверок, только затем merge с ожидаемым HEAD sha.
+14. Релиз в GitHub Releases автоматически только из main; опубликовать новую версию, не заменять существующий tag.
+15. После изменений обновить ЭТОТ TXT: версии, разделы, реальное состояние, конкретные созданные/изменённые файлы, тесты, ограничения и TODO.
+16. Финальный ответ пользователю: факты «изменено в коде», «задеплоено», «CI проверено», «выпущено в Releases» строго раздельно. Дать ссылки на PR, release и сайт.
+
+КОМАНДЫ ЛОКАЛЬНОЙ ПРОВЕРКИ В КОРНЕ РЕПО:
+  python -m compileall -q src ui tools tests
+  python -m unittest discover -s tests -p 'test_recovery_and_trust.py' -v
+  python -m unittest discover -s tests -p 'test_release_integrity.py' -v
+  python -m unittest discover -s tests -p 'test_build_sbom.py' -v
+  python -m unittest discover -s tests -p 'test_desktop_sync.py' -v
+  python -m unittest discover -s tests -p 'test_portable_updates.py' -v
+  node tools/check-site.mjs
+  deno test supabase/functions/wtmm-mod-scan/zip_test.ts
+  deno check supabase/functions/wtmm-mod-scan/index.ts
+
+ЗАВИСИМОСТИ для Windows desktop закреплены в requirements-build.txt.
+Не использовать Python 3.15 бинарные __pycache__ из истории Git — Python cache не является исходником. CI build использует Python 3.12.
+
+================================================================================
+06. КОНКРЕТНЫЕ СХЕМЫ ДАННЫХ, ФАЙЛЫ ПОЛЬЗОВАТЕЛЕЙ И ГРАНИЦЫ
+================================================================================
+Windows пользователь:
+  %LOCALAPPDATA%\WTModManager\settings.json — настройки/пресеты
+  %LOCALAPPDATA%\WTModManager\mods\ — пользовательская библиотека
+  %LOCALAPPDATA%\WTModManager\updates\ — скачанные проверенные EXE, backup, checksum, status
+  %LOCALAPPDATA%\WTModManager\update-channel.json — stable/beta
+  %LOCALAPPDATA%\WTModManager\recovery\session.json — маркер запуска
+  %LOCALAPPDATA%\WTModManager\recovery\crashes\crash-*.json — очищенные отчёты
+  %LOCALAPPDATA%\WTModManager\accounts\... — изолированная библиотека привязанных аккаунтов
+  DPAPI защищает device pairing token в Windows user context; не копировать токены в публичную папку.
+
+Supabase database (основные актуальные имена):
+  public.wtmm_mods — каталог модов, triage_status, triage_note, scan_status и т.п.
+  private.wtmm_mod_scan_queue — atomically claimed задания одного worker.
+  private.wtmm_scan_cache — SHA-256 / engine-version / checked или review / timestamp.
+  wtmm_scan_claim(), wtmm_scan_finish() — service-role RPC для очереди.
+  wtmm_scan_cache_get(), wtmm_scan_cache_put() — service-role only RPC.
+  cron.job 'wtmm-mod-scan-serial' — вызов Edge раз в минуту.
+  Edge wtmm-mod-scan -> POST, x-wtmm-internal-token (секрет только в Supabase Vault).
+  Edge wtmm-vt-lookup -> SHA/VT безопасный серверный gateway.
+
+Не изменять статус approval напрямую из клиента в обход RLS / server guards.
+Не доверять user_metadata JWT для прав администратора. Отдельные SQL
+скрипты под docs/database/ могут быть историческими миграциями, не «накатить все
+по алфавиту» без изучения зависимостей и сверки текущей схемы. Для секретов
+использовать server-side secrets manager, а не docs/assets/config.
+
+================================================================================
+07. ПРИОРИТЕТЫ СЛЕДУЮЩИХ РАБОТ (ЧЕСТНЫЙ BACKLOG)
+================================================================================
+P0. Подлинная подпись Windows EXE — юридическая/провайдерская проверка владельца издателя, сертификат, HSM/SignPath/Microsoft Store в зависимости от доступности. Без реального издателя не обещать решение SmartScreen.
+P0. End-to-end стенд сканера ZIP: тестовый benign мод, manual review, известный заблокированный формат, инфраструктурная ошибка, cron retry; без загрузки персональных модов.
+P0. Аудит приватных ключей и журналов: ранее опубликованный VT ключ считать скомпрометированным; заменить и хранить только server-side, проверить отсутствие следов в GitHub/Logs.
+P1. Улучшить установленную Inno Setup recovery: осмысленный Repair, локальная резервная копия установленной версии, safe rollback с согласия и проверкой доступности backup; не ломать uninstall metadata.
+P1. Проверить UI на 125/150/200% DPI и узких экранах; скроллинг без наложений; сделать screenshot-based regression по доступной инфраструктуре.
+P1. Провести живой тест POST Edge ZIP scanner с различными допустимыми test fixtures (не на production пользовательских файлах), проверить cache hit/miss, переинициализацию по SCANNER_VERSION.
+P1. Проверить резервное копирование пользовательских настроек перед миграциями, восстановление после частичной записи.
+P1. Экран подробной истории обновлений/последнего rollback в приложении без слежки и логирования PII.
+P2. Подключить более глубокую проверку зависимостей: Python SBOM сейчас отражает Python distributions, не все native DLL; при необходимости расширить без ложных claims.
+P2. Обновить историческую документацию в docs/WTMM_MOD_SCANNER.md и docs/md/FINAL_RELEASE_CHECKLIST.md после сверки сервера.
+P2. Улучшить sandbox-среду для ручного анализа модов; не выполнять содержимое ZIP на сервере или в браузере.
+P2. Тестировать изменения GitHub Actions после Dependabot PR, не объединять их автоматически без результатов CI.
+P2. Поддерживать этот handoff-файл актуальным после каждого релиза, добавляя дату и changelog блока.
+
+================================================================================
+08. ПОЛНЫЙ РЕЕСТР ФАЙЛОВ ПРОЕКТА (АКТУАЛЬНАЯ ВЕТКА ДО ДОБАВЛЕНИЯ ЭТОГО TXT)
+================================================================================
+Каждая строка FILE = реальный файл, найденный в git tree ветки документации.
+Файлы .pyc/__pycache__ специально удалены: это не исходники.
+Файлы SQL нельзя без разбора применять повторно.
+Размер — размер Git blob на момент создания справки, не runtime RAM.
+
+FILE: .github/dependabot.yml
+  PURPOSE: еженедельные предложения обновления Python-зависимостей и GitHub Actions; обновления проходят PR, не устанавливаются молча
+  GIT_BYTES: 373
+
+FILE: .github/workflows/build-windows-exe.yml
+  PURPOSE: главный CI Windows x64: тесты, сборка portable + Inno Setup, подпись (если сертификат), SBOM, SHA-256, аттестация и защищённая публикация
+  GIT_BYTES: 17161
+
+FILE: .github/workflows/dependency-health.yml
+  PURPOSE: еженедельный и событийный pip-audit закреплённых requirements-build.txt
+  GIT_BYTES: 941
+
+FILE: .github/workflows/desktop-sync-tests.yml
+  PURPOSE: регрессия связки Windows клиента с аккаунтами/DPAPI/ZIP и инсталляцией
+  GIT_BYTES: 2528
+
+FILE: .github/workflows/encrypted-database-backup.yml
+  PURPOSE: опциональные зашифрованные резервные копии БД через pg_dump + age; нужны секреты, выключено без конфигурации
+  GIT_BYTES: 2542
+
+FILE: .github/workflows/release-checksums.yml
+  PURPOSE: проверяет опубликованные SHA256SUMS.txt read-only, ничего не перезаписывая
+  GIT_BYTES: 1492
+
+FILE: .github/workflows/scan-mod-packages.yml
+  PURPOSE: дополнительный ClamAV-скан опубликованных модов; activation via secrets / WTMM_SCAN_ENABLED; НЕ считать постоянно активным
+  GIT_BYTES: 1545
+
+FILE: .github/workflows/smoke-windows-release.yml
+  PURPOSE: Windows smoke-проверка скачанного уже опубликованного portable EXE (в файле закреплён прежний тестовый тег)
+  GIT_BYTES: 2452
+
+FILE: .github/workflows/website-checks.yml
+  PURPOSE: Node/Deno/Python проверки страниц, CSP, файлов, SQL политики, ZIP и Edge функций
+  GIT_BYTES: 3704
+
+FILE: .gitignore
+  PURPOSE: правила исключения секретов, временных файлов и кэшей из Git
+  GIT_BYTES: 406
+
+FILE: assets/icons/Black/arrow.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3309
+
+FILE: assets/icons/Black/camouflages.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 21598
+
+FILE: assets/icons/Black/configurations.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 5677
+
+FILE: assets/icons/Black/pause.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4585
+
+FILE: assets/icons/Black/play.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4166
+
+FILE: assets/icons/Black/reset.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 10375
+
+FILE: assets/icons/Black/settings.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 15096
+
+FILE: assets/icons/Black/sights.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4108
+
+FILE: assets/icons/Black/sounds.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 10651
+
+FILE: assets/icons/Black/stop.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4116
+
+FILE: assets/icons/Logotip/LogotipProject.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 1310865
+
+FILE: assets/icons/White/arrow.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2041
+
+FILE: assets/icons/White/camouflages.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 5568
+
+FILE: assets/icons/White/configurations.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2522
+
+FILE: assets/icons/White/pause.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2312
+
+FILE: assets/icons/White/play.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2772
+
+FILE: assets/icons/White/reset.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3277
+
+FILE: assets/icons/White/settings.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4011
+
+FILE: assets/icons/White/sights.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4488
+
+FILE: assets/icons/White/sounds.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3353
+
+FILE: assets/icons/White/stop.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2034
+
+FILE: config/support_config.json
+  PURPOSE: публичные настройки раздела поддержки, не место для закрытых токенов
+  GIT_BYTES: 240
+
+FILE: config/update_config.json
+  PURPOSE: публичный идентификатор GitHub-репозитория и канал обновлений по умолчанию beta
+  GIT_BYTES: 89
+
+FILE: data/settings.json
+  PURPOSE: JSON конфигурация/публичные данные
+  GIT_BYTES: 594
+
+FILE: docs/.nojekyll
+  PURPOSE: дополнительный ресурс проекта
+  GIT_BYTES: 0
+
+FILE: docs/app.js
+  PURPOSE: главный JS логики сайта: секции, проверки релизов, UI, события
+  GIT_BYTES: 55307
+
+FILE: docs/assets/approved.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3497
+
+FILE: docs/assets/camouflages.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 5427
+
+FILE: docs/assets/Chat.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3615
+
+FILE: docs/assets/community-icons.svg
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 8332
+
+FILE: docs/assets/configurations.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2398
+
+FILE: docs/assets/emoji.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4244
+
+FILE: docs/assets/guardian.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4662
+
+FILE: docs/assets/Heart.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3420
+
+FILE: docs/assets/help.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4015
+
+FILE: docs/assets/ideas.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2971
+
+FILE: docs/assets/language.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4049
+
+FILE: docs/assets/LogotipProject.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 1051210
+
+FILE: docs/assets/moderation.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 2811
+
+FILE: docs/assets/news.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3313
+
+FILE: docs/assets/photo.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3576
+
+FILE: docs/assets/profile.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3109
+
+FILE: docs/assets/reset.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3277
+
+FILE: docs/assets/settings.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4011
+
+FILE: docs/assets/sights.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 4382
+
+FILE: docs/assets/updates.png
+  PURPOSE: бинарный UI-ассет/иконка; не редактировать текстовым инструментом, сохранять прозрачность и размеры
+  GIT_BYTES: 3698
+
+FILE: docs/BETA12_RELIABILITY.md
+  PURPOSE: описание функций Beta 12 и ограничений их подтверждения
+  GIT_BYTES: 4141
+
+FILE: docs/community/community.css
+  PURPOSE: оформление сообщества
+  GIT_BYTES: 22896
+
+FILE: docs/community/community.html
+  PURPOSE: веб-страница чата/сообщества
+  GIT_BYTES: 9085
+
+FILE: docs/community/community.js
+  PURPOSE: потоки сообщества, посты, публикации, ссылки, интерфейс
+  GIT_BYTES: 87629
+
+FILE: docs/community2.css
+  PURPOSE: дополнительное оформление Community 2.0
+  GIT_BYTES: 5489
+
+FILE: docs/contact/contact-core.mjs
+  PURPOSE: вспомогательные функции контакта
+  GIT_BYTES: 1480
+
+FILE: docs/contact/contact-extra-i18n.mjs
+  PURPOSE: дополнительные тексты контакта
+  GIT_BYTES: 6256
+
+FILE: docs/contact/contact.css
+  PURPOSE: стили обращения в поддержку
+  GIT_BYTES: 10542
+
+FILE: docs/contact/contact.html
+  PURPOSE: форма связи с авторами/обращения
+  GIT_BYTES: 10604
+
+FILE: docs/contact/contact.js
+  PURPOSE: UI контакта, валидация и клиентские события
+  GIT_BYTES: 20467
+
+FILE: docs/creator/creator.html
+  PURPOSE: редактор/страница автора контента
+  GIT_BYTES: 3930
+
+FILE: docs/creator/creator.js
+  PURPOSE: действия автора контента
+  GIT_BYTES: 6968
+
+FILE: docs/database/community_2_2026_11_18.sql
+  PURPOSE: эволюция схемы Community 2.0
+  GIT_BYTES: 16894
+
+FILE: docs/database/community_platform_upgrade.sql
+  PURPOSE: обновления платформы сообщества
+  GIT_BYTES: 10615
+
+FILE: docs/database/community.sql
+  PURPOSE: база сообщества и её первоначальные таблицы/правила
+  GIT_BYTES: 21611
+
+FILE: docs/database/guardian_upgrade.sql
+  PURPOSE: модераторские и защитные правила Guardian
+  GIT_BYTES: 25067
+
+FILE: docs/database/media_upgrade.sql
+  PURPOSE: хранение медиа сообщества/модов
+  GIT_BYTES: 8063
+
+FILE: docs/database/mod_catalog_search_audit.sql
+  PURPOSE: проверка поиска по каталогу
+  GIT_BYTES: 807
+
+FILE: docs/database/mod_catalog_search_upgrade.sql
+  PURPOSE: RPC/индексы улучшенного поиска модов
+  GIT_BYTES: 2223
+
+FILE: docs/database/mod_malware_scanning_upgrade.sql
+  PURPOSE: дополнительная антивирусная часть при отдельной активации; не следует считать active без проверки
+  GIT_BYTES: 3850
+
+FILE: docs/database/mod_package_integrity_upgrade.sql
+  PURPOSE: правила целостности загружаемых пакетов
+  GIT_BYTES: 2518
+
+FILE: docs/database/mod_scan_antivirus_approval_guard.sql
+  PURPOSE: проверка запрета публикации при заблокированном AV-статусе
+  GIT_BYTES: 887
+
+FILE: docs/database/mod_scan_audit.sql
+  PURPOSE: SQL-аудит статусов и политики сканирования
+  GIT_BYTES: 1274
+
+FILE: docs/database/mod_scan_cache_priority.sql
+  PURPOSE: 30-дневный private кэш SHA+версия сканера и справедливая очередь с приоритетом/старением
+  GIT_BYTES: 4849
+
+FILE: docs/database/mod_scan_cron_schedule.sql
+  PURPOSE: cron расписание и защищённая серверная маршрутизация сканера
+  GIT_BYTES: 936
+
+FILE: docs/database/mod_scan_false_positive_review.sql
+  PURPOSE: статус review вместо ложного отклонения, ручной admin+MFA gate
+  GIT_BYTES: 3888
+
+FILE: docs/database/mod_scan_sequential_queue.sql
+  PURPOSE: историческая база серверной очереди сканера, атомарный claim, 3 попытки, сериализация
+  GIT_BYTES: 8302
+
+FILE: docs/database/nickname_cooldown_and_contact_rate_2026_11_18.sql
+  PURPOSE: ограничение переименований и отправки контактных запросов
+  GIT_BYTES: 3663
+
+FILE: docs/database/optional_mfa_enforcement_2026_11_18.sql
+  PURPOSE: опциональные барьеры MFA для действий администраторов
+  GIT_BYTES: 3423
+
+FILE: docs/database/performance_rls_policy_merge.sql
+  PURPOSE: оптимизация дублирующих RLS политик
+  GIT_BYTES: 1309
+
+FILE: docs/database/privileged_function_access_upgrade.sql
+  PURPOSE: запрет лишнего EXECUTE на привилегированных RPC
+  GIT_BYTES: 349
+
+FILE: docs/database/profile_upgrade.sql
+  PURPOSE: схема профилей
+  GIT_BYTES: 3104
+
+FILE: docs/database/security_audit.sql
+  PURPOSE: SQL-аудит существующих политик безопасности
+  GIT_BYTES: 1628
+
+FILE: docs/database/security_hardening.sql
+  PURPOSE: дополнительные правила защиты
+  GIT_BYTES: 1335
+
+FILE: docs/database/security_suite_audit.sql
+  PURPOSE: сводная проверка защитных механизмов
+  GIT_BYTES: 1493
+
+FILE: docs/database/submission_rate_limits_2026_11_18.sql
+  PURPOSE: лимиты подачи контента и антиспам
+  GIT_BYTES: 3158
+
+FILE: docs/desktop-link.html
+  PURPOSE: страница подтверждения связки сайта и desktop
+  GIT_BYTES: 2170
+
+FILE: docs/home-refresh.css
+  PURPOSE: дополнительный слой обновлённой главной страницы
+  GIT_BYTES: 8951
+
+FILE: docs/index.html
+  PURPOSE: главная страница GitHub Pages, навигация, скачивание и функции
+  GIT_BYTES: 33263
+
+FILE: docs/js/async-pool.mjs
+  PURPOSE: ограниченная очередь асинхронных задач в JS
+  GIT_BYTES: 795
+
+FILE: docs/js/community-config.js
+  PURPOSE: публичная конфигурация Supabase (только publishable, не secrets)
+  GIT_BYTES: 272
+
+FILE: docs/js/community-icons.js
+  PURPOSE: библиотека SVG-иконок сообщества
+  GIT_BYTES: 4530
+
+FILE: docs/js/community2-api.mjs
+  PURPOSE: API для расширенных функций Community 2.0
+  GIT_BYTES: 5059
+
+FILE: docs/js/community2-dashboard.mjs
+  PURPOSE: дашборд сообщества, уведомления/пользовательские секции
+  GIT_BYTES: 10607
+
+FILE: docs/js/community2-mods.mjs
+  PURPOSE: интеграция сообщества с модами, избранное/сравнение
+  GIT_BYTES: 6207
+
+FILE: docs/js/contact-bridge.mjs
+  PURPOSE: JavaScript модуль веб-сайта, проверить imports/events перед изменением
+  GIT_BYTES: 1977
+
+FILE: docs/js/desktop-link.mjs
+  PURPOSE: browser frontend handshake для связывания ПК с аккаунтом
+  GIT_BYTES: 2224
+
+FILE: docs/js/error-monitor.js
+  PURPOSE: локальное обнаружение ошибок интерфейса сайта
+  GIT_BYTES: 3112
+
+FILE: docs/js/guardian-panel.js
+  PURPOSE: клиентская часть Guardian панели с серверными правами
+  GIT_BYTES: 17660
+
+FILE: docs/js/home-extra-i18n.js
+  PURPOSE: дополнительные переводы домашней страницы
+  GIT_BYTES: 15919
+
+FILE: docs/js/mod-review-policy.mjs
+  PURPOSE: правила отображения статусов ручной проверки
+  GIT_BYTES: 373
+
+FILE: docs/js/mod-zip-validator.mjs
+  PURPOSE: структурная браузерная валидация ZIP, не антивирус
+  GIT_BYTES: 5150
+
+FILE: docs/js/profile-mfa.mjs
+  PURPOSE: UI дополнительного фактора учётной записи
+  GIT_BYTES: 5896
+
+FILE: docs/js/session-drafts.mjs
+  PURPOSE: управление черновиками браузерной сессии
+  GIT_BYTES: 1278
+
+FILE: docs/js/site-language.mjs
+  PURPOSE: пятиъязычная локализация сайта
+  GIT_BYTES: 53739
+
+FILE: docs/js/supabase-session.mjs
+  PURPOSE: проверка текущей авторизованной сессии веб-пользователя
+  GIT_BYTES: 1230
+
+FILE: docs/js/trust-center.js
+  PURPOSE: безопасный рендер публичных GitHub release digest/metadata; не заявляет неподписанный EXE подписанным
+  GIT_BYTES: 3659
+
+FILE: docs/js/updates-center.mjs
+  PURPOSE: запрос публичных релизов и авторизованных уведомлений Supabase
+  GIT_BYTES: 4764
+
+FILE: docs/json/site-config.json
+  PURPOSE: публичные данные и настройки отображения сайта
+  GIT_BYTES: 339
+
+FILE: docs/md/COMMUNITY_PLATFORM_SETUP.md
+  PURPOSE: инструкция Community 2.0
+  GIT_BYTES: 5350
+
+FILE: docs/md/FEATURE_UPGRADE_2026_11_17.md
+  PURPOSE: история дополнительных возможностей сайта
+  GIT_BYTES: 3835
+
+FILE: docs/md/FINAL_RELEASE_CHECKLIST.md
+  PURPOSE: исторический аудит релизов; некоторые статусы могли устареть, сверять с живой БД
+  GIT_BYTES: 2386
+
+FILE: docs/md/SECURITY_SUITE_2026_11_18.md
+  PURPOSE: исторический отчёт о веб-защите и SQL
+  GIT_BYTES: 7145
+
+FILE: docs/md/SECURITY_UPGRADE_GUIDE.md
+  PURPOSE: план усиления веб-безопасности
+  GIT_BYTES: 11362
+
+FILE: docs/md/WTMM_MOD_SECURITY_BETA8.md
+  PURPOSE: история mod security Beta 8
+  GIT_BYTES: 5628
+
+FILE: docs/md/WTMM_SINGLE_FILE_BETA9.md
+  PURPOSE: история перехода на единый EXE Beta 9
+  GIT_BYTES: 2789
+
+FILE: docs/mods/mods.css
+  PURPOSE: основное оформление каталога модов
+  GIT_BYTES: 13034
+
+FILE: docs/mods/mods.html
+  PURPOSE: веб-каталог модов, загрузки, фильтрация и модерация
+  GIT_BYTES: 9957
+
+FILE: docs/mods/mods.js
+  PURPOSE: каталог, загрузка ZIP, статусы scanner, предупреждения, ручной admin review, загрузки модов
+  GIT_BYTES: 45687
+
+FILE: docs/mods/rounded-filters.css
+  PURPOSE: CSS скруглённых dropdown фильтров
+  GIT_BYTES: 4019
+
+FILE: docs/mods/rounded-filters.mjs
+  PURPOSE: поведение адаптивных фильтров, клавиатура и выбор
+  GIT_BYTES: 7276
+
+FILE: docs/profile/profile-security.css
+  PURPOSE: отдельные стили безопасности аккаунта
+  GIT_BYTES: 1848
+
+FILE: docs/profile/profile-watchdog.js
+  PURPOSE: локальный контроль/обновление состояния профиля
+  GIT_BYTES: 911
+
+FILE: docs/profile/profile.css
+  PURPOSE: стили профиля
+  GIT_BYTES: 8410
+
+FILE: docs/profile/profile.html
+  PURPOSE: страница персонального веб-профиля
+  GIT_BYTES: 19122
+
+FILE: docs/profile/profile.js
+  PURPOSE: интерактивный профиль, настройка пользовательских сведений
+  GIT_BYTES: 20094
+
+FILE: docs/RELEASE_TRUST_AND_SIGNING.md
+  PURPOSE: инструкция Authenticode, Sigstore, SHA, false positives
+  GIT_BYTES: 8704
+
+FILE: docs/styles.css
+  PURPOSE: основная система оформления сайта
+  GIT_BYTES: 24088
+
+FILE: docs/supabase/functions/community-media/deno.json
+  PURPOSE: зависимости/настройки Deno для community-media
+  GIT_BYTES: 205
+
+FILE: docs/supabase/functions/community-media/index.ts
+  PURPOSE: серверный endpoint управления медиа сообщества
+  GIT_BYTES: 11752
+
+FILE: docs/supabase/functions/contact-message/index.ts
+  PURPOSE: серверный endpoint сообщений поддержки с проверками и ограничениями
+  GIT_BYTES: 9492
+
+FILE: docs/supabase/functions/wtmm-desktop-bridge/index.ts
+  PURPOSE: Supabase Edge серверный gateway привязки Windows и списка разрешённых модов
+  GIT_BYTES: 10778
+
+FILE: docs/support/support-extra-i18n.mjs
+  PURPOSE: локализация страниц поддержки
+  GIT_BYTES: 10016
+
+FILE: docs/support/support.css
+  PURPOSE: стили поддержки
+  GIT_BYTES: 15023
+
+FILE: docs/support/support.html
+  PURPOSE: страница тикетов, идей и поддержки
+  GIT_BYTES: 17215
+
+FILE: docs/support/support.js
+  PURPOSE: обработка обращений и UI поддержки
+  GIT_BYTES: 50702
+
+FILE: docs/sync-test.txt
+  PURPOSE: документация/исторические заметки; проверять актуальность статусов
+  GIT_BYTES: 133
+
+FILE: docs/trust.html
+  PURPOSE: публичная страница доверия к Windows-сборкам и инструкция SHA/attestation
+  GIT_BYTES: 5681
+
+FILE: docs/updates.html
+  PURPOSE: страница GitHub Releases и пользовательских уведомлений
+  GIT_BYTES: 3661
+
+FILE: docs/WTMM_MOD_SCANNER.md
+  PURPOSE: описание сервера ZIP сканера; некоторые разделы старее последующих migrations
+  GIT_BYTES: 3166
+
+FILE: installer/release-notes.txt
+  PURPOSE: текст изменений текущей Beta 12, читаемый установщиком и GitHub release CI
+  GIT_BYTES: 2178
+
+FILE: installer/wtmm.installed
+  PURPOSE: маркер установленной версии, различающий installer и portable
+  GIT_BYTES: 161
+
+FILE: installer/WTModManager.iss
+  PURPOSE: Inno Setup: мастер установки, режимы, папка, каналы, миграция portable, ярлыки, деинсталляция, запрос taskbar pin через приложение
+  GIT_BYTES: 14219
+
+FILE: README.md
+  PURPOSE: короткое описание проекта, ссылка на сайт, независимый статус
+  GIT_BYTES: 765
+
+FILE: requirements-build.txt
+  PURPOSE: документация/исторические заметки; проверять актуальность статусов
+  GIT_BYTES: 132
+
+FILE: src/audio_analysis.py
+  PURPOSE: реальные ограниченные сэмплы амплитуды WAV для визуализации, не произвольные полоски
+  GIT_BYTES: 2584
+
+FILE: src/crash_recovery.py
+  PURPOSE: ограниченные локальные аварийные отчёты и распознавание неожиданного закрытия после обновления; не отправляет данные
+  GIT_BYTES: 5503
+
+FILE: src/desktop_sync.py
+  PURPOSE: привязка Windows-клиента к веб-аккаунту через серверный challenge, DPAPI, фоновая синхронизация и rollback модов
+  GIT_BYTES: 23591
+
+FILE: src/diagnostics.py
+  PURPOSE: локальные тесты путей, настроек, обновлений и профиля с кодами D001-D009 без личных данных
+  GIT_BYTES: 5750
+
+FILE: src/game_mod_installer.py
+  PURPOSE: пользовательское добавление прицелов/камуфляжей/звуков в War Thunder после проверки путей, бэкапы, откат изменений
+  GIT_BYTES: 14529
+
+FILE: src/installed_updater.py
+  PURPOSE: передача проверенного установщика Inno Setup при подтверждённом обновлении установленной версии
+  GIT_BYTES: 1765
+
+FILE: src/main.py
+  PURPOSE: старт PySide6, системный трей, обнаружение игры, иконка, окна, фоновые проверки обновлений и Recovery
+  GIT_BYTES: 15610
+
+FILE: src/mod_security.py
+  PURPOSE: безопасный локальный анализ ZIP, ограничения/сигнатуры, опциональный персональный VT ключ DPAPI, SHA-lookup
+  GIT_BYTES: 11334
+
+FILE: src/portable_updater.py
+  PURPOSE: проверенный portable self-update с backup/rollback и отдельным помощником после закрытия процесса
+  GIT_BYTES: 12203
+
+FILE: src/profile_paths.py
+  PURPOSE: единый %LOCALAPPDATA%/WTModManager для данных каждого пользователя Windows, миграция и пути аккаунтов/модов
+  GIT_BYTES: 7792
+
+FILE: src/settings_store.py
+  PURPOSE: валидация, атомарная запись settings.json, темы, языки, пресеты и сброс
+  GIT_BYTES: 17105
+
+FILE: src/taskbar_pin.py
+  PURPOSE: пользовательский запрос закрепления в панели задач; ручной официальный fallback при недоступности Windows API
+  GIT_BYTES: 2484
+
+FILE: src/trust_center.py
+  PURPOSE: on-demand SHA-256 локального EXE и штатная проверка Authenticode Windows PowerShell без передачи файла
+  GIT_BYTES: 4886
+
+FILE: src/update_checker.py
+  PURPOSE: версия 1.3.0-beta.12, GitHub Releases API, сравнение версий, каналы Stable/Beta, проверка SHA-256 и размера скачанного EXE
+  GIT_BYTES: 9533
+
+FILE: src/update_notifications.py
+  PURPOSE: локальная история уведомлений и настройки автопроверки каждые 10 минут
+  GIT_BYTES: 4524
+
+FILE: src/vt_backend.py
+  PURPOSE: запрос VirusTotal по SHA через защищённый Supabase шлюз без VT-ключа внутри клиентского EXE
+  GIT_BYTES: 3432
+
+FILE: supabase/functions/wtmm-mod-scan/index.ts
+  PURPOSE: Edge worker по внутреннему Vault token: атомарно забирает 1 ZIP, ищет по SHA кэш, сканирует, закрывает задание
+  GIT_BYTES: 5166
+
+FILE: supabase/functions/wtmm-mod-scan/zip_test.ts
+  PURPOSE: Deno regression тесты ZIP, ложных срабатываний и вредоносных архивов
+  GIT_BYTES: 5433
+
+FILE: supabase/functions/wtmm-mod-scan/zip.ts
+  PURPOSE: низкоуровневый ZIP parser + CRC, лимиты сжатия, опасные пути, расширения, сигнатуры, manual review
+  GIT_BYTES: 10726
+
+FILE: supabase/functions/wtmm-vt-lookup/index.ts
+  PURPOSE: Supabase Edge шлюз VirusTotal SHA-lookup, ключ хранится на сервере
+  GIT_BYTES: 6136
+
+FILE: tests/test_audio_analysis.py
+  PURPOSE: Python unittest по модулю audio analysis; проверять при изменениях функциональности
+  GIT_BYTES: 1986
+
+FILE: tests/test_build_sbom.py
+  PURPOSE: Python unittest по модулю build sbom; проверять при изменениях функциональности
+  GIT_BYTES: 1262
+
+FILE: tests/test_desktop_sync.py
+  PURPOSE: Python unittest по модулю desktop sync; проверять при изменениях функциональности
+  GIT_BYTES: 8644
+
+FILE: tests/test_diagnostics_and_rollback.py
+  PURPOSE: Python unittest по модулю diagnostics and rollback; проверять при изменениях функциональности
+  GIT_BYTES: 4338
+
+FILE: tests/test_game_mod_installer.py
+  PURPOSE: Python unittest по модулю game mod installer; проверять при изменениях функциональности
+  GIT_BYTES: 6177
+
+FILE: tests/test_gui_smoke.py
+  PURPOSE: Python unittest по модулю gui smoke; проверять при изменениях функциональности
+  GIT_BYTES: 2293
+
+FILE: tests/test_installer_assets.py
+  PURPOSE: Python unittest по модулю installer assets; проверять при изменениях функциональности
+  GIT_BYTES: 1499
+
+FILE: tests/test_installer_integration.py
+  PURPOSE: Python unittest по модулю installer integration; проверять при изменениях функциональности
+  GIT_BYTES: 7993
+
+FILE: tests/test_mod_security.py
+  PURPOSE: Python unittest по модулю mod security; проверять при изменениях функциональности
+  GIT_BYTES: 4961
+
+FILE: tests/test_portable_updates.py
+  PURPOSE: Python unittest по модулю portable updates; проверять при изменениях функциональности
+  GIT_BYTES: 5238
+
+FILE: tests/test_recovery_and_trust.py
+  PURPOSE: Python unittest по модулю recovery and trust; проверять при изменениях функциональности
+  GIT_BYTES: 4019
+
+FILE: tests/test_release_integrity.py
+  PURPOSE: Python unittest по модулю release integrity; проверять при изменениях функциональности
+  GIT_BYTES: 3390
+
+FILE: tests/test_update_notifications.py
+  PURPOSE: Python unittest по модулю update notifications; проверять при изменениях функциональности
+  GIT_BYTES: 5253
+
+FILE: tests/test_vt_backend.py
+  PURPOSE: Python unittest по модулю vt backend; проверять при изменениях функциональности
+  GIT_BYTES: 3210
+
+FILE: tools/build_installer_assets.py
+  PURPOSE: создание иллюстраций Inno Setup из официального логотипа и согласованного фона
+  GIT_BYTES: 5548
+
+FILE: tools/build_sbom.py
+  PURPOSE: генерация и валидация CycloneDX 1.5 Python-перечня зависимостей из среды сборки
+  GIT_BYTES: 3255
+
+FILE: tools/build_windows_exe.py
+  PURPOSE: PyInstaller Windows 3.12 onefile, упаковка ресурсов внутрь EXE без необязательного UPX
+  GIT_BYTES: 2830
+
+FILE: tools/check-site.mjs
+  PURPOSE: главный статический веб-аудит файлов, CSP, ссылок и запуск unit JS suite
+  GIT_BYTES: 6945
+
+FILE: tools/release_integrity.py
+  PURPOSE: единообразие версии, размер/тип файлов, SHA256SUMS, build-info, проверка на подмену
+  GIT_BYTES: 7663
+
+FILE: tools/scan_mod_packages.py
+  PURPOSE: офлайновый ZIP/ClamAV worker в опциональном GitHub workflow
+  GIT_BYTES: 11028
+
+FILE: tools/sign_windows_release.ps1
+  PURPOSE: подписание native DLL, EXE и установщика настоящим PFX, когда секреты владельца настроены
+  GIT_BYTES: 2123
+
+FILE: tools/taskbar/CMakeLists.txt
+  PURPOSE: сборка небольшого native helper через CMake
+  GIT_BYTES: 367
+
+FILE: tools/taskbar/taskbar_pin.cpp
+  PURPOSE: нативный Windows API helper для user-initiated pin, без Explorer hacks
+  GIT_BYTES: 2417
+
+FILE: tools/test_scan_mod_packages.py
+  PURPOSE: Python unittest инструмента scan_mod_packages
+  GIT_BYTES: 2254
+
+FILE: tools/test-async-pool.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для async-pool
+  GIT_BYTES: 680
+
+FILE: tools/test-community-2.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для community-2
+  GIT_BYTES: 6920
+
+FILE: tools/test-contact-panel.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для contact-panel
+  GIT_BYTES: 5872
+
+FILE: tools/test-error-monitor.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для error-monitor
+  GIT_BYTES: 1570
+
+FILE: tools/test-feature-enhancements.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для feature-enhancements
+  GIT_BYTES: 1828
+
+FILE: tools/test-global-search.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для global-search
+  GIT_BYTES: 1178
+
+FILE: tools/test-home-only-language.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для home-only-language
+  GIT_BYTES: 6493
+
+FILE: tools/test-home-refresh.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для home-refresh
+  GIT_BYTES: 4984
+
+FILE: tools/test-identity-gateway.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для identity-gateway
+  GIT_BYTES: 3085
+
+FILE: tools/test-localization-five.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для localization-five
+  GIT_BYTES: 3422
+
+FILE: tools/test-mod-review-policy.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для mod-review-policy
+  GIT_BYTES: 494
+
+FILE: tools/test-profile-mfa.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для profile-mfa
+  GIT_BYTES: 3625
+
+FILE: tools/test-rounded-mod-filters.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для rounded-mod-filters
+  GIT_BYTES: 8566
+
+FILE: tools/test-security-suite.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для security-suite
+  GIT_BYTES: 3061
+
+FILE: tools/test-session-drafts.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для session-drafts
+  GIT_BYTES: 999
+
+FILE: tools/test-site-functionality.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для site-functionality
+  GIT_BYTES: 1603
+
+FILE: tools/test-supabase-session.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для supabase-session
+  GIT_BYTES: 1370
+
+FILE: tools/test-windows-sync.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для windows-sync
+  GIT_BYTES: 1938
+
+FILE: tools/test-zip-validator.mjs
+  PURPOSE: Node.js regression-тест UI, безопасности и ассетов для zip-validator
+  GIT_BYTES: 2343
+
+FILE: tools/verify-release-checksum.ps1
+  PURPOSE: проверка локальной контрольной суммы скачанного файла по манифесту
+  GIT_BYTES: 1158
+
+FILE: tools/windows-sync/launch-hidden.vbs
+  PURPOSE: вспомогательный запуск локального sync без консоли
+  GIT_BYTES: 745
+
+FILE: tools/windows-sync/README.md
+  PURPOSE: инструкция безопасной синхронизации файлов с Windows
+  GIT_BYTES: 3733
+
+FILE: tools/windows-sync/setup-windows-sync.ps1
+  PURPOSE: создание/удаление локального Windows Scheduled Task с явным выбором
+  GIT_BYTES: 2477
+
+FILE: tools/windows-sync/sync-github-safe.ps1
+  PURPOSE: опциональная осторожная синхронизация Windows директории с GitHub
+  GIT_BYTES: 3360
+
+FILE: ui/appearance.py
+  PURPOSE: системная палитра и вспомогательная настройка оформления
+  GIT_BYTES: 18744
+
+FILE: ui/audio_waveform.py
+  PURPOSE: отрисовка реальной осциллограммы в интерфейсе звуков
+  GIT_BYTES: 2372
+
+FILE: ui/camouflages_page.py
+  PURPOSE: страница камуфляжей на базе MediaPage
+  GIT_BYTES: 568
+
+FILE: ui/game_install_ui.py
+  PURPOSE: диалоги подтверждения установки модификаций в игру и ручное восстановление
+  GIT_BYTES: 6215
+
+FILE: ui/i18n.py
+  PURPOSE: словарь переводов UI, языки и совместимость текстов интерфейса
+  GIT_BYTES: 38441
+
+FILE: ui/icon_assets.py
+  PURPOSE: загрузка белых/чёрных PNG иконок интерфейса
+  GIT_BYTES: 1492
+
+FILE: ui/main_window.py
+  PURPOSE: главное PySide6 окно, навигация, системные темы и масштабирование, страницы, трей
+  GIT_BYTES: 54209
+
+FILE: ui/media_page.py
+  PURPOSE: общая галерея/предпросмотр графических модификаций
+  GIT_BYTES: 11613
+
+FILE: ui/online_page.py
+  PURPOSE: Загрузки: аккаунт, уведомления, моды, версии, откат, каналы, диагностика и Trust Center
+  GIT_BYTES: 31462
+
+FILE: ui/personalization_panels.py
+  PURPOSE: вспомогательные компоненты оформления/пресетов
+  GIT_BYTES: 5901
+
+FILE: ui/security_panel.py
+  PURPOSE: локальная ZIP-проверка и серверный VirusTotal hash lookup в UI
+  GIT_BYTES: 9614
+
+FILE: ui/settings_page.py
+  PURPOSE: расширенный интерфейс настроек, цвета, темы, шрифты, анимация, слайдеры, пресеты, языки
+  GIT_BYTES: 91324
+
+FILE: ui/sights_page.py
+  PURPOSE: список, загрузка, предпросмотр, добавление и удаление прицелов
+  GIT_BYTES: 16411
+
+FILE: ui/sounds_page.py
+  PURPOSE: список звуков, локальный проигрыватель, громкость, прогресс, WAV-waveform, импорт/удаление
+  GIT_BYTES: 36235
+
+FILE: ui/theme_engine.py
+  PURPOSE: преобразование QSS под системную/светлую/тёмную тему и акцентные цвета
+  GIT_BYTES: 18063
+
+FILE: ui/trust_panel.py
+  PURPOSE: виджет WT Trust Center, асинхронный локальный SHA/AuthentiCode, копирование очищенного crash report
+  GIT_BYTES: 4129
+
+FILE: ui/update_ui.py
+  PURPOSE: потоковая фоновая проверка и скачивание обновлений, UI подтверждения, уведомления
+  GIT_BYTES: 13473
+
+FILE: WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt
+  PURPOSE: текущий основной большой файл контекста для будущих чатов и разработчиков
+  GIT_BYTES: generated
+
+================================================================================
+09. СЦЕНАРИИ РАЗБОРА ОШИБОК ПО ФАЙЛАМ
+================================================================================
+СИМПТОМ: Windows SmartScreen предупреждает.
+  Проверить Authenticode status, хеш из релиза, GitHub attestation, имя издателя.
+  НЕ добавлять исключения и НЕ переупаковывать для маскировки AV.
+  Ответственные: tools/sign_windows_release.ps1,
+    .github/workflows/build-windows-exe.yml, src/trust_center.py,
+    docs/trust.html, docs/RELEASE_TRUST_AND_SIGNING.md.
+  Блокер: сертификат/репутация реально отсутствуют у unsigned EXE.
+
+СИМПТОМ: обновление скачалось, но файл не запускается.
+  Проверить по GitHub sha256 size, update-channel.json, свободное место,
+  логи восстановления, portable backup. Не удалять пользовательские моды.
+  Ответственные: src/update_checker.py, ui/update_ui.py,
+    src/installed_updater.py, src/portable_updater.py,
+    src/crash_recovery.py, src/update_notifications.py.
+
+СИМПТОМ: ZIP безобидный, но заблокирован.
+  Отличить структурный ScanReject (реальная ошибка/запрещённый формат) от
+  review (неоднозначные признаки). Не менять verdict только ради снижения
+  false positives: нужна регрессия с безопасным и опасным test fixture.
+  Ответственные: supabase/functions/wtmm-mod-scan/zip.ts,
+    zip_test.ts, index.ts, docs/mods/mods.js и private SQL queue.
+  Обновить scanner engine version при изменении проверок.
+
+СИМПТОМ: VirusTotal показывает одно срабатывание.
+  Рассмотреть название детекта, SHA, версию, подпись; обращаться к вендору
+  антивируса при false positive. Не обходить Defender или подпись.
+  Ответственные: src/mod_security.py, src/vt_backend.py,
+    supabase/functions/wtmm-vt-lookup/index.ts, ui/security_panel.py.
+
+СИМПТОМ: окна/кнопки налезают друг на друга.
+  Проверить QScrollArea, QGridLayout/QVBoxLayout и фиксированные размеры.
+  Ответственные: ui/online_page.py, ui/main_window.py, ui/settings_page.py,
+    ui/sights_page.py, ui/sounds_page.py. Не сжимать весь интерфейс.
+  Добавить GUI smoke test и убедиться на DPI 125/150/200%.
+
+СИМПТОМ: сайт сломал ссылки/иконки/локализацию.
+  Проверить пути docs/assets, JS imports, CSP, 5 языков, GitHub Pages,
+  запустить node tools/check-site.mjs.
+  Ответственные: docs/index.html, docs/app.js, docs/styles.css,
+    docs/js/site-language.mjs, tools/test-*.mjs.
+
+СИМПТОМ: аккаунт/моды не синхронизируются.
+  Проверить RLS policy, Edge desktop bridge, DPAPI token, не светить его,
+  корректный owner_id и Storage подписанную ссылку.
+  Ответственные: src/desktop_sync.py, ui/online_page.py,
+    docs/supabase/functions/wtmm-desktop-bridge/index.ts.
+  Работать без обхода серверных правил.
+
+СИМПТОМ: GitHub Releases не опубликовался.
+  Посмотреть оба jobs build-windows-exe, версию в 4 местах,
+  тесты installer, checksum, подпись, attest, manifest, право contents:write
+  только publish job, tag collision.
+  Ответственные: .github/workflows/build-windows-exe.yml,
+    tools/release_integrity.py, tools/build_sbom.py.
+  НЕ менять существующий выпущенный тег для «быстрого фикса».
+
+================================================================================
+10. КОМАНДА-ПОДСКАЗКА ДЛЯ НОВОГО ЧАТА
+================================================================================
+«Работаем с GitHub-репозиторием qwerthegoe-hash/WT-Mod-Manager-Website,
+Windows desktop Python/PySide6 и сайтом GitHub Pages/Supabase.
+Открой файл WTMM_FULL_PROJECT_HANDOFF_2026-11-19.txt прямо в GitHub, затем
+прочитай последний git tree и релизы. Продолжай реальный проект, не начинай
+с нуля и не проси скачивать архив, если GitHub connector имеет доступ.
+Сохраняй функции и интерфейс, делай точечные изменения через PR, проверяй
+Python/Node/Deno и Windows installer CI. Отделяй реальную доступность
+сервиса от одной строчки кода. Никогда не публикуй секреты и не обходи
+Windows/AV защиту. После каждого этапа обновляй handoff TXT и перечисляй
+изменённые файлы, тесты, известные ограничения и ссылки.»
+================================================================================
+КОНЕЦ ДОКУМЕНТА
+================================================================================
